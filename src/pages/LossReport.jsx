@@ -290,7 +290,7 @@ function LossReport() {
         </TabPanel>
 
         <TabPanel value={activeTab} index={2}>
-          <ReportAnalysis />
+          <ReportAnalysis reportId={data?.report_id} />
         </TabPanel>
 
         <TabPanel value={activeTab} index={3}>
