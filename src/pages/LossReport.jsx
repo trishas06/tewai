@@ -240,6 +240,7 @@ function LossReport() {
           >
             <Tab label="Loss Report" />
             <Tab label="Report Summary" />
+            <Tab label="Report Analysis" />
             <Tab label="ChatBot" />
           </Tabs>
         </Box>
@@ -249,14 +250,23 @@ function LossReport() {
             <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
               <CircularProgress />
             </Box>
-          ) : renderPDFViewer()}
+          ) : (
+            renderPDFViewer()
+          )}
         </TabPanel>
 
         <TabPanel value={activeTab} index={1}>
-          <ReportSummary />
+          <ReportSummary claimNo={claimNo} />
         </TabPanel>
 
         <TabPanel value={activeTab} index={2}>
+          <Box sx={{ p: 2 }}>
+            <Typography variant="h6">Report Analysis</Typography>
+            {/* Add your Report Analysis content here */}
+          </Box>
+        </TabPanel>
+
+        <TabPanel value={activeTab} index={3}>
           <Typography>
             ChatBot Interface
           </Typography>
