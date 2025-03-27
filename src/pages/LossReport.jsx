@@ -21,6 +21,7 @@ import {
 } from '@mui/icons-material';
 import axios from 'axios';
 import ReportSummary from './ReportSummary';
+import ReportAnalysis from './ReportAnalysis';
 
 // Lazy load just the PDF viewer content
 const PDFViewerContent = lazy(() => import('./PDFViewerContent'));
@@ -260,10 +261,7 @@ function LossReport() {
         </TabPanel>
 
         <TabPanel value={activeTab} index={2}>
-          <Box sx={{ p: 2 }}>
-            <Typography variant="h6">Report Analysis</Typography>
-            {/* Add your Report Analysis content here */}
-          </Box>
+          <ReportAnalysis />
         </TabPanel>
 
         <TabPanel value={activeTab} index={3}>
