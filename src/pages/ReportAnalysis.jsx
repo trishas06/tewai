@@ -1,4 +1,4 @@
-import { useState } from 'react';
+
 import {
   Box,
   Typography,
@@ -9,7 +9,7 @@ import {
 } from '@mui/material';
 import { ExpandMore as ExpandMoreIcon } from '@mui/icons-material';
 
-function ReportAnalysis({ claimNo }) {
+function ReportAnalysis() {
   // Dummy data for question-answer sections
   const questionAnswers = [
     {

@@ -1,5 +1,5 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -10,14 +10,14 @@ import {
   Tab,
   Divider,
   IconButton,
-  Stack
+  Stack,
 } from '@mui/material';
-import { 
+import {
   ArrowBack as ArrowBackIcon,
   ZoomIn as ZoomInIcon,
   ZoomOut as ZoomOutIcon,
   NavigateNext as NextIcon,
-  NavigateBefore as PrevIcon
+  NavigateBefore as PrevIcon,
 } from '@mui/icons-material';
 import axios from 'axios';
 import ReportSummary from './ReportSummary';
@@ -54,7 +54,12 @@ function LossReport() {
   const { claimNo } = useParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [data, setData] = useState(null);
+  const location = useLocation();
+  const rowData = location.state || {};
+  const [data, setData] = useState({
+    reportName: rowData.loss_report_name || `Loss Report - ${claimNo}`,
+    ...rowData
+  });
   const [activeTab, setActiveTab] = useState(0);
   const [numPages, setNumPages] = useState(null);
   const [pageNumber, setPageNumber] = useState(1);
@@ -73,17 +78,23 @@ function LossReport() {
           throw new Error('Authentication token not found');
         }
 
+        if (!rowData.report_id || !rowData.loss_report_name) {
+          throw new Error('Missing required report parameters');
+        }
+
         const response = await axios.post(
-          `${import.meta.env.VITE_API_BASE_URL}${import.meta.env.VITE_GET_PDF_ENDPOINT}`,
+          `${import.meta.env.VITE_API_BASE_URL}${
+            import.meta.env.VITE_GET_PDF_ENDPOINT
+          }`,
           {
-            report_id: "67dc62ec5163b4b362573679",
-            report_name: "0002224016.pdf",
-            chunk_id: 1
+            report_id: rowData.report_id,
+            report_name: rowData.loss_report_name,
+            chunk_id: 1,
           },
           {
             headers: {
-              'Authorization': `Bearer ${token}`
-            }
+              Authorization: `Bearer ${token}`,
+            },
           }
         );
 
@@ -105,16 +116,18 @@ function LossReport() {
         const pdfBlob = new Blob([bytes], { type: 'application/pdf' });
         const pdfUrl = URL.createObjectURL(pdfBlob);
 
-        setData({
-          reportName: `Loss Report - ${claimNo}`,
+        setData(prevData => ({
+          ...prevData,
           pdfUrl
-        });
+        }));
         setLoading(false);
       } catch (error) {
         console.error('Error fetching report data:', error);
         if (error.message === 'Authentication token not found') {
           setError('Please log in to view the PDF file.');
           navigate('/login'); // Redirect to login if token is missing
+        } else if (error.message === 'Missing required report parameters') {
+          setError('Missing required report parameters.');
         } else if (error.message === 'Invalid PDF data received') {
           setError('Invalid PDF data received from server.');
         } else {
@@ -147,19 +160,19 @@ function LossReport() {
   };
 
   const handlePreviousPage = () => {
-    setPageNumber(prev => Math.max(prev - 1, 1));
+    setPageNumber((prev) => Math.max(prev - 1, 1));
   };
 
   const handleNextPage = () => {
-    setPageNumber(prev => Math.min(prev + 1, numPages || prev));
+    setPageNumber((prev) => Math.min(prev + 1, numPages || prev));
   };
 
   const handleZoomIn = () => {
-    setScale(prev => Math.min(prev + 0.1, 2));
+    setScale((prev) => Math.min(prev + 0.1, 2));
   };
 
   const handleZoomOut = () => {
-    setScale(prev => Math.max(prev - 0.1, 0.5));
+    setScale((prev) => Math.max(prev - 0.1, 0.5));
   };
 
   const renderPDFViewer = () => {
@@ -180,11 +193,20 @@ function LossReport() {
     }
 
     return (
-      <Suspense fallback={
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
-          <CircularProgress />
-        </Box>
-      }>
+      <Suspense
+        fallback={
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              height: '50vh',
+            }}
+          >
+            <CircularProgress />
+          </Box>
+        }
+      >
         <PDFViewerContent
           data={data}
           pageNumber={pageNumber}
@@ -202,14 +224,18 @@ function LossReport() {
 
   return (
     <Box sx={{ p: 3 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3, justifyContent: 'space-between' }}>
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          mb: 3,
+          justifyContent: 'space-between',
+        }}
+      >
         <Typography variant="h5" component="h1">
           Loss Report Details
         </Typography>
-        <Button
-          startIcon={<ArrowBackIcon />}
-          onClick={handleBack}
-        >
+        <Button startIcon={<ArrowBackIcon />} onClick={handleBack}>
           Back
         </Button>
       </Box>
@@ -222,20 +248,23 @@ function LossReport() {
           <Typography variant="h6">
             {data?.reportName || `Loss Report - ${claimNo}`}
           </Typography>
-          
-          <Typography variant="subtitle1" color="text.secondary" sx={{ mt: 2 }} gutterBottom>
+
+          <Typography
+            variant="subtitle1"
+            color="text.secondary"
+            sx={{ mt: 2 }}
+            gutterBottom
+          >
             Claim Number
           </Typography>
-          <Typography variant="h6">
-            {claimNo}
-          </Typography>
+          <Typography variant="h6">{claimNo}</Typography>
         </Box>
 
         <Divider sx={{ my: 2 }} />
 
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Tabs 
-            value={activeTab} 
+          <Tabs
+            value={activeTab}
             onChange={handleTabChange}
             aria-label="loss report tabs"
           >
@@ -265,13 +294,11 @@ function LossReport() {
         </TabPanel>
 
         <TabPanel value={activeTab} index={3}>
-          <Typography>
-            ChatBot Interface
-          </Typography>
+          <Typography>ChatBot Interface</Typography>
         </TabPanel>
       </Paper>
     </Box>
   );
 }
 
-export default LossReport; 
+export default LossReport;

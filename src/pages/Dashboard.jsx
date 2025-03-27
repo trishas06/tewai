@@ -30,7 +30,7 @@ import {
   Select,
   Chip,
   OutlinedInput,
-  CircularProgress
+  CircularProgress,
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -41,7 +41,7 @@ import {
   LastPage as LastPageIcon,
   KeyboardArrowLeft,
   KeyboardArrowRight,
-  Description as DescriptionIcon
+  Description as DescriptionIcon,
 } from '@mui/icons-material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
@@ -58,7 +58,7 @@ const headCells = [
   { id: 'adjusterName', label: 'Adjuster Name' },
   { id: 'createdOn', label: 'Created On' },
   { id: 'status', label: 'Status' },
-  { id: 'actions', label: 'Action' }
+  { id: 'actions', label: 'Action' },
 ];
 
 // Status chip colors
@@ -171,19 +171,19 @@ function Dashboard() {
     adjusters: [],
     statuses: [],
     startDate: null,
-    endDate: null
+    endDate: null,
   });
-  
+
   // For filter dialog
   const [openFilterDialog, setOpenFilterDialog] = useState(false);
   const [filterOptions, setFilterOptions] = useState({
     carriers: [],
     policyForms: [],
     adjusters: [],
-    statuses: []
+    statuses: [],
   });
   const [tempFilters, setTempFilters] = useState({ ...filters });
-  
+
   // Fetch initial data and filter options
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -192,7 +192,7 @@ function Dashboard() {
           navigate('/login');
           return;
         }
-        
+
         // Fetch filter options
         const options = await dashboardService.getFilterOptions();
         setFilterOptions(options);
@@ -202,10 +202,10 @@ function Dashboard() {
         setLoading(false);
       }
     };
-    
+
     fetchInitialData();
   }, [navigate]);
-  
+
   // Fetch data when page, rowsPerPage, filters, or search term changes
   useEffect(() => {
     const fetchData = async () => {
@@ -225,45 +225,45 @@ function Dashboard() {
         setLoading(false);
       }
     };
-    
+
     fetchData();
   }, [page, rowsPerPage, filters, searchTerm]);
-  
+
   // Handle page change
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
   };
-  
+
   // Handle rows per page change
   const handleChangeRowsPerPage = (event) => {
     setRowsPerPage(parseInt(event.target.value, 10));
     setPage(0);
   };
-  
+
   // Handle search input change
   const handleSearchChange = (event) => {
     setSearchTerm(event.target.value);
     setPage(0);
   };
-  
+
   // Handle filter dialog open
   const handleOpenFilterDialog = () => {
     setTempFilters({ ...filters });
     setOpenFilterDialog(true);
   };
-  
+
   // Handle filter dialog close
   const handleCloseFilterDialog = () => {
     setOpenFilterDialog(false);
   };
-  
+
   // Handle filter apply
   const handleApplyFilters = () => {
     setFilters({ ...tempFilters });
     setOpenFilterDialog(false);
     setPage(0);
   };
-  
+
   // Handle filter reset
   const handleResetFilters = () => {
     setTempFilters({
@@ -272,31 +272,33 @@ function Dashboard() {
       adjusters: [],
       statuses: [],
       startDate: null,
-      endDate: null
+      endDate: null,
     });
   };
-  
+
   // Handle multi-select change
   const handleMultiSelectChange = (field) => (event) => {
     setTempFilters({
       ...tempFilters,
-      [field]: event.target.value
+      [field]: event.target.value,
     });
   };
-  
+
   // Handle date picker change
   const handleDateChange = (field) => (newValue) => {
     setTempFilters({
       ...tempFilters,
-      [field]: newValue
+      [field]: newValue,
     });
   };
-  
+
   // Add handler for navigating to Loss Report Screen
-  const handleNavigateToLossReport = (claimNo) => {
-    navigate(`/loss-report/${claimNo}`);
+  const handleNavigateToLossReport = (row) => {
+    navigate(`/loss-report/${row.claimNo}`, {
+      state: row.originalData,
+    });
   };
-  
+
   return (
     <Box sx={{ p: 2 }}>
       <Typography variant="h5" sx={{ mb: 3, fontWeight: 500 }}>
@@ -317,15 +319,15 @@ function Dashboard() {
               },
               '&:hover fieldset': {
                 borderColor: '#bdbdbd',
-              }
-            }
+              },
+            },
           }}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
                 <SearchIcon sx={{ color: '#757575' }} />
               </InputAdornment>
-            )
+            ),
           }}
         />
         <Button
@@ -338,7 +340,10 @@ function Dashboard() {
         </Button>
       </Box>
 
-      <TableContainer component={Paper} sx={{ boxShadow: '0px 2px 4px rgba(0,0,0,0.1)' }}>
+      <TableContainer
+        component={Paper}
+        sx={{ boxShadow: '0px 2px 4px rgba(0,0,0,0.1)' }}
+      >
         <Table>
           <TableHead>
             <TableRow>
@@ -376,16 +381,16 @@ function Dashboard() {
                       sx={{
                         color: getStatusColor(row.status).color,
                         bgcolor: getStatusColor(row.status).bgcolor,
-                        fontWeight: 500
+                        fontWeight: 500,
                       }}
                     />
                   </TableCell>
                   <TableCell align="center">
                     {row.status !== 'Failed' && (
-                      <IconButton 
+                      <IconButton
                         size="small"
                         title="View Loss Report"
-                        onClick={() => handleNavigateToLossReport(row.claimNo)}
+                        onClick={() => handleNavigateToLossReport(row)}
                       >
                         <DescriptionIcon sx={{ fontSize: 20 }} />
                       </IconButton>
@@ -409,7 +414,12 @@ function Dashboard() {
       </TableContainer>
 
       {/* Filter Dialog */}
-      <Dialog open={openFilterDialog} onClose={handleCloseFilterDialog} maxWidth="xs" fullWidth>
+      <Dialog
+        open={openFilterDialog}
+        onClose={handleCloseFilterDialog}
+        maxWidth="xs"
+        fullWidth
+      >
         <DialogTitle>Filter Claims</DialogTitle>
         <DialogContent>
           <MultiSelect
@@ -456,11 +466,13 @@ function Dashboard() {
         <DialogActions>
           <Button onClick={handleResetFilters}>Reset</Button>
           <Button onClick={handleCloseFilterDialog}>Cancel</Button>
-          <Button onClick={handleApplyFilters} variant="contained">Apply</Button>
+          <Button onClick={handleApplyFilters} variant="contained">
+            Apply
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>
   );
 }
 
-export default Dashboard; 
+export default Dashboard;
