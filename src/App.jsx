@@ -1,0 +1,135 @@
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { createContext, useMemo, useState } from 'react';
+import Login from './pages/Login';
+import Dashboard from './pages/Dashboard';
+import AuthLayout from './components/layout/AuthLayout';
+import LossReport from './pages/LossReport';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
+
+export const ColorModeContext = createContext({ toggleColorMode: () => {} });
+
+function App() {
+  const [mode, setMode] = useState('light');
+
+  const colorMode = useMemo(
+    () => ({
+      toggleColorMode: () => {
+        setMode((prevMode) => (prevMode === 'light' ? 'dark' : 'light'));
+      },
+    }),
+    [],
+  );
+
+  const theme = useMemo(
+    () =>
+      createTheme({
+        palette: {
+          mode,
+          primary: {
+            main: 'rgb(91, 155, 152)',
+            light: 'rgb(120, 175, 172)',
+            dark: 'rgb(70, 135, 132)',
+          },
+          secondary: {
+            main: '#9c27b0',
+            light: '#ba68c8',
+            dark: '#7b1fa2',
+          },
+          background: {
+            default: mode === 'light' ? '#f5f5f5' : '#121212',
+            paper: mode === 'light' ? '#ffffff' : '#1e1e1e',
+          },
+          text: {
+            primary: mode === 'light' ? 'rgba(0, 0, 0, 0.87)' : 'rgba(255, 255, 255, 0.87)',
+            secondary: mode === 'light' ? 'rgba(0, 0, 0, 0.6)' : 'rgba(255, 255, 255, 0.6)',
+          },
+          divider: mode === 'light' ? 'rgba(0, 0, 0, 0.12)' : 'rgba(255, 255, 255, 0.12)',
+          action: {
+            active: mode === 'light' ? 'rgba(0, 0, 0, 0.54)' : 'rgba(255, 255, 255, 0.54)',
+            hover: mode === 'light' ? 'rgba(0, 0, 0, 0.04)' : 'rgba(255, 255, 255, 0.04)',
+            selected: mode === 'light' ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.08)',
+            disabled: mode === 'light' ? 'rgba(0, 0, 0, 0.26)' : 'rgba(255, 255, 255, 0.26)',
+            disabledBackground: mode === 'light' ? 'rgba(0, 0, 0, 0.12)' : 'rgba(255, 255, 255, 0.12)',
+          },
+        },
+        typography: {
+          fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+          h5: {
+            fontWeight: 500,
+          },
+        },
+        components: {
+          MuiButton: {
+            styleOverrides: {
+              root: {
+                textTransform: 'none',
+              },
+            },
+          },
+          MuiPaper: {
+            styleOverrides: {
+              root: {
+                backgroundImage: 'none',
+              },
+            },
+          },
+          MuiAppBar: {
+            styleOverrides: {
+              root: {
+                backgroundColor: mode === 'light' ? '#ffffff' : '#1e1e1e',
+                color: mode === 'light' ? 'rgba(0, 0, 0, 0.87)' : 'rgba(255, 255, 255, 0.87)',
+              },
+            },
+          },
+          MuiDrawer: {
+            styleOverrides: {
+              paper: {
+                backgroundColor: mode === 'light' ? '#ffffff' : '#1e1e1e',
+              },
+            },
+          },
+        },
+      }),
+    [mode],
+  );
+
+  return (
+    <ColorModeContext.Provider value={colorMode}>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <Router>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            
+            {/* Authenticated Routes */}
+            <Route path="/dashboard" element={
+              <AuthLayout>
+                <Dashboard />
+              </AuthLayout>
+            } 
+            />
+            <Route path="/loss-report/:claimNo" element={
+              <AuthLayout>
+                <LossReport />
+              </AuthLayout>
+            } 
+            />
+            
+            {/* Add other authenticated routes here */}
+            {/* Example:
+            <Route path="/reports" element={
+              <AuthLayout>
+                <Reports />
+              </AuthLayout>
+            } /> 
+            */}
+          </Routes>
+        </Router>
+      </ThemeProvider>
+    </ColorModeContext.Provider>
+  );
+}
+
+export default App;

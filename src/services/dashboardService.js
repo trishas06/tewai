@@ -1,0 +1,154 @@
+import axios from 'axios';
+
+const API_URL = import.meta.env.VITE_API_BASE_URL;
+
+export const dashboardService = {
+  getClaimsData: async (page, rowsPerPage, filters = {}, searchTerm = '') => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
+
+      const response = await axios.get(
+        `${API_URL}/get_lossreport_data`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+
+      // Transform the API response to match our table structure
+      let data = response.data.message.map(item => ({
+        id: item._id || Math.random().toString(36).substring(2, 11),
+        claimNo: item.claim_number || '',
+        carrier: item.carrier || '',
+        policyNo: item.policy_number || '',
+        policyForm: item.policy_form || '',
+        adjusterName: item.adjuster_name || '',
+        createdOn: new Date(item.created_at).toLocaleString(),
+        status: item.status || 'Pending'
+      }));
+
+      // Apply search term filtering
+      if (searchTerm) {
+        const term = searchTerm.toLowerCase();
+        data = data.filter(
+          item =>
+            item.claimNo.toLowerCase().includes(term) ||
+            item.carrier.toLowerCase().includes(term) ||
+            item.policyForm.toLowerCase().includes(term) ||
+            item.adjusterName.toLowerCase().includes(term)
+        );
+      }
+
+      // Apply advanced filters
+      if (filters.carriers && filters.carriers.length > 0) {
+        data = data.filter(item => filters.carriers.includes(item.carrier));
+      }
+      
+      if (filters.policyForms && filters.policyForms.length > 0) {
+        data = data.filter(item => filters.policyForms.includes(item.policyForm));
+      }
+      
+      if (filters.adjusters && filters.adjusters.length > 0) {
+        data = data.filter(item => filters.adjusters.includes(item.adjusterName));
+      }
+      
+      if (filters.statuses && filters.statuses.length > 0) {
+        data = data.filter(item => filters.statuses.includes(item.status));
+      }
+      
+      if (filters.startDate) {
+        data = data.filter(item => new Date(item.createdOn) >= new Date(filters.startDate));
+      }
+      
+      if (filters.endDate) {
+        data = data.filter(item => new Date(item.createdOn) <= new Date(filters.endDate));
+      }
+
+      // Calculate pagination values
+      const totalCount = data.length;
+      const paginatedData = data.slice(page * rowsPerPage, (page + 1) * rowsPerPage);
+
+      return {
+        data: paginatedData,
+        totalCount
+      };
+    } catch (error) {
+      console.error('Error fetching claims data:', error);
+      throw error;
+    }
+  },
+
+  getFilterOptions: async () => {
+    try {
+      // Get all data first
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
+
+      const response = await axios.get(
+        `${API_URL}/get_lossreport_data`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+
+      // Transform the data
+      const data = response.data.message.map(item => ({
+        claimNo: item.claim_number || '',
+        carrier: item.carrier || '',
+        policyNo: item.policy_number || '',
+        policyForm: item.policy_form || '',
+        adjusterName: item.adjuster_name || '',
+        status: item.status || 'Pending'
+      }));
+
+      // Extract unique values for filters
+      const carriers = [...new Set(data.map(item => item.carrier))].filter(Boolean);
+      const policyForms = [...new Set(data.map(item => item.policyForm))].filter(Boolean);
+      const adjusters = [...new Set(data.map(item => item.adjusterName))].filter(Boolean);
+      const statuses = [...new Set(data.map(item => item.status))].filter(Boolean);
+
+      return {
+        carriers,
+        policyForms,
+        adjusters,
+        statuses
+      };
+    } catch (error) {
+      console.error('Error fetching filter options:', error);
+      throw error;
+    }
+  },
+
+  getNotifications: async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
+
+      const response = await axios.get(
+        `${API_URL}/get_notifications`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+      throw error;
+    }
+  }
+};
+
+export default dashboardService; 

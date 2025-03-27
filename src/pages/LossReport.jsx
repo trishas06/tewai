@@ -1,0 +1,269 @@
+import { useState, useEffect, lazy, Suspense } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import {
+  Box,
+  Typography,
+  Paper,
+  CircularProgress,
+  Button,
+  Tabs,
+  Tab,
+  Divider,
+  IconButton,
+  Stack
+} from '@mui/material';
+import { 
+  ArrowBack as ArrowBackIcon,
+  ZoomIn as ZoomInIcon,
+  ZoomOut as ZoomOutIcon,
+  NavigateNext as NextIcon,
+  NavigateBefore as PrevIcon
+} from '@mui/icons-material';
+import axios from 'axios';
+import ReportSummary from './ReportSummary';
+
+// Lazy load just the PDF viewer content
+const PDFViewerContent = lazy(() => import('./PDFViewerContent'));
+
+// Set up PDF.js worker
+const setPdfWorker = async () => {
+  const { pdfjs } = await import('react-pdf');
+  pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+};
+
+// Call the setup function
+setPdfWorker();
+
+// Tab Panel component
+function TabPanel({ children, value, index }) {
+  return (
+    <Box
+      role="tabpanel"
+      hidden={value !== index}
+      id={`loss-report-tabpanel-${index}`}
+      aria-labelledby={`loss-report-tab-${index}`}
+      sx={{ py: 3 }}
+    >
+      {value === index && children}
+    </Box>
+  );
+}
+
+function LossReport() {
+  const { claimNo } = useParams();
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState(null);
+  const [activeTab, setActiveTab] = useState(0);
+  const [numPages, setNumPages] = useState(null);
+  const [pageNumber, setPageNumber] = useState(1);
+  const [scale, setScale] = useState(1);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchReportData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Get the token from localStorage
+        const token = localStorage.getItem('token');
+        if (!token) {
+          throw new Error('Authentication token not found');
+        }
+
+        const response = await axios.post(
+          `${import.meta.env.VITE_API_BASE_URL}${import.meta.env.VITE_GET_PDF_ENDPOINT}`,
+          {
+            report_id: "67dc62ec5163b4b362573679",
+            report_name: "0002224016.pdf",
+            chunk_id: 1
+          },
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          }
+        );
+
+        // Convert base64 to blob
+        const base64Response = response.data.base64_pdf;
+        if (!base64Response) {
+          throw new Error('Invalid PDF data received');
+        }
+
+        // Convert base64 to binary
+        const binaryString = window.atob(base64Response);
+        const len = binaryString.length;
+        const bytes = new Uint8Array(len);
+        for (let i = 0; i < len; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+
+        // Create blob from binary data
+        const pdfBlob = new Blob([bytes], { type: 'application/pdf' });
+        const pdfUrl = URL.createObjectURL(pdfBlob);
+
+        setData({
+          reportName: `Loss Report - ${claimNo}`,
+          pdfUrl
+        });
+        setLoading(false);
+      } catch (error) {
+        console.error('Error fetching report data:', error);
+        if (error.message === 'Authentication token not found') {
+          setError('Please log in to view the PDF file.');
+          navigate('/login'); // Redirect to login if token is missing
+        } else if (error.message === 'Invalid PDF data received') {
+          setError('Invalid PDF data received from server.');
+        } else {
+          setError('Failed to load the PDF file. Please try again later.');
+        }
+        setLoading(false);
+      }
+    };
+
+    fetchReportData();
+
+    // Cleanup function to revoke blob URL
+    return () => {
+      if (data?.pdfUrl) {
+        URL.revokeObjectURL(data.pdfUrl);
+      }
+    };
+  }, []);
+
+  const handleBack = () => {
+    navigate(-1);
+  };
+
+  const handleTabChange = (event, newValue) => {
+    setActiveTab(newValue);
+  };
+
+  const onDocumentLoadSuccess = ({ numPages }) => {
+    setNumPages(numPages);
+  };
+
+  const handlePreviousPage = () => {
+    setPageNumber(prev => Math.max(prev - 1, 1));
+  };
+
+  const handleNextPage = () => {
+    setPageNumber(prev => Math.min(prev + 1, numPages || prev));
+  };
+
+  const handleZoomIn = () => {
+    setScale(prev => Math.min(prev + 0.1, 2));
+  };
+
+  const handleZoomOut = () => {
+    setScale(prev => Math.max(prev - 0.1, 0.5));
+  };
+
+  const renderPDFViewer = () => {
+    if (error) {
+      return (
+        <Typography color="error" align="center">
+          {error}
+        </Typography>
+      );
+    }
+
+    if (!data?.pdfUrl) {
+      return (
+        <Typography color="text.secondary" align="center">
+          No PDF file available
+        </Typography>
+      );
+    }
+
+    return (
+      <Suspense fallback={
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
+          <CircularProgress />
+        </Box>
+      }>
+        <PDFViewerContent
+          data={data}
+          pageNumber={pageNumber}
+          numPages={numPages}
+          scale={scale}
+          handlePreviousPage={handlePreviousPage}
+          handleNextPage={handleNextPage}
+          handleZoomOut={handleZoomOut}
+          handleZoomIn={handleZoomIn}
+          onDocumentLoadSuccess={onDocumentLoadSuccess}
+        />
+      </Suspense>
+    );
+  };
+
+  return (
+    <Box sx={{ p: 3 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3, justifyContent: 'space-between' }}>
+        <Typography variant="h5" component="h1">
+          Loss Report Details
+        </Typography>
+        <Button
+          startIcon={<ArrowBackIcon />}
+          onClick={handleBack}
+        >
+          Back
+        </Button>
+      </Box>
+
+      <Paper sx={{ p: 3 }}>
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="subtitle1" color="text.secondary" gutterBottom>
+            Report Name
+          </Typography>
+          <Typography variant="h6">
+            {data?.reportName || `Loss Report - ${claimNo}`}
+          </Typography>
+          
+          <Typography variant="subtitle1" color="text.secondary" sx={{ mt: 2 }} gutterBottom>
+            Claim Number
+          </Typography>
+          <Typography variant="h6">
+            {claimNo}
+          </Typography>
+        </Box>
+
+        <Divider sx={{ my: 2 }} />
+
+        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+          <Tabs 
+            value={activeTab} 
+            onChange={handleTabChange}
+            aria-label="loss report tabs"
+          >
+            <Tab label="Loss Report" />
+            <Tab label="Report Summary" />
+            <Tab label="ChatBot" />
+          </Tabs>
+        </Box>
+
+        <TabPanel value={activeTab} index={0}>
+          {loading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : renderPDFViewer()}
+        </TabPanel>
+
+        <TabPanel value={activeTab} index={1}>
+          <ReportSummary />
+        </TabPanel>
+
+        <TabPanel value={activeTab} index={2}>
+          <Typography>
+            ChatBot Interface
+          </Typography>
+        </TabPanel>
+      </Paper>
+    </Box>
+  );
+}
+
+export default LossReport; 
