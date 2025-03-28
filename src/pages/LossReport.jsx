@@ -58,7 +58,7 @@ function LossReport() {
   const rowData = location.state || {};
   const [data, setData] = useState({
     reportName: rowData.loss_report_name || `Loss Report - ${claimNo}`,
-    ...rowData
+    ...rowData,
   });
   const [activeTab, setActiveTab] = useState(0);
   const [numPages, setNumPages] = useState(null);
@@ -116,9 +116,9 @@ function LossReport() {
         const pdfBlob = new Blob([bytes], { type: 'application/pdf' });
         const pdfUrl = URL.createObjectURL(pdfBlob);
 
-        setData(prevData => ({
+        setData((prevData) => ({
           ...prevData,
-          pdfUrl
+          pdfUrl,
         }));
         setLoading(false);
       } catch (error) {
@@ -286,7 +286,7 @@ function LossReport() {
         </TabPanel>
 
         <TabPanel value={activeTab} index={1}>
-          <ReportSummary claimNo={claimNo} />
+          <ReportSummary reportId={data?.report_id} />
         </TabPanel>
 
         <TabPanel value={activeTab} index={2}>

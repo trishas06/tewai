@@ -5,15 +5,12 @@ import {
   TextField,
   Button,
   Paper,
-  CircularProgress
+  CircularProgress,
 } from '@mui/material';
-import {
-  Edit as EditIcon,
-  Save as SaveIcon
-} from '@mui/icons-material';
+import { Edit as EditIcon, Save as SaveIcon } from '@mui/icons-material';
 import axios from 'axios';
 
-function ReportSummary({ reportId = '67dc62ec5163b4b362573679' }) {
+function ReportSummary({ reportId }) {
   const [isEditingSummary, setIsEditingSummary] = useState(false);
   const [summary, setSummary] = useState('');
   const [originalSummary, setOriginalSummary] = useState('');
@@ -25,32 +22,37 @@ function ReportSummary({ reportId = '67dc62ec5163b4b362573679' }) {
       try {
         setLoading(true);
         setError(null);
-        
+
         const token = localStorage.getItem('token');
         if (!token) {
           throw new Error('Authentication token not found');
         }
+        if (!reportId) {
+          throw new Error('Invalid report ID');
+        }
 
         const response = await axios.get(
-          `${import.meta.env.VITE_API_BASE_URL}/get_summary`, 
+          `${import.meta.env.VITE_API_BASE_URL}/get_summary`,
           {
             params: { report_id: reportId },
             headers: {
-              'Authorization': `Bearer ${token}`
-            }
+              Authorization: `Bearer ${token}`,
+            },
           }
         );
 
         const { summary: reportSummary } = response.data;
         setSummary(reportSummary || '');
         setOriginalSummary(reportSummary || '');
-        
+
         setLoading(false);
       } catch (error) {
         console.error('Error fetching summary data:', error);
-        setError(error.message === 'Authentication token not found' 
-          ? 'Please log in to view the summary.' 
-          : 'Failed to load summary data. Please try again.');
+        setError(
+          error.message === 'Authentication token not found'
+            ? 'Please log in to view the summary.'
+            : 'Failed to load summary data. Please try again.'
+        );
         setLoading(false);
       }
     };
@@ -81,7 +83,9 @@ function ReportSummary({ reportId = '67dc62ec5163b4b362573679' }) {
     <Box>
       {error ? (
         <Paper sx={{ p: 2, mb: 2 }}>
-          <Typography color="error" align="center">{error}</Typography>
+          <Typography color="error" align="center">
+            {error}
+          </Typography>
         </Paper>
       ) : loading ? (
         <Paper sx={{ p: 2, mb: 2 }}>
@@ -92,20 +96,25 @@ function ReportSummary({ reportId = '67dc62ec5163b4b362573679' }) {
       ) : (
         <Paper sx={{ p: 2, mb: 2 }}>
           <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, alignItems: 'center' }}>
+            <Box
+              sx={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                mb: 2,
+                alignItems: 'center',
+              }}
+            >
               <Typography variant="h6">Report Summary</Typography>
               <Box sx={{ display: 'flex', gap: 1 }}>
                 {isEditingSummary && (
-                  <Button
-                    onClick={handleCancelSummary}
-                  >
-                    Cancel
-                  </Button>
+                  <Button onClick={handleCancelSummary}>Cancel</Button>
                 )}
                 <Button
                   variant="contained"
                   startIcon={isEditingSummary ? <SaveIcon /> : <EditIcon />}
-                  onClick={isEditingSummary ? handleSaveSummary : handleEditSummary}
+                  onClick={
+                    isEditingSummary ? handleSaveSummary : handleEditSummary
+                  }
                 >
                   {isEditingSummary ? 'Save' : 'Edit'}
                 </Button>
@@ -121,7 +130,7 @@ function ReportSummary({ reportId = '67dc62ec5163b4b362573679' }) {
                 </Button>
               </Box>
             </Box>
-            
+
             <TextField
               fullWidth
               multiline
@@ -131,17 +140,17 @@ function ReportSummary({ reportId = '67dc62ec5163b4b362573679' }) {
               disabled={!isEditingSummary}
               variant="standard"
               InputProps={{
-                disableUnderline: !isEditingSummary
+                disableUnderline: !isEditingSummary,
               }}
               sx={{
                 '& .MuiInputBase-input.Mui-disabled': {
                   WebkitTextFillColor: 'rgba(0, 0, 0, 0.87)',
                   color: 'text.primary',
-                  padding: 0
+                  padding: 0,
                 },
                 '& .MuiInputBase-root': {
-                  padding: 0
-                }
+                  padding: 0,
+                },
               }}
             />
           </Box>
@@ -151,4 +160,4 @@ function ReportSummary({ reportId = '67dc62ec5163b4b362573679' }) {
   );
 }
 
-export default ReportSummary; 
+export default ReportSummary;
