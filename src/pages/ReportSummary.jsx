@@ -32,7 +32,7 @@ function ReportSummary({ reportId }) {
         }
 
         const response = await axios.get(
-          `${import.meta.env.VITE_API_BASE_URL}/get_summary`,
+          `${import.meta.env.VITE_API_BASE_URL}/get_summary_text`,
           {
             params: { report_id: reportId },
             headers: {
