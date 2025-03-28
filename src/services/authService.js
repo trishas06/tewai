@@ -13,7 +13,7 @@ const authAxios = axios.create({
 export const authService = {
   login: async (username, password) => {
     try {
-      const response = await authAxios.post('/login', { username, password });
+      const response = await authAxios.post('/login_new', { username, password });
       
       if (response.data.token) {
         localStorage.setItem('token', response.data.token);

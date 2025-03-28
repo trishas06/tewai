@@ -6,8 +6,18 @@ import {
   Button,
   Paper,
   CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  IconButton,
 } from '@mui/material';
-import { Edit as EditIcon, Save as SaveIcon } from '@mui/icons-material';
+import { 
+  Edit as EditIcon, 
+  Save as SaveIcon,
+  Close as CloseIcon,
+  Info as InfoIcon,
+} from '@mui/icons-material';
 import axiosInstance from '../utils/axiosInstance';
 
 function ReportSummary({ reportId }) {
@@ -17,6 +27,7 @@ function ReportSummary({ reportId }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  const [openDialog, setOpenDialog] = useState(false);
 
   useEffect(() => {
     const fetchSummaryData = async () => {
@@ -47,8 +58,16 @@ function ReportSummary({ reportId }) {
     fetchSummaryData();
   }, [reportId]);
 
-  const handleEditSummary = () => {
-    setOriginalSummary(summary);
+  const handleEditClick = () => {
+    setOpenDialog(true);
+  };
+
+  const handleDialogClose = () => {
+    setOpenDialog(false);
+  };
+
+  const handleConfirmEdit = () => {
+    setOpenDialog(false);
     setIsEditingSummary(true);
   };
 
@@ -121,7 +140,7 @@ function ReportSummary({ reportId }) {
                 <Button
                   variant="contained"
                   startIcon={isEditingSummary ? <SaveIcon /> : <EditIcon />}
-                  onClick={isEditingSummary ? handleSaveSummary : handleEditSummary}
+                  onClick={isEditingSummary ? handleSaveSummary : handleEditClick}
                   disabled={saving}
                 >
                   {isEditingSummary ? (saving ? 'Saving...' : 'Save') : 'Edit'}
@@ -165,6 +184,51 @@ function ReportSummary({ reportId }) {
           </Box>
         </Paper>
       )}
+
+      <Dialog 
+        open={openDialog} 
+        onClose={handleDialogClose}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: 1,
+          pb: 1
+        }}>
+          <InfoIcon sx={{ color: '#FFA500' }} />
+          <Typography variant="h6">Edit Information</Typography>
+          <IconButton
+            aria-label="close"
+            onClick={handleDialogClose}
+            sx={{
+              position: 'absolute',
+              right: 8,
+              top: 8,
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" sx={{ mt: 2, textAlign: 'justify' }}>
+            Your updated information will be used for model fine-tuning, enhancing its performance. 
+            Providing detailed explanations and reasoning will further improve its accuracy and 
+            effectiveness over time.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, pt: 0 }}>
+          <Button onClick={handleDialogClose}>Cancel</Button>
+          <Button 
+            variant="contained" 
+            onClick={handleConfirmEdit}
+            startIcon={<EditIcon />}
+          >
+            Continue Editing
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

@@ -4,6 +4,7 @@ import { NotificationsOutlined as NotificationsIcon, Logout as LogoutIcon, Circl
 import { useNavigate } from 'react-router-dom';
 import { ColorModeContext } from '../../App';
 import { useTheme } from '@mui/material/styles';
+import logo from '../../assets/images/logo.svg';
 
 function Header({ isExpanded }) {
   const [anchorEl, setAnchorEl] = useState(null);
@@ -98,12 +99,26 @@ function Header({ isExpanded }) {
           easing: theme.transitions.easing.sharp,
           duration: theme.transitions.duration.leavingScreen,
         }),
+        pr: 0,
+        '& .MuiToolbar-root': {
+          pr: 0,
+          minHeight: '64px',
+        }
       }}
     >
-      <Toolbar>
-        <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-          CNC
-        </Typography>
+      <Toolbar sx={{ pr: 0 }}>
+        <Box
+          component="img"
+          src={logo}
+          alt="Logo"
+          sx={{
+            height: '40px',
+            width: 'auto',
+            mr: 1,
+            filter: theme.palette.mode === 'dark' ? 'invert(1)' : 'none'
+          }}
+        />
+        <Box sx={{ flexGrow: 1 }} />
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
           <Tooltip title={theme.palette.mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>
             <IconButton onClick={colorMode.toggleColorMode} color="inherit" sx={{ mr: 1 }}>

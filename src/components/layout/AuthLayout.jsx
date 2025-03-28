@@ -33,9 +33,10 @@ function AuthLayout({ children }) {
         component="main"
         sx={{
           flexGrow: 1,
-          ml: '64px',
+          ml: '24px',
           pt: '64px', // Header height
           pb: '56px', // Footer height
+          pr: '24px',
           minHeight: '100vh',
           transition: theme => theme.transitions.create('margin-left', {
             easing: theme.transitions.easing.sharp,

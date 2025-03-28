@@ -302,7 +302,7 @@ function Dashboard() {
   return (
     <Box sx={{ p: 2 }}>
       <Typography variant="h5" sx={{ mb: 3, fontWeight: 500 }}>
-        Loss Report Extracted
+        Loss Reports
       </Typography>
 
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
