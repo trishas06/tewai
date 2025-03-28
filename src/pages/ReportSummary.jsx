@@ -91,13 +91,12 @@ function ReportSummary({ reportId = '67dc62ec5163b4b362573679' }) {
         </Paper>
       ) : (
         <Paper sx={{ p: 2, mb: 2 }}>
-          <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column' }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, alignItems: 'center' }}>
               <Typography variant="h6">Report Summary</Typography>
-              <Box>
+              <Box sx={{ display: 'flex', gap: 1 }}>
                 {isEditingSummary && (
                   <Button
-                    sx={{ mr: 1 }}
                     onClick={handleCancelSummary}
                   >
                     Cancel
@@ -110,37 +109,41 @@ function ReportSummary({ reportId = '67dc62ec5163b4b362573679' }) {
                 >
                   {isEditingSummary ? 'Save' : 'Edit'}
                 </Button>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={() => {
+                    // TODO: Implement guidance report generation
+                    console.log('Generate guidance report');
+                  }}
+                >
+                  Generate Guidance Report
+                </Button>
               </Box>
             </Box>
             
             <TextField
               fullWidth
               multiline
-              rows={12}
+              minRows={10}
               value={summary}
               onChange={(e) => setSummary(e.target.value)}
               disabled={!isEditingSummary}
+              variant="standard"
+              InputProps={{
+                disableUnderline: !isEditingSummary
+              }}
               sx={{
-                mb: 2,
                 '& .MuiInputBase-input.Mui-disabled': {
                   WebkitTextFillColor: 'rgba(0, 0, 0, 0.87)',
-                  color: 'text.primary'
+                  color: 'text.primary',
+                  padding: 0
+                },
+                '& .MuiInputBase-root': {
+                  padding: 0
                 }
               }}
             />
-            
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <Button
-                variant="contained"
-                color="primary"
-                onClick={() => {
-                  // TODO: Implement guidance report generation
-                  console.log('Generate guidance report');
-                }}
-              >
-                Generate Guidance Report
-              </Button>
-            </Box>
           </Box>
         </Paper>
       )}
