@@ -129,7 +129,7 @@ function LossReport() {
         URL.revokeObjectURL(data.pdfUrl);
       }
     };
-  }, [data?.pdfUrl, rowData.loss_report_name, rowData.report_id]);
+  }, [rowData.loss_report_name, rowData.report_id]);
 
   const handleBack = () => {
     navigate(-1);
