@@ -15,6 +15,7 @@ function ReportSummary({ reportId }) {
   const [summary, setSummary] = useState('');
   const [originalSummary, setOriginalSummary] = useState('');
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -53,10 +54,27 @@ function ReportSummary({ reportId }) {
 
   const handleSaveSummary = async () => {
     try {
-      // TODO: API call to save summary
+      setSaving(true);
+      setError(null);
+
+      if (!reportId) {
+        throw new Error('Invalid report ID');
+      }
+
+      await axiosInstance.post('/edit_summary_text', {
+        report_id: reportId,
+        updated_summary_text: summary,
+      });
+
+      setOriginalSummary(summary);
       setIsEditingSummary(false);
     } catch (error) {
       console.error('Error saving summary:', error);
+      setError(error.response?.data?.message || 'Failed to save summary. Please try again.');
+      // Revert to original summary on error
+      setSummary(originalSummary);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -93,16 +111,20 @@ function ReportSummary({ reportId }) {
               <Typography variant="h6">Report Summary</Typography>
               <Box sx={{ display: 'flex', gap: 1 }}>
                 {isEditingSummary && (
-                  <Button onClick={handleCancelSummary}>Cancel</Button>
+                  <Button 
+                    onClick={handleCancelSummary}
+                    disabled={saving}
+                  >
+                    Cancel
+                  </Button>
                 )}
                 <Button
                   variant="contained"
                   startIcon={isEditingSummary ? <SaveIcon /> : <EditIcon />}
-                  onClick={
-                    isEditingSummary ? handleSaveSummary : handleEditSummary
-                  }
+                  onClick={isEditingSummary ? handleSaveSummary : handleEditSummary}
+                  disabled={saving}
                 >
-                  {isEditingSummary ? 'Save' : 'Edit'}
+                  {isEditingSummary ? (saving ? 'Saving...' : 'Save') : 'Edit'}
                 </Button>
                 <Button
                   variant="contained"
@@ -111,6 +133,7 @@ function ReportSummary({ reportId }) {
                     // TODO: Implement guidance report generation
                     console.log('Generate guidance report');
                   }}
+                  disabled={saving}
                 >
                   Generate Guidance Report
                 </Button>
@@ -123,7 +146,7 @@ function ReportSummary({ reportId }) {
               minRows={10}
               value={summary}
               onChange={(e) => setSummary(e.target.value)}
-              disabled={!isEditingSummary}
+              disabled={!isEditingSummary || saving}
               variant="standard"
               InputProps={{
                 disableUnderline: !isEditingSummary,
