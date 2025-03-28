@@ -226,22 +226,17 @@ function LossReport() {
 
       <Paper sx={{ p: 3 }}>
         <Box sx={{ mb: 3 }}>
-          <Typography variant="subtitle1" color="text.secondary" gutterBottom>
-            Report Name
-          </Typography>
-          <Typography variant="h6">
-            {data?.reportName || `Loss Report - ${claimNo}`}
+          <Typography variant="h6" gutterBottom>
+            Report Name:{' '}
+            <span>{data?.reportName || `Loss Report - ${claimNo}`}</span>
           </Typography>
 
-          <Typography
-            variant="subtitle1"
-            color="text.secondary"
-            sx={{ mt: 2 }}
-            gutterBottom
-          >
-            Claim Number
+          <Typography sx={{ mt: 2 }} gutterBottom>
+            <Button onClick={handleBack}>Loss Report Extracted / </Button>
+            <span>
+              Claim No. <span>{claimNo}</span>
+            </span>
           </Typography>
-          <Typography variant="h6">{claimNo}</Typography>
         </Box>
 
         <Divider sx={{ my: 2 }} />
