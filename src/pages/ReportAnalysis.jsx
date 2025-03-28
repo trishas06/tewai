@@ -10,7 +10,7 @@ import {
   Chip,
 } from '@mui/material';
 import { ExpandMore as ExpandMoreIcon } from '@mui/icons-material';
-import axios from 'axios';
+import axiosInstance from '../utils/axiosInstance';
 
 function ReportAnalysis({ reportId }) {
   const [loading, setLoading] = useState(true);
@@ -36,53 +36,37 @@ function ReportAnalysis({ reportId }) {
         setLoading(true);
         setError(null);
 
-        const token = localStorage.getItem('token');
-        if (!token) {
-          throw new Error('Authentication token not found');
-        }
-
         if (!reportId) {
           throw new Error('Report ID is required');
         }
 
-        const response = await axios.get(
-          `https://floodbot.cnc.claims:7001/get_question_answer`,
+        const response = await axiosInstance.get(
+          '/get_question_answer',
           {
-            params: { report_id: reportId },
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
+            params: { report_id: reportId }
           }
         );
 
-        if (
-          response.data.status === 'success' &&
-          response.data.question_answer
-        ) {
+        if (response.data.status === 'success' && response.data.question_answer) {
           // Group questions by headerKey
-          const groupedData = response.data.question_answer.reduce(
-            (acc, item) => {
-              const headerKey = item.headerKey || 'Other';
-              if (!acc[headerKey]) {
-                acc[headerKey] = [];
-              }
-              // Format the page number before adding to the group
-              acc[headerKey].push({
-                ...item,
-                pageNumber: formatPageNumber(item.pageNumber),
-              });
-              return acc;
-            },
-            {}
-          );
+          const groupedData = response.data.question_answer.reduce((acc, item) => {
+            const headerKey = item.headerKey || 'Other';
+            if (!acc[headerKey]) {
+              acc[headerKey] = [];
+            }
+            // Format the page number before adding to the group
+            acc[headerKey].push({
+              ...item,
+              pageNumber: formatPageNumber(item.pageNumber)
+            });
+            return acc;
+          }, {});
 
           // Convert to array format
-          const formattedData = Object.entries(groupedData).map(
-            ([header, items]) => ({
-              category: header,
-              items,
-            })
-          );
+          const formattedData = Object.entries(groupedData).map(([header, items]) => ({
+            category: header,
+            items
+          }));
 
           setAnalysisData(formattedData);
         } else {
@@ -92,11 +76,7 @@ function ReportAnalysis({ reportId }) {
         setLoading(false);
       } catch (error) {
         console.error('Error fetching analysis data:', error);
-        setError(
-          error.message === 'Authentication token not found'
-            ? 'Please log in to view the analysis.'
-            : 'Failed to load analysis data. Please try again.'
-        );
+        setError('Failed to load analysis data. Please try again.');
         setLoading(false);
       }
     };

@@ -2,10 +2,18 @@ import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
 
+// Create a separate instance for auth-related calls
+const authAxios = axios.create({
+  baseURL: API_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
 export const authService = {
   login: async (username, password) => {
     try {
-      const response = await axios.post(`${API_URL}/login`, { username, password });
+      const response = await authAxios.post('/login', { username, password });
       
       if (response.data.token) {
         localStorage.setItem('token', response.data.token);

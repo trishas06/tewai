@@ -8,7 +8,7 @@ import {
   CircularProgress,
 } from '@mui/material';
 import { Edit as EditIcon, Save as SaveIcon } from '@mui/icons-material';
-import axios from 'axios';
+import axiosInstance from '../utils/axiosInstance';
 
 function ReportSummary({ reportId }) {
   const [isEditingSummary, setIsEditingSummary] = useState(false);
@@ -23,23 +23,13 @@ function ReportSummary({ reportId }) {
         setLoading(true);
         setError(null);
 
-        const token = localStorage.getItem('token');
-        if (!token) {
-          throw new Error('Authentication token not found');
-        }
         if (!reportId) {
           throw new Error('Invalid report ID');
         }
 
-        const response = await axios.get(
-          `${import.meta.env.VITE_API_BASE_URL}/get_summary_text`,
-          {
-            params: { report_id: reportId },
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
+        const response = await axiosInstance.get('/get_summary_text', {
+          params: { report_id: reportId }
+        });
 
         const { summary: reportSummary } = response.data;
         setSummary(reportSummary || '');
@@ -48,11 +38,7 @@ function ReportSummary({ reportId }) {
         setLoading(false);
       } catch (error) {
         console.error('Error fetching summary data:', error);
-        setError(
-          error.message === 'Authentication token not found'
-            ? 'Please log in to view the summary.'
-            : 'Failed to load summary data. Please try again.'
-        );
+        setError('Failed to load summary data. Please try again.');
         setLoading(false);
       }
     };

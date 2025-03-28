@@ -1,20 +1,9 @@
-import axios from 'axios';
-
-const API_URL = import.meta.env.VITE_API_BASE_URL;
+import axiosInstance from '../utils/axiosInstance';
 
 export const dashboardService = {
   getClaimsData: async (page, rowsPerPage, filters = {}, searchTerm = '') => {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('Authentication token not found');
-      }
-
-      const response = await axios.get(`${API_URL}/get_lossreport_data`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const response = await axiosInstance.get('/get_lossreport_data');
 
       // Transform the API response to match our table structure
       let data = response.data.message.map((item) => ({
@@ -107,17 +96,7 @@ export const dashboardService = {
 
   getFilterOptions: async () => {
     try {
-      // Get all data first
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('Authentication token not found');
-      }
-
-      const response = await axios.get(`${API_URL}/get_lossreport_data`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const response = await axiosInstance.get('/get_lossreport_data');
 
       // Transform the data
       const data = response.data.message.map((item) => ({
@@ -157,17 +136,7 @@ export const dashboardService = {
 
   getNotifications: async () => {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('Authentication token not found');
-      }
-
-      const response = await axios.get(`${API_URL}/get_notifications`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
+      const response = await axiosInstance.get('/get_notifications');
       return response.data;
     } catch (error) {
       console.error('Error fetching notifications:', error);

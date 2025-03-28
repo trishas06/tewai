@@ -19,7 +19,7 @@ import {
   NavigateNext as NextIcon,
   NavigateBefore as PrevIcon,
 } from '@mui/icons-material';
-import axios from 'axios';
+import axiosInstance from '../utils/axiosInstance';
 import ReportSummary from './ReportSummary';
 import ReportAnalysis from './ReportAnalysis';
 
@@ -72,29 +72,16 @@ function LossReport() {
         setLoading(true);
         setError(null);
 
-        // Get the token from localStorage
-        const token = localStorage.getItem('token');
-        if (!token) {
-          throw new Error('Authentication token not found');
-        }
-
         if (!rowData.report_id || !rowData.loss_report_name) {
           throw new Error('Missing required report parameters');
         }
 
-        const response = await axios.post(
-          `${import.meta.env.VITE_API_BASE_URL}${
-            import.meta.env.VITE_GET_PDF_ENDPOINT
-          }`,
+        const response = await axiosInstance.post(
+          import.meta.env.VITE_GET_PDF_ENDPOINT,
           {
             report_id: rowData.report_id,
             report_name: rowData.loss_report_name,
             chunk_id: 1,
-          },
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
           }
         );
 
@@ -123,10 +110,7 @@ function LossReport() {
         setLoading(false);
       } catch (error) {
         console.error('Error fetching report data:', error);
-        if (error.message === 'Authentication token not found') {
-          setError('Please log in to view the PDF file.');
-          navigate('/login'); // Redirect to login if token is missing
-        } else if (error.message === 'Missing required report parameters') {
+        if (error.message === 'Missing required report parameters') {
           setError('Missing required report parameters.');
         } else if (error.message === 'Invalid PDF data received') {
           setError('Invalid PDF data received from server.');
@@ -145,7 +129,7 @@ function LossReport() {
         URL.revokeObjectURL(data.pdfUrl);
       }
     };
-  }, []);
+  }, [data?.pdfUrl, rowData.loss_report_name, rowData.report_id]);
 
   const handleBack = () => {
     navigate(-1);
