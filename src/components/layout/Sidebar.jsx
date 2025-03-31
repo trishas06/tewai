@@ -6,6 +6,7 @@ import {
   Settings as SettingsIcon,
   MenuOpen as MenuOpenIcon,
   Menu as MenuIcon,
+  AdminPanelSettings as AdminPanelSettingsIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 
@@ -14,6 +15,7 @@ const collapsedWidth = 64;
 
 const menuItems = [
   { text: 'Dashboard', icon: <DescriptionIcon />, path: '/dashboard' },
+  { text: 'Admin Settings', icon: <AdminPanelSettingsIcon />, path: '/admin-settings' },
   // { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
   // { text: 'Loss Reports', icon: <DescriptionIcon />, path: '/loss-reports' },
   // { text: 'Analytics', icon: <AssessmentIcon />, path: '/analytics' },

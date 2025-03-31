@@ -4,6 +4,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import AuthLayout from './components/layout/AuthLayout';
 import LossReport from './pages/LossReport';
+import AdminSettings from './pages/AdminSettings';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 
@@ -113,6 +114,12 @@ function App() {
             <Route path="/loss-report/:claimNo" element={
               <AuthLayout>
                 <LossReport />
+              </AuthLayout>
+            } 
+            />
+            <Route path="/admin-settings" element={
+              <AuthLayout>
+                <AdminSettings />
               </AuthLayout>
             } 
             />
