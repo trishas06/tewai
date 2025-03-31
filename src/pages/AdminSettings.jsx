@@ -518,7 +518,6 @@ function AdminSettings() {
                   fontWeight="medium"
                   sx={{
                     color: !section.enabled ? 'text.disabled' : 'text.primary',
-                    textDecoration: !section.enabled ? 'line-through' : 'none',
                   }}
                 >
                   {section.category}
@@ -625,11 +624,7 @@ function AdminSettings() {
                         color:
                           prompt.enabled && section.enabled
                             ? 'text.primary'
-                            : 'text.disabled',
-                        textDecoration:
-                          prompt.enabled && section.enabled
-                            ? 'none'
-                            : 'line-through',
+                            : 'text.disabled'
                       }}
                     />
                     {isEditing && (
