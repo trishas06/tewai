@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
   Paper,
@@ -33,45 +33,16 @@ import {
   KeyboardArrowUp as PromptUpIcon,
   KeyboardArrowDown as PromptDownIcon,
   Delete as DeleteIcon,
+  Info as InfoIcon,
+  Close as CloseIcon,
 } from '@mui/icons-material';
-
-// Dummy data structure
-const initialData = [
-  {
-    id: 1,
-    category: 'Property Details',
-    enabled: true,
-    prompts: [
-      { id: 1, question: 'What is the property type?', enabled: true },
-      { id: 2, question: 'What is the construction type?', enabled: true },
-      { id: 3, question: 'What is the year built?', enabled: true },
-    ],
-  },
-  {
-    id: 2,
-    category: 'Loss Information',
-    enabled: true,
-    prompts: [
-      { id: 4, question: 'What is the date of loss?', enabled: true },
-      { id: 5, question: 'What is the cause of loss?', enabled: true },
-      { id: 6, question: 'What is the estimated damage amount?', enabled: true },
-    ],
-  },
-  {
-    id: 3,
-    category: 'Coverage Details',
-    enabled: true,
-    prompts: [
-      { id: 7, question: 'What is the policy number?', enabled: true },
-      { id: 8, question: 'What is the coverage type?', enabled: true },
-      { id: 9, question: 'What is the policy limit?', enabled: true },
-    ],
-  },
-];
+import axiosInstance from '../utils/axiosInstance';
 
 function AdminSettings() {
-  const [data, setData] = useState(initialData);
-  const [backupData, setBackupData] = useState(null);  // Backup for cancel operation
+  const [data, setData] = useState([]);
+  const [backupData, setBackupData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [expandedCategory, setExpandedCategory] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [openPromptDialog, setOpenPromptDialog] = useState(false);
@@ -83,20 +54,52 @@ function AdminSettings() {
   const [newCategoryOrder, setNewCategoryOrder] = useState('');
   const [validationError, setValidationError] = useState('');
   const [newlyAddedCategories, setNewlyAddedCategories] = useState(new Set());
+  const [openInfoDialog, setOpenInfoDialog] = useState(false);
+
+  // Fetch prompts data from API
+  useEffect(() => {
+    const fetchPrompts = async () => {
+      try {
+        const response = await axiosInstance.get('/get_prompts');
+        // Map the response data to match our component's structure
+        const formattedData = response.data.question_answer.map((item) => ({
+          id: item.order, // Using order as id since it's unique
+          category: item.category,
+          enabled: item.questions.every((q) => q.is_enable), // Category is enabled if all questions are enabled
+          order: item.order,
+          prompts: item.questions.map((q) => ({
+            id: q.order,
+            question: q.question,
+            enabled: q.is_enable,
+            order: q.order,
+            type: q.type,
+          })),
+        }));
+        setData(formattedData);
+        setLoading(false);
+      } catch (err) {
+        setError('Failed to load prompts. Please try again later.', err);
+        setLoading(false);
+      }
+    };
+
+    fetchPrompts();
+  }, []);
 
   // Calculate if all items are enabled
-  const isAllEnabled = data.every(category => 
-    category.enabled && category.prompts.every(prompt => prompt.enabled)
+  const isAllEnabled = data.every(
+    (category) =>
+      category.enabled && category.prompts.every((prompt) => prompt.enabled)
   );
 
   const handleToggleAll = () => {
-    const newData = data.map(category => ({
+    const newData = data.map((category) => ({
       ...category,
       enabled: !isAllEnabled,
-      prompts: category.prompts.map(prompt => ({
+      prompts: category.prompts.map((prompt) => ({
         ...prompt,
-        enabled: !isAllEnabled
-      }))
+        enabled: !isAllEnabled,
+      })),
     }));
     setData(newData);
   };
@@ -108,9 +111,15 @@ function AdminSettings() {
   const handleMoveCategory = (categoryIndex, direction) => {
     const newData = [...data];
     if (direction === 'up' && categoryIndex > 0) {
-      [newData[categoryIndex], newData[categoryIndex - 1]] = [newData[categoryIndex - 1], newData[categoryIndex]];
+      [newData[categoryIndex], newData[categoryIndex - 1]] = [
+        newData[categoryIndex - 1],
+        newData[categoryIndex],
+      ];
     } else if (direction === 'down' && categoryIndex < newData.length - 1) {
-      [newData[categoryIndex], newData[categoryIndex + 1]] = [newData[categoryIndex + 1], newData[categoryIndex]];
+      [newData[categoryIndex], newData[categoryIndex + 1]] = [
+        newData[categoryIndex + 1],
+        newData[categoryIndex],
+      ];
     }
     setData(newData);
   };
@@ -118,11 +127,12 @@ function AdminSettings() {
   const handleToggleCategory = (categoryIndex) => {
     const newData = [...data];
     const category = newData[categoryIndex];
-    category.enabled = !category.enabled;
+    const newEnabled = !category.enabled;
+    category.enabled = newEnabled;
     // Toggle all prompts within the category
-    category.prompts = category.prompts.map(prompt => ({
+    category.prompts = category.prompts.map((prompt) => ({
       ...prompt,
-      enabled: category.enabled
+      enabled: newEnabled,
     }));
     setData(newData);
   };
@@ -131,13 +141,19 @@ function AdminSettings() {
     const newData = [...data];
     const category = newData[categoryIndex];
     const prompts = [...category.prompts];
-    
+
     if (direction === 'up' && promptIndex > 0) {
-      [prompts[promptIndex], prompts[promptIndex - 1]] = [prompts[promptIndex - 1], prompts[promptIndex]];
+      [prompts[promptIndex], prompts[promptIndex - 1]] = [
+        prompts[promptIndex - 1],
+        prompts[promptIndex],
+      ];
     } else if (direction === 'down' && promptIndex < prompts.length - 1) {
-      [prompts[promptIndex], prompts[promptIndex + 1]] = [prompts[promptIndex + 1], prompts[promptIndex]];
+      [prompts[promptIndex], prompts[promptIndex + 1]] = [
+        prompts[promptIndex + 1],
+        prompts[promptIndex],
+      ];
     }
-    
+
     newData[categoryIndex] = { ...category, prompts };
     setData(newData);
   };
@@ -148,7 +164,7 @@ function AdminSettings() {
     const prompts = [...category.prompts];
     prompts[promptIndex] = {
       ...prompts[promptIndex],
-      enabled: !prompts[promptIndex].enabled
+      enabled: !prompts[promptIndex].enabled,
     };
     newData[categoryIndex] = { ...category, prompts };
     setData(newData);
@@ -165,12 +181,16 @@ function AdminSettings() {
   const handleSave = () => {
     // Check if any newly added category has no prompts
     const categoriesWithNoPrompts = data
-      .filter(category => newlyAddedCategories.has(category.id))
-      .filter(category => category.prompts.length === 0)
-      .map(category => category.category);
+      .filter((category) => newlyAddedCategories.has(category.id))
+      .filter((category) => category.prompts.length === 0)
+      .map((category) => category.category);
 
     if (categoriesWithNoPrompts.length > 0) {
-      setValidationError(`Please add at least one prompt to the following categories: ${categoriesWithNoPrompts.join(', ')}`);
+      setValidationError(
+        `Please add at least one prompt to the following categories: ${categoriesWithNoPrompts.join(
+          ', '
+        )}`
+      );
       return;
     }
 
@@ -190,7 +210,7 @@ function AdminSettings() {
     setIsEditing(false);
     setValidationError('');
     setNewlyAddedCategories(new Set());
-    setExpandedCategory(null);  // Close any open accordions
+    setExpandedCategory(null); // Close any open accordions
   };
 
   const handleAddPrompt = (category) => {
@@ -217,29 +237,35 @@ function AdminSettings() {
 
   const handleConfirmAddCategory = () => {
     if (newCategory.trim()) {
-      const newId = Math.max(...data.map(c => c.id)) + 1;
+      const newOrder = parseInt(newCategoryOrder) || data.length + 1;
+      const newId = Math.max(...data.map((c) => c.order), 0) + 1;
       const newData = [...data];
-      const orderNum = parseInt(newCategoryOrder) || newData.length + 1;
-      
+
       // Create new category
       const newCategoryItem = {
         id: newId,
         category: newCategory.trim(),
         enabled: true,
-        prompts: []
+        order: newOrder,
+        prompts: [],
       };
 
       // Insert at specific position or append
-      if (orderNum <= 1) {
+      if (newOrder <= 1) {
         newData.unshift(newCategoryItem);
-      } else if (orderNum > newData.length) {
+      } else if (newOrder > newData.length) {
         newData.push(newCategoryItem);
       } else {
-        newData.splice(orderNum - 1, 0, newCategoryItem);
+        newData.splice(newOrder - 1, 0, newCategoryItem);
       }
 
+      // Update orders for all categories
+      newData.forEach((cat, index) => {
+        cat.order = index + 1;
+      });
+
       setData(newData);
-      setNewlyAddedCategories(prev => new Set([...prev, newId]));
+      setNewlyAddedCategories((prev) => new Set([...prev, newId]));
       handleCategoryDialogClose();
       setExpandedCategory(newCategory.trim());
     }
@@ -247,27 +273,34 @@ function AdminSettings() {
 
   const handleConfirmAddPrompt = () => {
     if (newPrompt.trim() && selectedCategory) {
-      const newData = data.map(category => {
+      const newData = data.map((category) => {
         if (category.category === selectedCategory) {
           const prompts = [...category.prompts];
-          const newId = Math.max(...prompts.map(p => p.id), 0) + 1;
-          const orderNum = parseInt(newPromptOrder) || prompts.length + 1;
-          
+          const newOrder = parseInt(newPromptOrder) || prompts.length + 1;
+          const newId = Math.max(...prompts.map((p) => p.order), 0) + 1;
+
           // Create new prompt
           const newPromptItem = {
             id: newId,
             question: newPrompt.trim(),
-            enabled: true
+            enabled: true,
+            order: newOrder,
+            type: 'text', // Default type for new prompts
           };
 
           // Insert at specific position or append
-          if (orderNum <= 1) {
+          if (newOrder <= 1) {
             prompts.unshift(newPromptItem);
-          } else if (orderNum > prompts.length) {
+          } else if (newOrder > prompts.length) {
             prompts.push(newPromptItem);
           } else {
-            prompts.splice(orderNum - 1, 0, newPromptItem);
+            prompts.splice(newOrder - 1, 0, newPromptItem);
           }
+
+          // Update orders for all prompts
+          prompts.forEach((prompt, index) => {
+            prompt.order = index + 1;
+          });
 
           return { ...category, prompts };
         }
@@ -298,6 +331,31 @@ function AdminSettings() {
     setData(newData);
   };
 
+  const handleInfoDialogOpen = () => {
+    setOpenInfoDialog(true);
+  };
+
+  const handleInfoDialogClose = () => {
+    setOpenInfoDialog(false);
+  };
+
+  // Add loading and error states to the UI
+  if (loading) {
+    return (
+      <Box sx={{ p: 3, textAlign: 'center' }}>
+        <Typography>Loading prompts...</Typography>
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Alert severity="error">{error}</Alert>
+      </Box>
+    );
+  }
+
   return (
     <Box>
       <Paper sx={{ p: 2, mb: 2 }}>
@@ -321,20 +379,20 @@ function AdminSettings() {
             {isEditing && (
               <>
                 <Box sx={{ display: 'flex', alignItems: 'center', mr: 2 }}>
-                  <Typography variant="body2" color="text.secondary" sx={{ mr: 1 }}>
-                    Toggle All
-                  </Typography>
                   <Switch
                     checked={isAllEnabled}
                     onChange={handleToggleAll}
                     color="primary"
                   />
+                  <IconButton
+                    size="small"
+                    onClick={handleInfoDialogOpen}
+                    sx={{ ml: 0.5 }}
+                  >
+                    <InfoIcon fontSize="small" color="action" />
+                  </IconButton>
                 </Box>
-                <Button
-                  variant="outlined"
-                  color="error"
-                  onClick={handleCancel}
-                >
+                <Button variant="outlined" color="error" onClick={handleCancel}>
                   Cancel
                 </Button>
               </>
@@ -370,15 +428,16 @@ function AdminSettings() {
             key={section.id}
             expanded={expandedCategory === section.category}
             onChange={handleCategoryChange(section.category)}
-            sx={{ 
+            sx={{
               mb: 1,
               opacity: section.enabled ? 1 : 0.6,
               transition: 'opacity 0.2s ease-in-out',
-              ...(newlyAddedCategories.has(section.id) && section.prompts.length === 0 && {
-                borderColor: 'error.main',
-                borderWidth: 1,
-                borderStyle: 'solid'
-              })
+              ...(newlyAddedCategories.has(section.id) &&
+                section.prompts.length === 0 && {
+                  borderColor: 'error.main',
+                  borderWidth: 1,
+                  borderStyle: 'solid',
+                }),
             }}
           >
             <AccordionSummary
@@ -390,88 +449,72 @@ function AdminSettings() {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  mr: 2
-                }
+                  mr: 2,
+                },
               }}
             >
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                 {isEditing && (
-                  <Box 
-                    sx={{ 
+                  <Box
+                    sx={{
                       display: 'flex',
                       gap: 1,
                       alignItems: 'center',
                     }}
                   >
-                    {categoryIndex === 0 ? (
-                      <IconButton
-                        size="small"
-                        disabled={true}
-                        sx={{ 
-                          bgcolor: 'action.disabledBackground',
-                          width: 24,
-                          height: 24,
-                        }}
-                      >
-                        <PromptUpIcon sx={{ fontSize: 16, color: 'white' }} />
-                      </IconButton>
-                    ) : (
-                      <Tooltip title="Move Up">
+                    <Tooltip title={categoryIndex === 0 ? "" : "Move Up"}>
+                      <span>
                         <IconButton
                           size="small"
+                          disabled={categoryIndex === 0}
                           onClick={(e) => {
                             e.stopPropagation();
                             handleMoveCategory(categoryIndex, 'up');
                           }}
-                          sx={{ 
-                            bgcolor: 'primary.main',
+                          sx={{
+                            bgcolor: categoryIndex === 0 ? 'action.disabledBackground' : 'primary.main',
                             width: 24,
                             height: 24,
                             '&:hover': {
-                              bgcolor: 'primary.dark',
+                              bgcolor: categoryIndex === 0 ? 'action.disabledBackground' : 'primary.dark',
+                            },
+                            '&.Mui-disabled': {
+                              bgcolor: 'action.disabledBackground',
                             }
                           }}
                         >
                           <PromptUpIcon sx={{ fontSize: 16, color: 'white' }} />
                         </IconButton>
-                      </Tooltip>
-                    )}
-                    {categoryIndex === data.length - 1 ? (
-                      <IconButton
-                        size="small"
-                        disabled={true}
-                        sx={{ 
-                          bgcolor: 'action.disabledBackground',
-                          width: 24,
-                          height: 24,
-                        }}
-                      >
-                        <PromptDownIcon sx={{ fontSize: 16, color: 'white' }} />
-                      </IconButton>
-                    ) : (
-                      <Tooltip title="Move Down">
+                      </span>
+                    </Tooltip>
+                    <Tooltip title={categoryIndex === data.length - 1 ? "" : "Move Down"}>
+                      <span>
                         <IconButton
                           size="small"
+                          disabled={categoryIndex === data.length - 1}
                           onClick={(e) => {
                             e.stopPropagation();
                             handleMoveCategory(categoryIndex, 'down');
                           }}
-                          sx={{ 
-                            bgcolor: 'primary.main',
+                          sx={{
+                            bgcolor: categoryIndex === data.length - 1 ? 'action.disabledBackground' : 'primary.main',
                             width: 24,
                             height: 24,
                             '&:hover': {
-                              bgcolor: 'primary.dark',
+                              bgcolor: categoryIndex === data.length - 1 ? 'action.disabledBackground' : 'primary.dark',
+                            },
+                            '&.Mui-disabled': {
+                              bgcolor: 'action.disabledBackground',
                             }
                           }}
                         >
                           <PromptDownIcon sx={{ fontSize: 16, color: 'white' }} />
                         </IconButton>
-                      </Tooltip>
-                    )}
+                      </span>
+                    </Tooltip>
                   </Box>
                 )}
-                <Typography 
+                <Typography
                   fontWeight="medium"
                   sx={{
                     color: !section.enabled ? 'text.disabled' : 'text.primary',
@@ -493,11 +536,11 @@ function AdminSettings() {
                     <IconButton
                       size="small"
                       onClick={(e) => handleDeleteCategory(categoryIndex, e)}
-                      sx={{ 
+                      sx={{
                         color: 'error.main',
                         '&:hover': {
                           bgcolor: 'error.lighter',
-                        }
+                        },
                       }}
                     >
                       <DeleteIcon fontSize="small" />
@@ -521,89 +564,83 @@ function AdminSettings() {
                     }}
                   >
                     {isEditing && (
-                      <Box 
-                        sx={{ 
+                      <Box
+                        sx={{
                           display: 'flex',
                           gap: 1,
                           alignItems: 'center',
-                          mr: 2
+                          mr: 2,
                         }}
                       >
-                        {promptIndex === 0 ? (
-                          <IconButton
-                            size="small"
-                            disabled={true}
-                            sx={{ 
-                              bgcolor: 'action.disabledBackground',
-                              width: 24,
-                              height: 24,
-                            }}
-                          >
-                            <PromptUpIcon sx={{ fontSize: 16, color: 'white' }} />
-                          </IconButton>
-                        ) : (
-                          <Tooltip title="Move Up">
+                        <Tooltip title={promptIndex === 0 ? "" : "Move Up"}>
+                          <span>
                             <IconButton
                               size="small"
+                              disabled={promptIndex === 0}
                               onClick={() => handleMovePrompt(categoryIndex, promptIndex, 'up')}
-                              sx={{ 
-                                bgcolor: 'primary.main',
+                              sx={{
+                                bgcolor: promptIndex === 0 ? 'action.disabledBackground' : 'primary.main',
                                 width: 24,
                                 height: 24,
                                 '&:hover': {
-                                  bgcolor: 'primary.dark',
+                                  bgcolor: promptIndex === 0 ? 'action.disabledBackground' : 'primary.dark',
+                                },
+                                '&.Mui-disabled': {
+                                  bgcolor: 'action.disabledBackground',
                                 }
                               }}
                             >
                               <PromptUpIcon sx={{ fontSize: 16, color: 'white' }} />
                             </IconButton>
-                          </Tooltip>
-                        )}
-                        {promptIndex === section.prompts.length - 1 ? (
-                          <IconButton
-                            size="small"
-                            disabled={true}
-                            sx={{ 
-                              bgcolor: 'action.disabledBackground',
-                              width: 24,
-                              height: 24,
-                            }}
-                          >
-                            <PromptDownIcon sx={{ fontSize: 16, color: 'white' }} />
-                          </IconButton>
-                        ) : (
-                          <Tooltip title="Move Down">
+                          </span>
+                        </Tooltip>
+                        <Tooltip title={promptIndex === section.prompts.length - 1 ? "" : "Move Down"}>
+                          <span>
                             <IconButton
                               size="small"
+                              disabled={promptIndex === section.prompts.length - 1}
                               onClick={() => handleMovePrompt(categoryIndex, promptIndex, 'down')}
-                              sx={{ 
-                                bgcolor: 'primary.main',
+                              sx={{
+                                bgcolor: promptIndex === section.prompts.length - 1 ? 'action.disabledBackground' : 'primary.main',
                                 width: 24,
                                 height: 24,
                                 '&:hover': {
-                                  bgcolor: 'primary.dark',
+                                  bgcolor: promptIndex === section.prompts.length - 1 ? 'action.disabledBackground' : 'primary.dark',
+                                },
+                                '&.Mui-disabled': {
+                                  bgcolor: 'action.disabledBackground',
                                 }
                               }}
                             >
                               <PromptDownIcon sx={{ fontSize: 16, color: 'white' }} />
                             </IconButton>
-                          </Tooltip>
-                        )}
+                          </span>
+                        </Tooltip>
                       </Box>
                     )}
                     <ListItemText
                       primary={prompt.question}
                       primaryTypographyProps={{
                         variant: 'body2',
-                        color: prompt.enabled && section.enabled ? 'text.primary' : 'text.disabled',
-                        textDecoration: prompt.enabled && section.enabled ? 'none' : 'line-through',
+                        color:
+                          prompt.enabled && section.enabled
+                            ? 'text.primary'
+                            : 'text.disabled',
+                        textDecoration:
+                          prompt.enabled && section.enabled
+                            ? 'none'
+                            : 'line-through',
                       }}
                     />
                     {isEditing && (
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Box
+                        sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+                      >
                         <Switch
                           checked={prompt.enabled && section.enabled}
-                          onChange={() => handleTogglePrompt(categoryIndex, promptIndex)}
+                          onChange={() =>
+                            handleTogglePrompt(categoryIndex, promptIndex)
+                          }
                           color="primary"
                           disabled={!section.enabled}
                           onClick={(e) => e.stopPropagation()}
@@ -611,12 +648,14 @@ function AdminSettings() {
                         <Tooltip title="Delete Prompt">
                           <IconButton
                             size="small"
-                            onClick={() => handleDeletePrompt(categoryIndex, promptIndex)}
-                            sx={{ 
+                            onClick={() =>
+                              handleDeletePrompt(categoryIndex, promptIndex)
+                            }
+                            sx={{
                               color: 'error.main',
                               '&:hover': {
                                 bgcolor: 'error.lighter',
-                              }
+                              },
                             }}
                           >
                             <DeleteIcon fontSize="small" />
@@ -643,12 +682,77 @@ function AdminSettings() {
         ))}
       </Paper>
 
+      {/* Info Dialog */}
+      <Dialog
+        open={openInfoDialog}
+        onClose={handleInfoDialogClose}
+        PaperProps={{
+          sx: { 
+            width: '100%', 
+            maxWidth: 600,
+            borderRadius: 1,
+            '& .MuiDialogTitle-root': {
+              borderBottom: '1px solid',
+              borderColor: 'divider',
+              bgcolor: 'background.default'
+            }
+          }
+        }}
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <InfoIcon sx={{ color: '#FFB400' }} />
+          Prompts
+          <IconButton
+            aria-label="close"
+            onClick={handleInfoDialogClose}
+            sx={{
+              position: 'absolute',
+              right: 8,
+              top: 8,
+              color: 'text.secondary'
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ mt: 2 }}>
+          <Typography variant="body1" sx={{ mb: 2 }}>
+            This switch allows you to enable or disable all categories and their prompts at once:
+          </Typography>
+          <Box sx={{ pl: 2 }}>
+            <Typography variant="body1" component="div" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+              <span style={{ fontSize: '1.5em' }}>•</span> When turned ON: Enables all categories and their prompts
+            </Typography>
+            <Typography variant="body1" component="div" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+              <span style={{ fontSize: '1.5em' }}>•</span> When turned OFF: Disables all categories and their prompts
+            </Typography>
+          </Box>
+          <Typography variant="body1" sx={{ mt: 2, color: 'text.secondary', fontStyle: 'italic' }}>
+            Note: You can still individually toggle categories and prompts after using this switch.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ 
+          p: 2, 
+          borderTop: '1px solid',
+          borderColor: 'divider',
+          bgcolor: 'background.default'
+        }}>
+          <Button 
+            onClick={handleInfoDialogClose}
+            variant="contained"
+            sx={{ minWidth: 100 }}
+          >
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       {/* Add Prompt Dialog */}
-      <Dialog 
-        open={openPromptDialog} 
+      <Dialog
+        open={openPromptDialog}
         onClose={handlePromptDialogClose}
         PaperProps={{
-          sx: { width: '100%', maxWidth: 500 }
+          sx: { width: '100%', maxWidth: 500 },
         }}
       >
         <DialogTitle>Add New Prompt</DialogTitle>
@@ -675,12 +779,15 @@ function AdminSettings() {
                   setNewPromptOrder(value);
                 }
               }}
-              placeholder={`Enter order (1-${selectedCategory ? 
-                data.find(c => c.category === selectedCategory)?.prompts.length + 1 || 1 
-                : 1})`}
+              placeholder={`Enter order (1-${
+                selectedCategory
+                  ? data.find((c) => c.category === selectedCategory)?.prompts
+                      .length + 1 || 1
+                  : 1
+              })`}
               sx={{ mb: 1 }}
               InputProps={{
-                inputProps: { min: 1 }
+                inputProps: { min: 1 },
               }}
               helperText="Leave empty to add at the end"
             />
@@ -688,8 +795,8 @@ function AdminSettings() {
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={handlePromptDialogClose}>Cancel</Button>
-          <Button 
-            onClick={handleConfirmAddPrompt} 
+          <Button
+            onClick={handleConfirmAddPrompt}
             variant="contained"
             disabled={!newPrompt.trim()}
           >
@@ -699,11 +806,11 @@ function AdminSettings() {
       </Dialog>
 
       {/* Add Category Dialog */}
-      <Dialog 
-        open={openCategoryDialog} 
+      <Dialog
+        open={openCategoryDialog}
         onClose={handleCategoryDialogClose}
         PaperProps={{
-          sx: { width: '100%', maxWidth: 500 }
+          sx: { width: '100%', maxWidth: 500 },
         }}
       >
         <DialogTitle>Add New Category</DialogTitle>
@@ -731,7 +838,7 @@ function AdminSettings() {
               placeholder={`Enter order (1-${data.length + 1})`}
               sx={{ mb: 1 }}
               InputProps={{
-                inputProps: { min: 1 }
+                inputProps: { min: 1 },
               }}
               helperText="Leave empty to add at the end"
             />
@@ -739,8 +846,8 @@ function AdminSettings() {
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={handleCategoryDialogClose}>Cancel</Button>
-          <Button 
-            onClick={handleConfirmAddCategory} 
+          <Button
+            onClick={handleConfirmAddCategory}
             variant="contained"
             disabled={!newCategory.trim()}
           >
@@ -752,4 +859,4 @@ function AdminSettings() {
   );
 }
 
-export default AdminSettings; 
+export default AdminSettings;
