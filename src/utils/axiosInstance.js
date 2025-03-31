@@ -1,5 +1,11 @@
 import axios from 'axios';
 
+// Create a custom event for session timeout
+export const SESSION_TIMEOUT_EVENT = 'sessionTimeout';
+export const triggerSessionTimeout = () => {
+  window.dispatchEvent(new Event(SESSION_TIMEOUT_EVENT));
+};
+
 const axiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
   headers: {
@@ -25,10 +31,13 @@ axiosInstance.interceptors.request.use(
 axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      // Handle unauthorized access
+    if (error.response?.status === 403 || error.response?.status === 401) {
+      // Clear user data
       localStorage.removeItem('token');
-      window.location.href = '/login';
+      localStorage.removeItem('user');
+      
+      // Trigger session timeout event
+      triggerSessionTimeout();
     }
     return Promise.reject(error);
   }
