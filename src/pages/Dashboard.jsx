@@ -299,6 +299,11 @@ function Dashboard() {
     });
   };
 
+  // Add this function at the top of the component
+  const generateUniqueKey = (row) => {
+    return `${row.claimNo}-${row.createdOn}-${row.policyNo}`;
+  };
+
   return (
     <Box sx={{ p: 2 }}>
       <Typography variant="h5" sx={{ mb: 3, fontWeight: 500 }}>
@@ -367,7 +372,7 @@ function Dashboard() {
               </TableRow>
             ) : (
               rows.map((row) => (
-                <TableRow key={row.claimNo} hover>
+                <TableRow key={generateUniqueKey(row)} hover>
                   <TableCell>{row.claimNo}</TableCell>
                   <TableCell>{row.carrier}</TableCell>
                   <TableCell>{row.policyNo}</TableCell>

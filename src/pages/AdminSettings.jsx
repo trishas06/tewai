@@ -56,6 +56,11 @@ function AdminSettings() {
   const [newlyAddedCategories, setNewlyAddedCategories] = useState(new Set());
   const [openInfoDialog, setOpenInfoDialog] = useState(false);
 
+  // Add this function at the top of the component
+  const generateUniqueId = () => {
+    return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  };
+
   // Fetch prompts data from API
   useEffect(() => {
     const fetchPrompts = async () => {
@@ -63,12 +68,12 @@ function AdminSettings() {
         const response = await axiosInstance.get('/get_prompts');
         // Map the response data to match our component's structure
         const formattedData = response.data.question_answer.map((item) => ({
-          id: item.order, // Using order as id since it's unique
+          id: generateUniqueId(), // Generate unique id instead of using order
           category: item.category,
           enabled: item.questions.every((q) => q.is_enable), // Category is enabled if all questions are enabled
           order: item.order,
           prompts: item.questions.map((q) => ({
-            id: q.order,
+            id: generateUniqueId(), // Generate unique id for prompts too
             question: q.question,
             enabled: q.is_enable,
             order: q.order,
@@ -77,8 +82,8 @@ function AdminSettings() {
         }));
         setData(formattedData);
         setLoading(false);
-      } catch (err) {
-        setError('Failed to load prompts. Please try again later.', err);
+      } catch {
+        setError('Failed to load prompts. Please try again later.');
         setLoading(false);
       }
     };
@@ -111,15 +116,23 @@ function AdminSettings() {
   const handleMoveCategory = (categoryIndex, direction) => {
     const newData = [...data];
     if (direction === 'up' && categoryIndex > 0) {
+      // Swap categories
       [newData[categoryIndex], newData[categoryIndex - 1]] = [
         newData[categoryIndex - 1],
         newData[categoryIndex],
       ];
+      // Update orders
+      newData[categoryIndex].order = categoryIndex + 1;
+      newData[categoryIndex - 1].order = categoryIndex;
     } else if (direction === 'down' && categoryIndex < newData.length - 1) {
+      // Swap categories
       [newData[categoryIndex], newData[categoryIndex + 1]] = [
         newData[categoryIndex + 1],
         newData[categoryIndex],
       ];
+      // Update orders
+      newData[categoryIndex].order = categoryIndex + 1;
+      newData[categoryIndex + 1].order = categoryIndex + 2;
     }
     setData(newData);
   };
@@ -143,15 +156,23 @@ function AdminSettings() {
     const prompts = [...category.prompts];
 
     if (direction === 'up' && promptIndex > 0) {
+      // Swap prompts
       [prompts[promptIndex], prompts[promptIndex - 1]] = [
         prompts[promptIndex - 1],
         prompts[promptIndex],
       ];
+      // Update orders
+      prompts[promptIndex].order = promptIndex + 1;
+      prompts[promptIndex - 1].order = promptIndex;
     } else if (direction === 'down' && promptIndex < prompts.length - 1) {
+      // Swap prompts
       [prompts[promptIndex], prompts[promptIndex + 1]] = [
         prompts[promptIndex + 1],
         prompts[promptIndex],
       ];
+      // Update orders
+      prompts[promptIndex].order = promptIndex + 1;
+      prompts[promptIndex + 1].order = promptIndex + 2;
     }
 
     newData[categoryIndex] = { ...category, prompts };
@@ -162,10 +183,21 @@ function AdminSettings() {
     const newData = [...data];
     const category = newData[categoryIndex];
     const prompts = [...category.prompts];
+    const newPromptEnabled = !prompts[promptIndex].enabled;
+
     prompts[promptIndex] = {
       ...prompts[promptIndex],
-      enabled: !prompts[promptIndex].enabled,
+      enabled: newPromptEnabled,
     };
+
+    // If category has only one prompt, toggle category status along with the prompt
+    if (prompts.length === 1) {
+      category.enabled = newPromptEnabled;
+    } else {
+      // For categories with multiple prompts, category is enabled only if any prompt is enabled
+      category.enabled = prompts.some((prompt) => prompt.enabled);
+    }
+
     newData[categoryIndex] = { ...category, prompts };
     setData(newData);
   };
@@ -178,7 +210,7 @@ function AdminSettings() {
     setNewlyAddedCategories(new Set());
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     // Check if any newly added category has no prompts
     const categoriesWithNoPrompts = data
       .filter((category) => newlyAddedCategories.has(category.id))
@@ -194,11 +226,33 @@ function AdminSettings() {
       return;
     }
 
-    // Clear backup as we're committing the changes
-    setBackupData(null);
-    setIsEditing(false);
-    setValidationError('');
-    setNewlyAddedCategories(new Set());
+    try {
+      // Format data according to API structure
+      const formattedData = {
+        question_answer: data.map((category) => ({
+          category: category.category,
+          order: category.order,
+          questions: category.prompts.map((prompt) => ({
+            is_enable: prompt.enabled,
+            order: prompt.order,
+            question: prompt.question,
+            type: prompt.type || 'text', // Use existing type or default to 'text'
+          })),
+        })),
+      };
+
+      // Make API call to update prompts
+      await axiosInstance.post('/update_default_prompts', formattedData);
+
+      // Clear backup as we're committing the changes
+      setBackupData(null);
+      setIsEditing(false);
+      setValidationError('');
+      setNewlyAddedCategories(new Set());
+    } catch (err) {
+      setValidationError('Failed to save changes. Please try again.');
+      console.error('Error saving prompts:', err);
+    }
   };
 
   const handleCancel = () => {
@@ -238,7 +292,7 @@ function AdminSettings() {
   const handleConfirmAddCategory = () => {
     if (newCategory.trim()) {
       const newOrder = parseInt(newCategoryOrder) || data.length + 1;
-      const newId = Math.max(...data.map((c) => c.order), 0) + 1;
+      const newId = generateUniqueId(); // Use the new unique id generator
       const newData = [...data];
 
       // Create new category
@@ -277,7 +331,7 @@ function AdminSettings() {
         if (category.category === selectedCategory) {
           const prompts = [...category.prompts];
           const newOrder = parseInt(newPromptOrder) || prompts.length + 1;
-          const newId = Math.max(...prompts.map((p) => p.order), 0) + 1;
+          const newId = generateUniqueId(); // Use the new unique id generator
 
           // Create new prompt
           const newPromptItem = {
@@ -315,6 +369,12 @@ function AdminSettings() {
     event.stopPropagation();
     const newData = [...data];
     newData.splice(categoryIndex, 1);
+
+    // Update order for remaining categories
+    newData.forEach((category, index) => {
+      category.order = index + 1;
+    });
+
     setData(newData);
     // If the deleted category was expanded, collapse it
     if (expandedCategory === data[categoryIndex].category) {
@@ -327,6 +387,12 @@ function AdminSettings() {
     const category = newData[categoryIndex];
     const prompts = [...category.prompts];
     prompts.splice(promptIndex, 1);
+
+    // Update order for remaining prompts
+    prompts.forEach((prompt, index) => {
+      prompt.order = index + 1;
+    });
+
     newData[categoryIndex] = { ...category, prompts };
     setData(newData);
   };
@@ -487,6 +553,7 @@ function AdminSettings() {
                         </IconButton>
                       </span>
                     </Tooltip>
+
                     <Tooltip title={categoryIndex === data.length - 1 ? "" : "Move Down"}>
                       <span>
                         <IconButton
@@ -593,6 +660,7 @@ function AdminSettings() {
                             </IconButton>
                           </span>
                         </Tooltip>
+
                         <Tooltip title={promptIndex === section.prompts.length - 1 ? "" : "Move Down"}>
                           <span>
                             <IconButton
@@ -624,7 +692,7 @@ function AdminSettings() {
                         color:
                           prompt.enabled && section.enabled
                             ? 'text.primary'
-                            : 'text.disabled'
+                            : 'text.disabled',
                       }}
                     />
                     {isEditing && (
@@ -682,16 +750,16 @@ function AdminSettings() {
         open={openInfoDialog}
         onClose={handleInfoDialogClose}
         PaperProps={{
-          sx: { 
-            width: '100%', 
+          sx: {
+            width: '100%',
             maxWidth: 600,
             borderRadius: 1,
             '& .MuiDialogTitle-root': {
               borderBottom: '1px solid',
               borderColor: 'divider',
-              bgcolor: 'background.default'
-            }
-          }
+              bgcolor: 'background.default',
+            },
+          },
         }}
       >
         <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -704,7 +772,7 @@ function AdminSettings() {
               position: 'absolute',
               right: 8,
               top: 8,
-              color: 'text.secondary'
+              color: 'text.secondary',
             }}
           >
             <CloseIcon />
@@ -712,27 +780,45 @@ function AdminSettings() {
         </DialogTitle>
         <DialogContent sx={{ mt: 2 }}>
           <Typography variant="body1" sx={{ mb: 2 }}>
-            This switch allows you to enable or disable all categories and their prompts at once:
+            This switch allows you to enable or disable all categories and their
+            prompts at once:
           </Typography>
           <Box sx={{ pl: 2 }}>
-            <Typography variant="body1" component="div" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-              <span style={{ fontSize: '1.5em' }}>•</span> When turned ON: Enables all categories and their prompts
+            <Typography
+              variant="body1"
+              component="div"
+              sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}
+            >
+              <span style={{ fontSize: '1.5em' }}>•</span> When turned ON:
+              Enables all categories and their prompts
             </Typography>
-            <Typography variant="body1" component="div" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-              <span style={{ fontSize: '1.5em' }}>•</span> When turned OFF: Disables all categories and their prompts
+            <Typography
+              variant="body1"
+              component="div"
+              sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}
+            >
+              <span style={{ fontSize: '1.5em' }}>•</span> When turned OFF:
+              Disabled in case all/any of categories and their prompts are
+              disabled
             </Typography>
           </Box>
-          <Typography variant="body1" sx={{ mt: 2, color: 'text.secondary', fontStyle: 'italic' }}>
-            Note: You can still individually toggle categories and prompts after using this switch.
+          <Typography
+            variant="body1"
+            sx={{ mt: 2, color: 'text.secondary', fontStyle: 'italic' }}
+          >
+            Note: You can still individually toggle categories and prompts after
+            using this switch.
           </Typography>
         </DialogContent>
-        <DialogActions sx={{ 
-          p: 2, 
-          borderTop: '1px solid',
-          borderColor: 'divider',
-          bgcolor: 'background.default'
-        }}>
-          <Button 
+        <DialogActions
+          sx={{
+            p: 2,
+            borderTop: '1px solid',
+            borderColor: 'divider',
+            bgcolor: 'background.default',
+          }}
+        >
+          <Button
             onClick={handleInfoDialogClose}
             variant="contained"
             sx={{ minWidth: 100 }}
