@@ -12,7 +12,10 @@ import {
   CircularProgress,
   useTheme,
 } from '@mui/material';
-import { Search as SearchIcon } from '@mui/icons-material';
+import {
+  Search as SearchIcon,
+  QuestionAnswer as QuestionAnswerIcon,
+} from '@mui/icons-material';
 import axiosInstance from '../utils/axiosInstance';
 
 export default function PredefinedQuestions({ onQuestionSelect }) {
@@ -27,7 +30,9 @@ export default function PredefinedQuestions({ onQuestionSelect }) {
       try {
         const response = await axiosInstance.get('/get_default_chat');
         if (response.data.status === 'success' && response.data.chat_faq) {
-          const sortedQuestions = response.data.chat_faq.sort((a, b) => a.Order - b.Order);
+          const sortedQuestions = response.data.chat_faq.sort(
+            (a, b) => a.Order - b.Order
+          );
           setQuestions(sortedQuestions);
         } else {
           setError('Failed to load questions');
@@ -43,7 +48,7 @@ export default function PredefinedQuestions({ onQuestionSelect }) {
     fetchQuestions();
   }, []);
 
-  const filteredQuestions = questions.filter(q => 
+  const filteredQuestions = questions.filter((q) =>
     q.question.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -80,10 +85,10 @@ export default function PredefinedQuestions({ onQuestionSelect }) {
           {filteredQuestions.length} Questions
         </Typography>
       </Typography>
-      <Box 
-        sx={{ 
-          p: 2.5, 
-          borderBottom: 1, 
+      <Box
+        sx={{
+          p: 2.5,
+          borderBottom: 1,
           borderColor: 'divider',
           bgcolor: theme.palette.background.paper,
         }}
@@ -117,10 +122,10 @@ export default function PredefinedQuestions({ onQuestionSelect }) {
           }}
         />
       </Box>
-      <List 
-        sx={{ 
-          overflow: 'auto', 
-          flex: 1, 
+      <List
+        sx={{
+          overflow: 'auto',
+          flex: 1,
           position: 'relative',
           py: 0,
           '&::-webkit-scrollbar': {
@@ -139,72 +144,88 @@ export default function PredefinedQuestions({ onQuestionSelect }) {
         }}
       >
         {loading ? (
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'center', 
-            alignItems: 'center',
-            height: '100%',
-            minHeight: 200,
-          }}>
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              height: '100%',
+              minHeight: 200,
+            }}
+          >
             <CircularProgress size={32} />
           </Box>
         ) : error ? (
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'center', 
-            alignItems: 'center',
-            height: '100%',
-            color: 'error.main',
-            minHeight: 200,
-          }}>
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              height: '100%',
+              color: 'error.main',
+              minHeight: 200,
+            }}
+          >
             <Typography>{error}</Typography>
           </Box>
         ) : (
           filteredQuestions.map((q, index) => (
-            <ListItem 
-              key={q.Order} 
-              disablePadding 
-              sx={{
-                borderBottom: index !== filteredQuestions.length - 1 ? `1px solid ${theme.palette.divider}` : 'none',
-              }}
-            >
-              <ListItemButton 
-                onClick={() => onQuestionSelect(q.question)}
+            <Box key={q.Order} sx={{ display: 'flex', alignItems: 'stretch' }}>
+              <QuestionAnswerIcon 
+                sx={{ 
+                  color: 'primary.main',
+                  alignSelf: 'center',
+                  ml: 2.5
+                }} 
+              />
+              <ListItem
+                disablePadding
                 sx={{
-                  py: 2,
-                  px: 2.5,
-                  '&:hover': {
-                    bgcolor: theme.palette.primary.light + '20',
-                  },
-                  '&.Mui-selected': {
-                    bgcolor: theme.palette.primary.light + '40',
-                    '&:hover': {
-                      bgcolor: theme.palette.primary.light + '50',
-                    },
-                  },
+                  borderBottom:
+                    index !== filteredQuestions.length - 1
+                      ? `1px solid ${theme.palette.divider}`
+                      : 'none',
+                  flex: 1,
                 }}
               >
-                <ListItemText 
-                  primary={q.question}
-                  primaryTypographyProps={{
-                    sx: { 
-                      display: '-webkit-box',
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: 'vertical',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      lineHeight: 1.4,
-                      color: theme.palette.text.primary,
-                      fontSize: '0.95rem',
-                      fontWeight: 400,
-                    }
+                <ListItemButton
+                  onClick={() => onQuestionSelect(q.question)}
+                  sx={{
+                    py: 2,
+                    px: 2.5,
+                    '&:hover': {
+                      bgcolor: theme.palette.primary.light + '20',
+                    },
+                    '&.Mui-selected': {
+                      bgcolor: theme.palette.primary.light + '40',
+                      '&:hover': {
+                        bgcolor: theme.palette.primary.light + '50',
+                      },
+                    },
                   }}
-                />
-              </ListItemButton>
-            </ListItem>
+                >
+                  <ListItemText
+                    primary={q.question}
+                    primaryTypographyProps={{
+                      sx: {
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        lineHeight: 1.4,
+                        color: theme.palette.text.primary,
+                        fontSize: '0.95rem',
+                        fontWeight: 400,
+                      },
+                    }}
+                  />
+                </ListItemButton>
+              </ListItem>
+            </Box>
           ))
         )}
       </List>
     </Paper>
   );
-} 
+}
