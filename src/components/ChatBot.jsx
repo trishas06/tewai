@@ -1,21 +1,9 @@
-import { useState, useRef, useEffect } from 'react';
-import {
-  Box,
-  Paper,
-  TextField,
-  IconButton,
-  Typography,
-  Avatar,
-  CircularProgress,
-} from '@mui/material';
-import {
-  Send as SendIcon,
-  Person as PersonIcon,
-  SmartToy as SmartToyIcon,
-  Edit as EditIcon,
-} from '@mui/icons-material';
+import { useState, useEffect } from 'react';
+import { Box } from '@mui/material';
 import { io } from 'socket.io-client';
 import axiosInstance from '../utils/axiosInstance';
+import PredefinedQuestions from './PredefinedQuestions';
+import ChatArea from './ChatArea';
 
 export default function ChatBot({ reportId, userId, selectedfaq }) {
   const [messages, setMessages] = useState([]);
@@ -27,7 +15,6 @@ export default function ChatBot({ reportId, userId, selectedfaq }) {
   const [isLoading, setIsLoading] = useState(false);
   const [editingMessageContent, setEditingMessageContent] = useState('');
   const [editingPageReference, setEditingPageReference] = useState('');
-  const scrollableDivRef = useRef(null);
 
   useEffect(() => {
     const newSocket = io(import.meta.env.VITE_API_BASE_URL);
@@ -64,20 +51,15 @@ export default function ChatBot({ reportId, userId, selectedfaq }) {
     };
   }, [selectedfaq]);
 
-  useEffect(() => {
-    if (scrollableDivRef.current) {
-      scrollableDivRef.current.scrollTop =
-        scrollableDivRef.current.scrollHeight;
-    }
-  }, [messages, chatHistory]);
-
   const generateMessageId = () => {
-    const timestamp = new Date().getTime();
-    return `${timestamp}-${Math.random().toString(36).substr(2, 9)}`;
+    return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   };
 
   const addMessage = (role, content, pageReference = '', messageId = null) => {
-    const timestamp = messageId || new Date().getTime();
+    const date = new Date();
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const timestamp = messageId || `${days[date.getUTCDay()]} ${months[date.getUTCMonth()]} ${date.getUTCDate().toString().padStart(2, '0')} ${date.getUTCFullYear()} ${date.getUTCHours().toString().padStart(2, '0')}:${date.getUTCMinutes().toString().padStart(2, '0')}:${date.getUTCSeconds().toString().padStart(2, '0')}`;
     setMessages((prev) => [
       ...prev,
       {
@@ -116,7 +98,7 @@ export default function ChatBot({ reportId, userId, selectedfaq }) {
           messageId: generateMessageId(),
           role: 'user',
           content: chatArray[0],
-          timestamp: parseInt(timestamp)
+          timestamp
         });
         if (chatArray.length > 1) {
           const answer = chatArray[1];
@@ -126,7 +108,7 @@ export default function ChatBot({ reportId, userId, selectedfaq }) {
             role: 'bot',
             content: answer,
             pageReference: pageReference,
-            timestamp: parseInt(timestamp)
+            timestamp
           });
         }
       }
@@ -134,9 +116,10 @@ export default function ChatBot({ reportId, userId, selectedfaq }) {
     return messages;
   };
 
-  const handleSendQuestion = () => {
+  const handleSendQuestion = (questionText = null) => {
+    const textToSend = questionText || question;
     if (isLoading) return;
-    if (!question.trim()) {
+    if (!textToSend.trim()) {
       alert('Please type a message before sending.');
       return;
     }
@@ -147,13 +130,13 @@ export default function ChatBot({ reportId, userId, selectedfaq }) {
     }
 
     setIsLoading(true);
-    addMessage('user', question);
+    addMessage('user', textToSend);
 
     if (socket) {
       socket.emit('ask_question', {
         loss_report_id: reportId,
         user_id: userId,
-        question: question,
+        question: textToSend,
         session_id: sessionId,
       });
     }
@@ -197,231 +180,23 @@ export default function ChatBot({ reportId, userId, selectedfaq }) {
   };
 
   return (
-    <Paper
-      elevation={3}
-      sx={{
-        height: 'calc(100vh - 300px)',
-        width: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        bgcolor: 'background.paper',
-        maxWidth: '100%',
-      }}
-    >
-      <Box
-        ref={scrollableDivRef}
-        sx={{
-          flex: 1,
-          overflowY: 'auto',
-          p: 2,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 2,
-        }}
-      >
-        {[...chatHistory, ...messages].length === 0 ? (
-          <Box
-            sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              height: '100%',
-              gap: 2,
-              color: 'text.secondary',
-            }}
-          >
-            <Typography variant="h6">
-              Welcome to the Chat Assistant! 👋
-            </Typography>
-            <Typography variant="body1" textAlign="center">
-              Start the conversation by typing your question below. I'm here to
-              help you with your loss report queries.
-            </Typography>
-          </Box>
-        ) : (
-          [...chatHistory, ...messages].map((msg) => (
-            <Box
-              key={msg.messageId}
-              sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start',
-                width: '100%',
-              }}
-            >
-              <Box
-                sx={{
-                  display: 'flex',
-                  flexDirection: msg.role === 'user' ? 'row-reverse' : 'row',
-                  alignItems: 'flex-start',
-                  gap: 1,
-                  width: '100%',
-                }}
-              >
-                <Avatar
-                  sx={{
-                    width: 32,
-                    height: 32,
-                    bgcolor:
-                      msg.role === 'user' ? 'primary.main' : 'secondary.main',
-                    border: 1,
-                    borderColor:
-                      msg.role === 'user' ? 'primary.light' : 'secondary.light',
-                  }}
-                >
-                  {msg.role === 'user' ? <PersonIcon /> : <SmartToyIcon />}
-                </Avatar>
-                <Paper
-                  elevation={1}
-                  sx={{
-                    p: 1.5,
-                    maxWidth: { xs: '85%', sm: '70%' },
-                    bgcolor:
-                      msg.role === 'user'
-                        ? 'primary.light'
-                        : 'background.default',
-                    color: msg.role === 'user' ? 'common.white' : 'text.primary',
-                    borderRadius: 2,
-                    position: 'relative',
-                    '&:hover .edit-button': {
-                      opacity: msg.role === 'bot' ? 1 : 0,
-                    },
-                  }}
-                >
-                  {editingMessageIndex === msg.messageId && msg.role === 'bot' ? (
-                    <TextField
-                      fullWidth
-                      multiline
-                      autoFocus
-                      value={`${editingMessageContent}${editingPageReference ? `\n\n${editingPageReference}` : ''}`}
-                      onChange={(e) => {
-                        const text = e.target.value;
-                        const parts = text.split('\n\n');
-                        const content = parts[0];
-                        const pageRef = parts.length > 1 ? parts[parts.length - 1] : '';
-                        setEditingMessageContent(content);
-                        setEditingPageReference(pageRef);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                          handleUpdateMessage(msg.messageId);
-                        } else if (e.key === 'Escape') {
-                          setEditingMessageIndex(null);
-                          setEditingMessageContent('');
-                          setEditingPageReference('');
-                        }
-                      }}
-                      onBlur={() => {
-                        setEditingMessageIndex(null);
-                        setEditingMessageContent('');
-                        setEditingPageReference('');
-                      }}
-                      variant="outlined"
-                      size="small"
-                    />
-                  ) : (
-                    <Box sx={{ position: 'relative', pr: 3 }}>
-                      <Typography variant="body2" sx={{ whiteSpace: 'pre-line' }}>
-                        {msg.content}
-                        {msg.pageReference && (
-                          <Typography
-                            component="span"
-                            sx={{
-                              display: 'block',
-                              mt: 0.5,
-                              color: 'text.secondary',
-                              fontStyle: 'italic',
-                              fontSize: '0.875rem'
-                            }}
-                          >
-                            {msg.pageReference}
-                          </Typography>
-                        )}
-                      </Typography>
-                      {msg.role === 'bot' && (
-                        <IconButton
-                          className="edit-button"
-                          size="small"
-                          onClick={() => {
-                            setEditingMessageIndex(msg.messageId);
-                            setEditingMessageContent(msg.content);
-                            setEditingPageReference(msg.pageReference || '');
-                          }}
-                          sx={{
-                            position: 'absolute',
-                            right: -28,
-                            top: '50%',
-                            transform: 'translateY(-50%)',
-                            opacity: 0,
-                            transition: 'opacity 0.2s',
-                            color: 'action.active',
-                            '&:hover': {
-                              bgcolor: 'action.hover',
-                            },
-                          }}
-                        >
-                          <EditIcon fontSize="small" />
-                        </IconButton>
-                      )}
-                    </Box>
-                  )}
-                </Paper>
-              </Box>
-              <Typography
-                variant="caption"
-                sx={{
-                  color: theme => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.6)',
-                  fontSize: '0.75rem',
-                  mt: 0.5,
-                  mx: 6,
-                  fontStyle: 'italic',
-                  opacity: 0.8
-                }}
-              >
-                {new Date(msg.timestamp).toLocaleString()}
-              </Typography>
-            </Box>
-          ))
-        )}
-        {isLoading && (
-          <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
-            <CircularProgress size={24} />
-          </Box>
-        )}
-      </Box>
-      <Box
-        sx={{
-          p: 2,
-          borderTop: 1,
-          borderColor: 'divider',
-          display: 'flex',
-          gap: 1,
-          width: '100%',
-        }}
-      >
-        <TextField
-          fullWidth
-          size="small"
-          value={question}
-          onChange={(e) => setQuestion(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault();
-              handleSendQuestion();
-            }
-          }}
-          placeholder="Type your message..."
-          variant="outlined"
-        />
-        <IconButton
-          color="primary"
-          onClick={handleSendQuestion}
-          disabled={isLoading}
-        >
-          <SendIcon />
-        </IconButton>
-      </Box>
-    </Paper>
+    <Box sx={{ display: 'flex', width: '100%', height: 'calc(100vh - 300px)' }}>
+      <PredefinedQuestions onQuestionSelect={handleSendQuestion} />
+      <ChatArea
+        messages={messages}
+        chatHistory={chatHistory}
+        question={question}
+        setQuestion={setQuestion}
+        handleSendQuestion={handleSendQuestion}
+        isLoading={isLoading}
+        editingMessageIndex={editingMessageIndex}
+        editingMessageContent={editingMessageContent}
+        editingPageReference={editingPageReference}
+        setEditingMessageIndex={setEditingMessageIndex}
+        setEditingMessageContent={setEditingMessageContent}
+        setEditingPageReference={setEditingPageReference}
+        handleUpdateMessage={handleUpdateMessage}
+      />
+    </Box>
   );
 }
