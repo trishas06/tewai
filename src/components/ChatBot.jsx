@@ -8,7 +8,12 @@ import {
   Avatar,
   CircularProgress,
 } from '@mui/material';
-import { Send as SendIcon, Person as PersonIcon, SmartToy as SmartToyIcon } from '@mui/icons-material';
+import {
+  Send as SendIcon,
+  Person as PersonIcon,
+  SmartToy as SmartToyIcon,
+  Edit as EditIcon,
+} from '@mui/icons-material';
 import { io } from 'socket.io-client';
 import axiosInstance from '../utils/axiosInstance';
 
@@ -21,6 +26,7 @@ export default function ChatBot({ reportId, userId, selectedfaq }) {
   const [editingMessageIndex, setEditingMessageIndex] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [editingMessageContent, setEditingMessageContent] = useState('');
+  const [editingPageReference, setEditingPageReference] = useState('');
   const scrollableDivRef = useRef(null);
 
   useEffect(() => {
@@ -38,8 +44,10 @@ export default function ChatBot({ reportId, userId, selectedfaq }) {
       } else if (data.answer) {
         for (const timestamp in data.answer) {
           if (Object.prototype.hasOwnProperty.call(data.answer, timestamp)) {
-            const combinedMessages = data.answer[timestamp].slice(1).join(', ');
-            addMessage('bot', combinedMessages);
+            const chatArray = data.answer[timestamp];
+            const answer = chatArray[1];
+            const pageReference = chatArray[2] || '';
+            addMessage('bot', answer, pageReference, timestamp);
           }
         }
       }
@@ -64,16 +72,20 @@ export default function ChatBot({ reportId, userId, selectedfaq }) {
   }, [messages, chatHistory]);
 
   const generateMessageId = () => {
-    return new Date().toISOString();
+    const timestamp = new Date().getTime();
+    return `${timestamp}-${Math.random().toString(36).substr(2, 9)}`;
   };
 
-  const addMessage = (role, content) => {
+  const addMessage = (role, content, pageReference = '', messageId = null) => {
+    const timestamp = messageId || new Date().getTime();
     setMessages((prev) => [
       ...prev,
       {
-        messageId: generateMessageId(),
+        messageId: messageId || generateMessageId(),
         role,
         content,
+        pageReference,
+        timestamp
       },
     ]);
   };
@@ -81,7 +93,7 @@ export default function ChatBot({ reportId, userId, selectedfaq }) {
   const loadChatHistory = async () => {
     try {
       const response = await axiosInstance.get('/get_chats', {
-        params: { loss_report_id: reportId }
+        params: { loss_report_id: reportId },
       });
 
       const { session_id, chats } = response.data;
@@ -104,13 +116,17 @@ export default function ChatBot({ reportId, userId, selectedfaq }) {
           messageId: generateMessageId(),
           role: 'user',
           content: chatArray[0],
+          timestamp: parseInt(timestamp)
         });
         if (chatArray.length > 1) {
-          const combinedMessages = chatArray.slice(1).join(', ');
+          const answer = chatArray[1];
+          const pageReference = chatArray[2] || '';
           messages.push({
             messageId: timestamp,
             role: 'bot',
-            content: combinedMessages,
+            content: answer,
+            pageReference: pageReference,
+            timestamp: parseInt(timestamp)
           });
         }
       }
@@ -146,10 +162,16 @@ export default function ChatBot({ reportId, userId, selectedfaq }) {
 
   const handleUpdateMessage = async (messageId) => {
     try {
+      const allMessages = [...chatHistory, ...messages];
+      
+      // Find the user message that came before this bot message
+      const botMessageIndex = allMessages.findIndex(msg => msg.messageId === messageId);
+      const userMessage = allMessages[botMessageIndex - 1]; // User message is always right before bot message
+      
       const updatedMessage = {
         loss_report_id: reportId,
         updated_chat: {
-          [messageId]: [question, editingMessageContent, 'Page No: []'],
+          [messageId]: [userMessage.content, editingMessageContent, editingPageReference],
         },
         messageId: messageId,
       };
@@ -157,22 +179,18 @@ export default function ChatBot({ reportId, userId, selectedfaq }) {
       await axiosInstance.post('/edit_chat', updatedMessage);
 
       // Update the message in the UI
-      setMessages((prev) =>
+      const updateMessageInArray = (prev) =>
         prev.map((msg) =>
           msg.messageId === messageId
-            ? { ...msg, content: editingMessageContent }
+            ? { ...msg, content: editingMessageContent, pageReference: editingPageReference }
             : msg
-        )
-      );
-      setChatHistory((prev) =>
-        prev.map((msg) =>
-          msg.messageId === messageId
-            ? { ...msg, content: editingMessageContent }
-            : msg
-        )
-      );
+        );
+
+      setMessages(updateMessageInArray);
+      setChatHistory(updateMessageInArray);
       setEditingMessageIndex(null);
       setEditingMessageContent('');
+      setEditingPageReference('');
     } catch (error) {
       console.error('Error updating message:', error);
     }
@@ -217,8 +235,8 @@ export default function ChatBot({ reportId, userId, selectedfaq }) {
               Welcome to the Chat Assistant! 👋
             </Typography>
             <Typography variant="body1" textAlign="center">
-              Start the conversation by typing your question below.
-              I'm here to help you with your loss report queries.
+              Start the conversation by typing your question below. I'm here to
+              help you with your loss report queries.
             </Typography>
           </Box>
         ) : (
@@ -227,54 +245,142 @@ export default function ChatBot({ reportId, userId, selectedfaq }) {
               key={msg.messageId}
               sx={{
                 display: 'flex',
-                flexDirection: msg.role === 'user' ? 'row-reverse' : 'row',
-                alignItems: 'flex-start',
-                gap: 1,
+                flexDirection: 'column',
+                alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start',
                 width: '100%',
               }}
             >
-              <Avatar
+              <Box
                 sx={{
-                  width: 32,
-                  height: 32,
-                  bgcolor: msg.role === 'user' ? 'primary.main' : 'secondary.main',
-                  border: 1,
-                  borderColor: msg.role === 'user' ? 'primary.light' : 'secondary.light',
+                  display: 'flex',
+                  flexDirection: msg.role === 'user' ? 'row-reverse' : 'row',
+                  alignItems: 'flex-start',
+                  gap: 1,
+                  width: '100%',
                 }}
               >
-                {msg.role === 'user' ? <PersonIcon /> : <SmartToyIcon />}
-              </Avatar>
-              <Paper
-                elevation={1}
+                <Avatar
+                  sx={{
+                    width: 32,
+                    height: 32,
+                    bgcolor:
+                      msg.role === 'user' ? 'primary.main' : 'secondary.main',
+                    border: 1,
+                    borderColor:
+                      msg.role === 'user' ? 'primary.light' : 'secondary.light',
+                  }}
+                >
+                  {msg.role === 'user' ? <PersonIcon /> : <SmartToyIcon />}
+                </Avatar>
+                <Paper
+                  elevation={1}
+                  sx={{
+                    p: 1.5,
+                    maxWidth: { xs: '85%', sm: '70%' },
+                    bgcolor:
+                      msg.role === 'user'
+                        ? 'primary.light'
+                        : 'background.default',
+                    color: msg.role === 'user' ? 'common.white' : 'text.primary',
+                    borderRadius: 2,
+                    position: 'relative',
+                    '&:hover .edit-button': {
+                      opacity: msg.role === 'bot' ? 1 : 0,
+                    },
+                  }}
+                >
+                  {editingMessageIndex === msg.messageId && msg.role === 'bot' ? (
+                    <TextField
+                      fullWidth
+                      multiline
+                      autoFocus
+                      value={`${editingMessageContent}${editingPageReference ? `\n\n${editingPageReference}` : ''}`}
+                      onChange={(e) => {
+                        const text = e.target.value;
+                        const parts = text.split('\n\n');
+                        const content = parts[0];
+                        const pageRef = parts.length > 1 ? parts[parts.length - 1] : '';
+                        setEditingMessageContent(content);
+                        setEditingPageReference(pageRef);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          handleUpdateMessage(msg.messageId);
+                        } else if (e.key === 'Escape') {
+                          setEditingMessageIndex(null);
+                          setEditingMessageContent('');
+                          setEditingPageReference('');
+                        }
+                      }}
+                      onBlur={() => {
+                        setEditingMessageIndex(null);
+                        setEditingMessageContent('');
+                        setEditingPageReference('');
+                      }}
+                      variant="outlined"
+                      size="small"
+                    />
+                  ) : (
+                    <Box sx={{ position: 'relative', pr: 3 }}>
+                      <Typography variant="body2" sx={{ whiteSpace: 'pre-line' }}>
+                        {msg.content}
+                        {msg.pageReference && (
+                          <Typography
+                            component="span"
+                            sx={{
+                              display: 'block',
+                              mt: 0.5,
+                              color: 'text.secondary',
+                              fontStyle: 'italic',
+                              fontSize: '0.875rem'
+                            }}
+                          >
+                            {msg.pageReference}
+                          </Typography>
+                        )}
+                      </Typography>
+                      {msg.role === 'bot' && (
+                        <IconButton
+                          className="edit-button"
+                          size="small"
+                          onClick={() => {
+                            setEditingMessageIndex(msg.messageId);
+                            setEditingMessageContent(msg.content);
+                            setEditingPageReference(msg.pageReference || '');
+                          }}
+                          sx={{
+                            position: 'absolute',
+                            right: -28,
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            opacity: 0,
+                            transition: 'opacity 0.2s',
+                            color: 'action.active',
+                            '&:hover': {
+                              bgcolor: 'action.hover',
+                            },
+                          }}
+                        >
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                      )}
+                    </Box>
+                  )}
+                </Paper>
+              </Box>
+              <Typography
+                variant="caption"
                 sx={{
-                  p: 1.5,
-                  maxWidth: { xs: '85%', sm: '70%' },
-                  bgcolor: msg.role === 'user' ? 'primary.light' : 'background.default',
-                  color: msg.role === 'user' ? 'common.white' : 'text.primary',
-                  borderRadius: 2,
-                  position: 'relative',
+                  color: theme => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.6)',
+                  fontSize: '0.75rem',
+                  mt: 0.5,
+                  mx: 6,
+                  fontStyle: 'italic',
+                  opacity: 0.8
                 }}
               >
-                {editingMessageIndex === msg.messageId ? (
-                  <TextField
-                    fullWidth
-                    multiline
-                    value={editingMessageContent}
-                    onChange={(e) => setEditingMessageContent(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        handleUpdateMessage(msg.messageId);
-                      }
-                    }}
-                    variant="outlined"
-                    size="small"
-                  />
-                ) : (
-                  <Typography variant="body2" sx={{ whiteSpace: 'pre-line' }}>
-                    {msg.content}
-                  </Typography>
-                )}
-              </Paper>
+                {new Date(msg.timestamp).toLocaleString()}
+              </Typography>
             </Box>
           ))
         )}
