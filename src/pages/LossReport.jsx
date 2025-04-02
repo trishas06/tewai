@@ -28,15 +28,6 @@ import GenerateGuidanceReport from '../components/GenerateGuidanceReport';
 // Lazy load just the PDF viewer content
 const PDFViewerContent = lazy(() => import('./PDFViewerContent'));
 
-// Set up PDF.js worker
-const setPdfWorker = async () => {
-  const { pdfjs } = await import('react-pdf');
-  pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
-};
-
-// Call the setup function
-setPdfWorker();
-
 // Tab Panel component
 function TabPanel({ children, value, index }) {
   return (
@@ -64,9 +55,6 @@ function LossReport() {
     ...rowData,
   });
   const [activeTab, setActiveTab] = useState(0);
-  const [numPages, setNumPages] = useState(null);
-  const [pageNumber, setPageNumber] = useState(1);
-  const [scale, setScale] = useState(1);
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -142,26 +130,6 @@ function LossReport() {
     setActiveTab(newValue);
   };
 
-  const onDocumentLoadSuccess = ({ numPages }) => {
-    setNumPages(numPages);
-  };
-
-  const handlePreviousPage = () => {
-    setPageNumber((prev) => Math.max(prev - 1, 1));
-  };
-
-  const handleNextPage = () => {
-    setPageNumber((prev) => Math.min(prev + 1, numPages || prev));
-  };
-
-  const handleZoomIn = () => {
-    setScale((prev) => Math.min(prev + 0.1, 2));
-  };
-
-  const handleZoomOut = () => {
-    setScale((prev) => Math.max(prev - 0.1, 0.5));
-  };
-
   const renderPDFViewer = () => {
     if (error) {
       return (
@@ -194,17 +162,7 @@ function LossReport() {
           </Box>
         }
       >
-        <PDFViewerContent
-          data={data}
-          pageNumber={pageNumber}
-          numPages={numPages}
-          scale={scale}
-          handlePreviousPage={handlePreviousPage}
-          handleNextPage={handleNextPage}
-          handleZoomOut={handleZoomOut}
-          handleZoomIn={handleZoomIn}
-          onDocumentLoadSuccess={onDocumentLoadSuccess}
-        />
+        <PDFViewerContent data={data} />
       </Suspense>
     );
   };
