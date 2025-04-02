@@ -4,6 +4,7 @@ import { io } from 'socket.io-client';
 import axiosInstance from '../utils/axiosInstance';
 import PredefinedQuestions from './PredefinedQuestions';
 import ChatArea from './ChatArea';
+import GenerateGuidanceReport from './GenerateGuidanceReport';
 
 export default function ChatBot({ reportId, userId, selectedfaq }) {
   const [messages, setMessages] = useState([]);
@@ -15,6 +16,7 @@ export default function ChatBot({ reportId, userId, selectedfaq }) {
   const [isLoading, setIsLoading] = useState(false);
   const [editingMessageContent, setEditingMessageContent] = useState('');
   const [editingPageReference, setEditingPageReference] = useState('');
+  const [hasChanges, setHasChanges] = useState(false);
 
   useEffect(() => {
     const newSocket = io(import.meta.env.VITE_API_BASE_URL);
@@ -35,6 +37,7 @@ export default function ChatBot({ reportId, userId, selectedfaq }) {
             const answer = chatArray[1];
             const pageReference = chatArray[2] || '';
             addMessage('bot', answer, pageReference, timestamp);
+            setHasChanges(true);
           }
         }
       }
@@ -58,8 +61,32 @@ export default function ChatBot({ reportId, userId, selectedfaq }) {
   const addMessage = (role, content, pageReference = '', messageId = null) => {
     const date = new Date();
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const timestamp = messageId || `${days[date.getUTCDay()]} ${months[date.getUTCMonth()]} ${date.getUTCDate().toString().padStart(2, '0')} ${date.getUTCFullYear()} ${date.getUTCHours().toString().padStart(2, '0')}:${date.getUTCMinutes().toString().padStart(2, '0')}:${date.getUTCSeconds().toString().padStart(2, '0')}`;
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    const timestamp =
+      messageId ||
+      `${days[date.getUTCDay()]} ${months[date.getUTCMonth()]} ${date
+        .getUTCDate()
+        .toString()
+        .padStart(2, '0')} ${date.getUTCFullYear()} ${date
+        .getUTCHours()
+        .toString()
+        .padStart(2, '0')}:${date
+        .getUTCMinutes()
+        .toString()
+        .padStart(2, '0')}:${date.getUTCSeconds().toString().padStart(2, '0')}`;
     setMessages((prev) => [
       ...prev,
       {
@@ -67,9 +94,10 @@ export default function ChatBot({ reportId, userId, selectedfaq }) {
         role,
         content,
         pageReference,
-        timestamp
+        timestamp,
       },
     ]);
+    setHasChanges(true);
   };
 
   const loadChatHistory = async () => {
@@ -98,7 +126,7 @@ export default function ChatBot({ reportId, userId, selectedfaq }) {
           messageId: generateMessageId(),
           role: 'user',
           content: chatArray[0],
-          timestamp
+          timestamp,
         });
         if (chatArray.length > 1) {
           const answer = chatArray[1];
@@ -108,7 +136,7 @@ export default function ChatBot({ reportId, userId, selectedfaq }) {
             role: 'bot',
             content: answer,
             pageReference: pageReference,
-            timestamp
+            timestamp,
           });
         }
       }
@@ -146,15 +174,21 @@ export default function ChatBot({ reportId, userId, selectedfaq }) {
   const handleUpdateMessage = async (messageId) => {
     try {
       const allMessages = [...chatHistory, ...messages];
-      
+
       // Find the user message that came before this bot message
-      const botMessageIndex = allMessages.findIndex(msg => msg.messageId === messageId);
+      const botMessageIndex = allMessages.findIndex(
+        (msg) => msg.messageId === messageId
+      );
       const userMessage = allMessages[botMessageIndex - 1]; // User message is always right before bot message
-      
+
       const updatedMessage = {
         loss_report_id: reportId,
         updated_chat: {
-          [messageId]: [userMessage.content, editingMessageContent, editingPageReference],
+          [messageId]: [
+            userMessage.content,
+            editingMessageContent,
+            editingPageReference,
+          ],
         },
         messageId: messageId,
       };
@@ -165,7 +199,11 @@ export default function ChatBot({ reportId, userId, selectedfaq }) {
       const updateMessageInArray = (prev) =>
         prev.map((msg) =>
           msg.messageId === messageId
-            ? { ...msg, content: editingMessageContent, pageReference: editingPageReference }
+            ? {
+                ...msg,
+                content: editingMessageContent,
+                pageReference: editingPageReference,
+              }
             : msg
         );
 
@@ -180,23 +218,37 @@ export default function ChatBot({ reportId, userId, selectedfaq }) {
   };
 
   return (
-    <Box sx={{ display: 'flex', width: '100%', height: 'calc(100vh - 300px)' }}>
-      <PredefinedQuestions onQuestionSelect={handleSendQuestion} />
-      <ChatArea
-        messages={messages}
-        chatHistory={chatHistory}
-        question={question}
-        setQuestion={setQuestion}
-        handleSendQuestion={handleSendQuestion}
-        isLoading={isLoading}
-        editingMessageIndex={editingMessageIndex}
-        editingMessageContent={editingMessageContent}
-        editingPageReference={editingPageReference}
-        setEditingMessageIndex={setEditingMessageIndex}
-        setEditingMessageContent={setEditingMessageContent}
-        setEditingPageReference={setEditingPageReference}
-        handleUpdateMessage={handleUpdateMessage}
-      />
-    </Box>
+    <>
+      <Box sx={{ mb: 2, justifyItems: 'right' }}>
+        <GenerateGuidanceReport
+          reportId={reportId}
+          hasChatChanges={hasChanges}
+          onError={(error) => {
+            // Handle error if needed
+            console.error('Error generating guidance report:', error);
+          }}
+        />
+      </Box>
+      <Box
+        sx={{ display: 'flex', width: '100%', height: 'calc(100vh - 300px)' }}
+      >
+        <PredefinedQuestions onQuestionSelect={handleSendQuestion} />
+        <ChatArea
+          messages={messages}
+          chatHistory={chatHistory}
+          question={question}
+          setQuestion={setQuestion}
+          handleSendQuestion={handleSendQuestion}
+          isLoading={isLoading}
+          editingMessageIndex={editingMessageIndex}
+          editingMessageContent={editingMessageContent}
+          editingPageReference={editingPageReference}
+          setEditingMessageIndex={setEditingMessageIndex}
+          setEditingMessageContent={setEditingMessageContent}
+          setEditingPageReference={setEditingPageReference}
+          handleUpdateMessage={handleUpdateMessage}
+        />
+      </Box>
+    </>
   );
 }

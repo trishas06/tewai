@@ -12,8 +12,8 @@ import {
   DialogActions,
   IconButton,
 } from '@mui/material';
-import { 
-  Edit as EditIcon, 
+import {
+  Edit as EditIcon,
   Save as SaveIcon,
   Close as CloseIcon,
   Info as InfoIcon,
@@ -29,6 +29,7 @@ function ReportSummary({ reportId }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [openDialog, setOpenDialog] = useState(false);
+  const [hasChanges, setHasChanges] = useState(false);
 
   useEffect(() => {
     const fetchSummaryData = async () => {
@@ -37,12 +38,18 @@ function ReportSummary({ reportId }) {
         setError(null);
 
         if (!reportId) {
-          throw new Error('Invalid report ID');
+          setError('Report ID is required to load the summary.');
+          setLoading(false);
+          return;
         }
 
         const response = await axiosInstance.get('/get_summary_text', {
-          params: { report_id: reportId }
+          params: { report_id: reportId },
         });
+
+        if (!response.data) {
+          throw new Error('Invalid response from server');
+        }
 
         const { summary: reportSummary } = response.data;
         setSummary(reportSummary || '');
@@ -51,7 +58,7 @@ function ReportSummary({ reportId }) {
         setLoading(false);
       } catch (error) {
         console.error('Error fetching summary data:', error);
-        setError('Failed to load summary data. Please try again.');
+        setError(error.response?.data?.message || 'Failed to load summary data. Please try again.');
         setLoading(false);
       }
     };
@@ -88,9 +95,13 @@ function ReportSummary({ reportId }) {
 
       setOriginalSummary(summary);
       setIsEditingSummary(false);
+      setHasChanges(summary == originalSummary ? false : true);
     } catch (error) {
       console.error('Error saving summary:', error);
-      setError(error.response?.data?.message || 'Failed to save summary. Please try again.');
+      setError(
+        error.response?.data?.message ||
+          'Failed to save summary. Please try again.'
+      );
       // Revert to original summary on error
       setSummary(originalSummary);
     } finally {
@@ -131,23 +142,23 @@ function ReportSummary({ reportId }) {
               <Typography variant="h6">Report Summary</Typography>
               <Box sx={{ display: 'flex', gap: 1 }}>
                 {isEditingSummary && (
-                  <Button 
-                    onClick={handleCancelSummary}
-                    disabled={saving}
-                  >
+                  <Button onClick={handleCancelSummary} disabled={saving}>
                     Cancel
                   </Button>
                 )}
                 <Button
                   variant="contained"
                   startIcon={isEditingSummary ? <SaveIcon /> : <EditIcon />}
-                  onClick={isEditingSummary ? handleSaveSummary : handleEditClick}
+                  onClick={
+                    isEditingSummary ? handleSaveSummary : handleEditClick
+                  }
                   disabled={saving}
                 >
                   {isEditingSummary ? (saving ? 'Saving...' : 'Save') : 'Edit'}
                 </Button>
-                <GenerateGuidanceReport 
-                  reportId={reportId} 
+                <GenerateGuidanceReport
+                  reportId={reportId}
+                  hasSummaryChanges={hasChanges}
                   onError={setError}
                 />
               </Box>
@@ -179,18 +190,20 @@ function ReportSummary({ reportId }) {
         </Paper>
       )}
 
-      <Dialog 
-        open={openDialog} 
+      <Dialog
+        open={openDialog}
         onClose={handleDialogClose}
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle sx={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: 1,
-          pb: 1
-        }}>
+        <DialogTitle
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1,
+            pb: 1,
+          }}
+        >
           <InfoIcon sx={{ color: '#FFA500' }} />
           <Typography variant="h6">Edit Information</Typography>
           <IconButton
@@ -207,15 +220,16 @@ function ReportSummary({ reportId }) {
         </DialogTitle>
         <DialogContent>
           <Typography variant="body1" sx={{ mt: 2, textAlign: 'justify' }}>
-            Your updated information will be used for model fine-tuning, enhancing its performance. 
-            Providing detailed explanations and reasoning will further improve its accuracy and 
-            effectiveness over time.
+            Your updated information will be used for model fine-tuning,
+            enhancing its performance. Providing detailed explanations and
+            reasoning will further improve its accuracy and effectiveness over
+            time.
           </Typography>
         </DialogContent>
         <DialogActions sx={{ p: 2, pt: 0 }}>
           <Button onClick={handleDialogClose}>Cancel</Button>
-          <Button 
-            variant="contained" 
+          <Button
+            variant="contained"
             onClick={handleConfirmEdit}
             startIcon={<EditIcon />}
           >

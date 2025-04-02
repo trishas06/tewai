@@ -60,6 +60,7 @@ function LossReport() {
   const rowData = location.state || {};
   const [data, setData] = useState({
     reportName: rowData.loss_report_name || `Loss Report - ${claimNo}`,
+    report_id: rowData.report_id,
     ...rowData,
   });
   const [activeTab, setActiveTab] = useState(0);
@@ -275,15 +276,7 @@ function LossReport() {
         </TabPanel>
 
         <TabPanel value={activeTab} index={3}>
-          <Box sx={{ mb: 2 }}>
-            <GenerateGuidanceReport 
-              reportId={data?.report_id} 
-              onError={(error) => {
-                // Handle error if needed
-                console.error('Error generating guidance report:', error);
-              }}
-            />
-          </Box>
+          
           <ChatBot reportId={data?.report_id} userId />
         </TabPanel>
       </Paper>

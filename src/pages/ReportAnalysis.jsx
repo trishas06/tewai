@@ -15,6 +15,9 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Alert,
+  Tooltip,
+  Divider,
 } from '@mui/material';
 import {
   ExpandMore as ExpandMoreIcon,
@@ -23,8 +26,14 @@ import {
   Cancel as CancelIcon,
   Close as CloseIcon,
   Info as InfoIcon,
+  Add as AddIcon,
+  KeyboardArrowUp as PromptUpIcon,
+  KeyboardArrowDown as PromptDownIcon,
+  Delete as DeleteIcon,
+  QuestionAnswer as QuestionAnswerIcon,
 } from '@mui/icons-material';
 import axiosInstance from '../utils/axiosInstance';
+import GenerateGuidanceReport from '../components/GenerateGuidanceReport';
 
 function ReportAnalysis({ reportId }) {
   const [loading, setLoading] = useState(true);
@@ -32,9 +41,9 @@ function ReportAnalysis({ reportId }) {
   const [error, setError] = useState(null);
   const [analysisData, setAnalysisData] = useState([]);
   const [isEditing, setIsEditing] = useState(false);
-  const [originalData, setOriginalData] = useState([]);
   const [openDialog, setOpenDialog] = useState(false);
-  originalData;
+  const [hasChanges, setHasChanges] = useState(false);
+
   useEffect(() => {
     const fetchAnalysisData = async () => {
       try {
@@ -53,9 +62,6 @@ function ReportAnalysis({ reportId }) {
           response.data.status === 'success' &&
           response.data.question_answer
         ) {
-          // Store original data
-          setOriginalData(response.data.question_answer);
-
           // Group questions by headerKey
           const groupedData = response.data.question_answer.reduce(
             (acc, item) => {
@@ -143,18 +149,6 @@ function ReportAnalysis({ reportId }) {
         updated_question_answer: updatedItems,
       });
 
-      // Update original data with new values
-      setOriginalData((prevData) =>
-        prevData.map((item) => {
-          const updatedItem = updatedItems.find(
-            (updated) =>
-              updated.question === item.question &&
-              updated.headerKey === item.headerKey
-          );
-          return updatedItem || item;
-        })
-      );
-
       // Update original values in analysisData
       setAnalysisData((prevData) =>
         prevData.map((section) => ({
@@ -168,6 +162,7 @@ function ReportAnalysis({ reportId }) {
       );
 
       setIsEditing(false);
+      setHasChanges(true);
     } catch (error) {
       console.error('Error saving analysis data:', error);
       setError('Failed to save changes. Please try again.');
@@ -190,6 +185,7 @@ function ReportAnalysis({ reportId }) {
       }))
     );
     setIsEditing(false);
+    setHasChanges(false);
   };
 
   const handleInputChange = (category, question, field, value) => {
@@ -215,7 +211,7 @@ function ReportAnalysis({ reportId }) {
   };
 
   const handleEditClick = () => {
-    setOpenDialog(true);
+    setIsEditing(true);
   };
 
   const handleDialogClose = () => {
@@ -286,6 +282,11 @@ function ReportAnalysis({ reportId }) {
             >
               {isEditing ? (saving ? 'Saving...' : 'Save') : 'Edit'}
             </Button>
+            <GenerateGuidanceReport
+              reportId={reportId}
+              hasAnalysisChanges={hasChanges}
+              onError={setError}
+            />
           </Box>
         </Box>
 

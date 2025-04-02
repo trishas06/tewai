@@ -2,24 +2,38 @@ import { useState } from 'react';
 import {
   Button,
   Dialog,
-  DialogTitle,
   DialogContent,
   DialogActions,
   IconButton,
   Typography,
   CircularProgress,
+  Box,
 } from '@mui/material';
 import { 
   CheckCircle as CheckCircleIcon,
   Close as CloseIcon,
+  Warning as WarningIcon,
 } from '@mui/icons-material';
 import axiosInstance from '../utils/axiosInstance';
 
-function GenerateGuidanceReport({ reportId, onError }) {
+function GenerateGuidanceReport({ 
+  reportId, 
+  onError,
+  hasSummaryChanges = false,
+  hasAnalysisChanges = false,
+  hasChatChanges = false,
+}) {
   const [openSuccessDialog, setOpenSuccessDialog] = useState(false);
+  const [openWarningDialog, setOpenWarningDialog] = useState(false);
   const [generatingReport, setGeneratingReport] = useState(false);
 
   const handleGenerateGuidanceReport = async () => {
+    // Check if any changes have been made
+    if (!hasSummaryChanges && !hasAnalysisChanges && !hasChatChanges) {
+      setOpenWarningDialog(true);
+      return;
+    }
+
     try {
       setGeneratingReport(true);
 
@@ -48,6 +62,10 @@ function GenerateGuidanceReport({ reportId, onError }) {
     setOpenSuccessDialog(false);
   };
 
+  const handleCloseWarningDialog = () => {
+    setOpenWarningDialog(false);
+  };
+
   return (
     <>
       <Button
@@ -60,32 +78,26 @@ function GenerateGuidanceReport({ reportId, onError }) {
         {generatingReport ? 'Generating...' : 'Generate Guidance Report'}
       </Button>
 
+      {/* Success Dialog */}
       <Dialog
         open={openSuccessDialog}
         onClose={handleCloseSuccessDialog}
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle sx={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: 1,
-          pb: 1
-        }}>
+        <Box sx={{ p: 2, pb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
           <CheckCircleIcon sx={{ color: '#4CAF50' }} />
-          <Typography variant="h6">Success</Typography>
+          <Typography variant="h6" component="div" sx={{ flex: 1 }}>
+            Success
+          </Typography>
           <IconButton
             aria-label="close"
             onClick={handleCloseSuccessDialog}
-            sx={{
-              position: 'absolute',
-              right: 8,
-              top: 8,
-            }}
+            size="small"
           >
             <CloseIcon />
           </IconButton>
-        </DialogTitle>
+        </Box>
         <DialogContent>
           <Typography variant="body1" sx={{ mt: 2, textAlign: 'justify' }}>
             Modified Guidance Report has been uploaded on S3.
@@ -95,6 +107,42 @@ function GenerateGuidanceReport({ reportId, onError }) {
           <Button 
             variant="contained" 
             onClick={handleCloseSuccessDialog}
+            color="primary"
+          >
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Warning Dialog */}
+      <Dialog
+        open={openWarningDialog}
+        onClose={handleCloseWarningDialog}
+        maxWidth="sm"
+        fullWidth
+      >
+        <Box sx={{ p: 2, pb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <WarningIcon sx={{ color: '#FFA500' }} />
+          <Typography variant="h6" component="div" sx={{ flex: 1 }}>
+            No Changes Detected
+          </Typography>
+          <IconButton
+            aria-label="close"
+            onClick={handleCloseWarningDialog}
+            size="small"
+          >
+            <CloseIcon />
+          </IconButton>
+        </Box>
+        <DialogContent>
+          <Typography variant="body1" sx={{ mt: 2, textAlign: 'justify' }}>
+            No changes detected. Please modify the tool response before clicking the 'Generate Guidance Report' button.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, pt: 0 }}>
+          <Button 
+            variant="contained" 
+            onClick={handleCloseWarningDialog}
             color="primary"
           >
             Close

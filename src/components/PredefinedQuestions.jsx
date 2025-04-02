@@ -171,12 +171,12 @@ export default function PredefinedQuestions({ onQuestionSelect }) {
         ) : (
           filteredQuestions.map((q, index) => (
             <Box key={q.Order} sx={{ display: 'flex', alignItems: 'stretch' }}>
-              <QuestionAnswerIcon 
-                sx={{ 
+              <QuestionAnswerIcon
+                sx={{
                   color: 'primary.main',
                   alignSelf: 'center',
-                  ml: 2.5
-                }} 
+                  ml: 2.5,
+                }}
               />
               <ListItem
                 disablePadding
