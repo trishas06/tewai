@@ -23,6 +23,7 @@ import axiosInstance from '../utils/axiosInstance';
 import ReportSummary from './ReportSummary';
 import ReportAnalysis from './ReportAnalysis';
 import ChatBot from '../components/ChatBot';
+import GenerateGuidanceReport from '../components/GenerateGuidanceReport';
 
 // Lazy load just the PDF viewer content
 const PDFViewerContent = lazy(() => import('./PDFViewerContent'));
@@ -274,6 +275,15 @@ function LossReport() {
         </TabPanel>
 
         <TabPanel value={activeTab} index={3}>
+          <Box sx={{ mb: 2 }}>
+            <GenerateGuidanceReport 
+              reportId={data?.report_id} 
+              onError={(error) => {
+                // Handle error if needed
+                console.error('Error generating guidance report:', error);
+              }}
+            />
+          </Box>
           <ChatBot reportId={data?.report_id} userId />
         </TabPanel>
       </Paper>

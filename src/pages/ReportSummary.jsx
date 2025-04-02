@@ -19,6 +19,7 @@ import {
   Info as InfoIcon,
 } from '@mui/icons-material';
 import axiosInstance from '../utils/axiosInstance';
+import GenerateGuidanceReport from '../components/GenerateGuidanceReport';
 
 function ReportSummary({ reportId }) {
   const [isEditingSummary, setIsEditingSummary] = useState(false);
@@ -145,17 +146,10 @@ function ReportSummary({ reportId }) {
                 >
                   {isEditingSummary ? (saving ? 'Saving...' : 'Save') : 'Edit'}
                 </Button>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  onClick={() => {
-                    // TODO: Implement guidance report generation
-                    console.log('Generate guidance report');
-                  }}
-                  disabled={saving}
-                >
-                  Generate Guidance Report
-                </Button>
+                <GenerateGuidanceReport 
+                  reportId={reportId} 
+                  onError={setError}
+                />
               </Box>
             </Box>
 
