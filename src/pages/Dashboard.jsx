@@ -395,6 +395,7 @@ function Dashboard() {
                       <IconButton
                         size="small"
                         title="View Loss Report"
+                        disabled={row.status !== 'Generated'}
                         onClick={() => handleNavigateToLossReport(row)}
                       >
                         <DescriptionIcon sx={{ fontSize: 20 }} />
