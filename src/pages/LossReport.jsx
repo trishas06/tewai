@@ -19,7 +19,6 @@ import {
   NavigateNext as NextIcon,
   NavigateBefore as PrevIcon,
 } from '@mui/icons-material';
-import axiosInstance from '../utils/axiosInstance';
 import ReportSummary from './ReportSummary';
 import ReportAnalysis from './ReportAnalysis';
 import ChatBot from '../components/ChatBot';
@@ -67,34 +66,26 @@ function LossReport() {
           throw new Error('Missing required report parameters');
         }
 
-        const response = await axiosInstance.post(
-          import.meta.env.VITE_GET_PDF_ENDPOINT,
-          {
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/get_pdf_new`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/pdf',
+          },
+          body: JSON.stringify({
             report_id: rowData.report_id,
             report_name: rowData.loss_report_name,
-            chunk_id: 1,
-          }
-        );
+          }),
+        });
 
-        // Convert base64 to blob
-        const base64Response = response.data.base64_pdf;
-        if (!base64Response) {
-          throw new Error('Invalid PDF data received');
+        if (!response.ok) {
+          throw new Error('Failed to fetch PDF');
         }
 
-        // Convert base64 to binary
-        const binaryString = window.atob(base64Response);
-        const len = binaryString.length;
-        const bytes = new Uint8Array(len);
-        for (let i = 0; i < len; i++) {
-          bytes[i] = binaryString.charCodeAt(i);
-        }
-
-        // Create blob from binary data
-        const pdfBlob = new Blob([bytes], { type: 'application/pdf' });
-        const pdfUrl = URL.createObjectURL(pdfBlob);
-
-        setData((prevData) => ({
+        // Create a blob URL directly from the response
+        const pdfUrl = URL.createObjectURL(await response.blob());
+        
+        setData(prevData => ({
           ...prevData,
           pdfUrl,
         }));
@@ -103,8 +94,6 @@ function LossReport() {
         console.error('Error fetching report data:', error);
         if (error.message === 'Missing required report parameters') {
           setError('Missing required report parameters.');
-        } else if (error.message === 'Invalid PDF data received') {
-          setError('Invalid PDF data received from server.');
         } else {
           setError('Failed to load the PDF file. Please try again later.');
         }
