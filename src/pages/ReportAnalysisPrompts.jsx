@@ -38,6 +38,7 @@ import {
   QuestionAnswer as QuestionAnswerIcon,
 } from '@mui/icons-material';
 import axiosInstance from '../utils/axiosInstance';
+import SuccessPopup from '../components/SuccessPopup';
 
 function ReportAnalysisPrompts() {
   const [data, setData] = useState([]);
@@ -58,6 +59,7 @@ function ReportAnalysisPrompts() {
   const [openInfoDialog, setOpenInfoDialog] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
   const [editingPrompt, setEditingPrompt] = useState(null);
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
 
   // Add this function at the top of the component
   const generateUniqueId = () => {
@@ -252,6 +254,7 @@ function ReportAnalysisPrompts() {
       setIsEditing(false);
       setValidationError('');
       setNewlyAddedCategories(new Set());
+      setShowSuccessPopup(true);
     } catch (err) {
       setValidationError('Failed to save changes. Please try again.');
       console.error('Error saving prompts:', err);
@@ -1032,6 +1035,10 @@ function ReportAnalysisPrompts() {
           </Button>
         </DialogActions>
       </Dialog>
+      <SuccessPopup
+        open={showSuccessPopup}
+        onClose={() => setShowSuccessPopup(false)}
+      />
     </Box>
   );
 }

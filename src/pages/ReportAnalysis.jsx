@@ -34,6 +34,7 @@ import {
 } from '@mui/icons-material';
 import axiosInstance from '../utils/axiosInstance';
 import GenerateGuidanceReport from '../components/GenerateGuidanceReport';
+import SuccessPopup from '../components/SuccessPopup';
 
 function ReportAnalysis({ reportId }) {
   const [loading, setLoading] = useState(true);
@@ -43,6 +44,7 @@ function ReportAnalysis({ reportId }) {
   const [isEditing, setIsEditing] = useState(false);
   const [openDialog, setOpenDialog] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
 
   useEffect(() => {
     const fetchAnalysisData = async () => {
@@ -139,11 +141,6 @@ function ReportAnalysis({ reportId }) {
         return;
       }
 
-      // TODO: Add API call to save the updated data
-      if (!reportId) {
-        throw new Error('Invalid report ID');
-      }
-
       await axiosInstance.post('/edit_question_answer', {
         report_id: reportId,
         updated_question_answer: updatedItems,
@@ -163,6 +160,7 @@ function ReportAnalysis({ reportId }) {
 
       setIsEditing(false);
       setHasChanges(true);
+      setShowSuccessPopup(true);
     } catch (error) {
       console.error('Error saving analysis data:', error);
       setError('Failed to save changes. Please try again.');
@@ -434,6 +432,10 @@ function ReportAnalysis({ reportId }) {
           </Button>
         </DialogActions>
       </Dialog>
+      <SuccessPopup
+        open={showSuccessPopup}
+        onClose={() => setShowSuccessPopup(false)}
+      />
     </Box>
   );
 }

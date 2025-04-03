@@ -20,6 +20,7 @@ import {
 } from '@mui/icons-material';
 import axiosInstance from '../utils/axiosInstance';
 import GenerateGuidanceReport from '../components/GenerateGuidanceReport';
+import SuccessPopup from '../components/SuccessPopup';
 
 function ReportSummary({ reportId }) {
   const [isEditingSummary, setIsEditingSummary] = useState(false);
@@ -30,6 +31,7 @@ function ReportSummary({ reportId }) {
   const [error, setError] = useState(null);
   const [openDialog, setOpenDialog] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
 
   useEffect(() => {
     const fetchSummaryData = async () => {
@@ -96,6 +98,7 @@ function ReportSummary({ reportId }) {
       setOriginalSummary(summary);
       setIsEditingSummary(false);
       setHasChanges(summary == originalSummary ? false : true);
+      setShowSuccessPopup(true);
     } catch (error) {
       console.error('Error saving summary:', error);
       setError(
@@ -129,65 +132,71 @@ function ReportSummary({ reportId }) {
           </Box>
         </Paper>
       ) : (
-        <Paper sx={{ p: 2, mb: 2 }}>
-          <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-            <Box
-              sx={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                mb: 2,
-                alignItems: 'center',
-              }}
-            >
-              <Typography variant="h6">Report Summary</Typography>
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                {isEditingSummary && (
-                  <Button onClick={handleCancelSummary} disabled={saving}>
-                    Cancel
+        <>
+          <Paper sx={{ p: 2, mb: 2 }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+              <Box
+                sx={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  mb: 2,
+                  alignItems: 'center',
+                }}
+              >
+                <Typography variant="h6">Report Summary</Typography>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  {isEditingSummary && (
+                    <Button onClick={handleCancelSummary} disabled={saving}>
+                      Cancel
+                    </Button>
+                  )}
+                  <Button
+                    variant="contained"
+                    startIcon={isEditingSummary ? <SaveIcon /> : <EditIcon />}
+                    onClick={
+                      isEditingSummary ? handleSaveSummary : handleEditClick
+                    }
+                    disabled={saving}
+                  >
+                    {isEditingSummary ? (saving ? 'Saving...' : 'Save') : 'Edit'}
                   </Button>
-                )}
-                <Button
-                  variant="contained"
-                  startIcon={isEditingSummary ? <SaveIcon /> : <EditIcon />}
-                  onClick={
-                    isEditingSummary ? handleSaveSummary : handleEditClick
-                  }
-                  disabled={saving}
-                >
-                  {isEditingSummary ? (saving ? 'Saving...' : 'Save') : 'Edit'}
-                </Button>
-                <GenerateGuidanceReport
-                  reportId={reportId}
-                  hasSummaryChanges={hasChanges}
-                  onError={setError}
-                />
+                  <GenerateGuidanceReport
+                    reportId={reportId}
+                    hasSummaryChanges={hasChanges}
+                    onError={setError}
+                  />
+                </Box>
               </Box>
-            </Box>
 
-            <TextField
-              fullWidth
-              multiline
-              minRows={10}
-              value={summary}
-              onChange={(e) => setSummary(e.target.value)}
-              disabled={!isEditingSummary || saving}
-              variant="standard"
-              InputProps={{
-                disableUnderline: !isEditingSummary,
-              }}
-              sx={{
-                '& .MuiInputBase-input.Mui-disabled': {
-                  WebkitTextFillColor: 'rgba(0, 0, 0, 0.87)',
-                  color: 'text.primary',
-                  padding: 0,
-                },
-                '& .MuiInputBase-root': {
-                  padding: 0,
-                },
-              }}
-            />
-          </Box>
-        </Paper>
+              <TextField
+                fullWidth
+                multiline
+                minRows={10}
+                value={summary}
+                onChange={(e) => setSummary(e.target.value)}
+                disabled={!isEditingSummary || saving}
+                variant="standard"
+                InputProps={{
+                  disableUnderline: !isEditingSummary,
+                }}
+                sx={{
+                  '& .MuiInputBase-input.Mui-disabled': {
+                    WebkitTextFillColor: 'rgba(0, 0, 0, 0.87)',
+                    color: 'text.primary',
+                    padding: 0,
+                  },
+                  '& .MuiInputBase-root': {
+                    padding: 0,
+                  },
+                }}
+              />
+            </Box>
+          </Paper>
+          <SuccessPopup
+            open={showSuccessPopup}
+            onClose={() => setShowSuccessPopup(false)}
+          />
+        </>
       )}
 
       <Dialog

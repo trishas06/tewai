@@ -29,6 +29,7 @@ import {
   QuestionAnswer as QuestionAnswerIcon,
 } from '@mui/icons-material';
 import axiosInstance from '../utils/axiosInstance';
+import SuccessPopup from '../components/SuccessPopup';
 
 function ChatbotPredefinedQuestions() {
   const [data, setData] = useState([]);
@@ -41,6 +42,7 @@ function ChatbotPredefinedQuestions() {
   const [newQuestionOrder, setNewQuestionOrder] = useState('');
   const [validationError, setValidationError] = useState('');
   const [editingQuestion, setEditingQuestion] = useState(null);
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
 
   // Fetch questions data from API
   useEffect(() => {
@@ -89,6 +91,7 @@ function ChatbotPredefinedQuestions() {
       setBackupData(null);
       setIsEditing(false);
       setValidationError('');
+      setShowSuccessPopup(true);
     } catch (err) {
       setValidationError('Failed to save changes. Please try again.');
       console.error('Error saving predefined questions:', err);
@@ -467,6 +470,10 @@ function ChatbotPredefinedQuestions() {
           </Button>
         </DialogActions>
       </Dialog>
+      <SuccessPopup
+        open={showSuccessPopup}
+        onClose={() => setShowSuccessPopup(false)}
+      />
     </Box>
   );
 }

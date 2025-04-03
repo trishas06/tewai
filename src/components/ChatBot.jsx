@@ -5,6 +5,7 @@ import axiosInstance from '../utils/axiosInstance';
 import PredefinedQuestions from './PredefinedQuestions';
 import ChatArea from './ChatArea';
 import GenerateGuidanceReport from './GenerateGuidanceReport';
+import SuccessPopup from './SuccessPopup';
 
 export default function ChatBot({ reportId, userId, selectedfaq }) {
   const [messages, setMessages] = useState([]);
@@ -17,6 +18,7 @@ export default function ChatBot({ reportId, userId, selectedfaq }) {
   const [editingMessageContent, setEditingMessageContent] = useState('');
   const [editingPageReference, setEditingPageReference] = useState('');
   const [hasChanges, setHasChanges] = useState(false);
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
 
   useEffect(() => {
     const newSocket = io(import.meta.env.VITE_API_BASE_URL);
@@ -212,6 +214,7 @@ export default function ChatBot({ reportId, userId, selectedfaq }) {
       setEditingMessageIndex(null);
       setEditingMessageContent('');
       setEditingPageReference('');
+      setShowSuccessPopup(true);
     } catch (error) {
       console.error('Error updating message:', error);
     }
@@ -249,6 +252,11 @@ export default function ChatBot({ reportId, userId, selectedfaq }) {
           handleUpdateMessage={handleUpdateMessage}
         />
       </Box>
+      <SuccessPopup
+        open={showSuccessPopup}
+        onClose={() => setShowSuccessPopup(false)}
+        message="Message updated successfully!"
+      />
     </>
   );
 }
