@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Box } from '@mui/material';
+import { Box, Typography, Paper } from '@mui/material';
 import { io } from 'socket.io-client';
 import axiosInstance from '../utils/axiosInstance';
 import PredefinedQuestions from './PredefinedQuestions';
@@ -221,17 +221,35 @@ export default function ChatBot({ reportId, userId, selectedfaq }) {
   };
 
   return (
-    <>
-      <Box sx={{ mb: 2, justifyItems: 'right' }}>
-        <GenerateGuidanceReport
-          reportId={reportId}
-          hasChatChanges={hasChanges}
-          onError={(error) => {
-            // Handle error if needed
-            console.error('Error generating guidance report:', error);
+    <Box>
+      <Paper sx={{ p: 2, mb: 2 }}>
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            mb: 2,
           }}
-        />
-      </Box>
+        >
+          <Box>
+            <Typography variant="h6" gutterBottom>
+              Chatbot
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Interactive AI assistant to help analyze the loss report
+            </Typography>
+          </Box>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <GenerateGuidanceReport
+              reportId={reportId}
+              hasChatChanges={hasChanges}
+              onError={(error) => {
+                console.error('Error generating guidance report:', error);
+              }}
+            />
+          </Box>
+        </Box>
+      </Paper>
       <Box
         sx={{ display: 'flex', width: '100%', height: 'calc(100vh - 300px)' }}
       >
@@ -257,6 +275,6 @@ export default function ChatBot({ reportId, userId, selectedfaq }) {
         onClose={() => setShowSuccessPopup(false)}
         message="Message updated successfully!"
       />
-    </>
+    </Box>
   );
 }
