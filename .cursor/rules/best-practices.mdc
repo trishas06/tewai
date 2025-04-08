@@ -1,0 +1,105 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+---
+description: Comprehensive guide for React.js best practices covering component structure, state management, performance optimization, TypeScript usage, styling, accessibility, and code conventions.
+globs: 
+alwaysApply: false
+---
+# React.js Best Practices
+
+**glob**: `**/*.{jsx,tsx,js,ts}`
+
+## Component Structure and Organization
+
+- Use functional components with hooks instead of class components
+- Keep components small and focused on a single responsibility
+- Extract reusable logic into custom hooks
+- Use named exports for components rather than default exports
+- Group related components in dedicated folders
+- Implement lazy loading for components when appropriate using React.lazy and Suspense
+
+## State Management
+
+- Use useState for local component state
+- Prefer useReducer for complex state logic
+- Keep state as close as possible to where it's used
+- Use context API for sharing state across distant components
+- Consider using state management libraries (Redux, Zustand, Jotai) only when necessary
+
+## Performance Optimization
+
+- Use React.memo for preventing unnecessary re-renders
+- Implement useMemo for expensive calculations
+- Use useCallback for functions passed to child components
+- Avoid inline function definitions in render methods
+- Use virtualization for long lists (react-window, react-virtualized)
+- Implement code splitting to reduce initial bundle size
+
+## Handling Side Effects
+
+- Use useEffect for side effects
+- Always define cleanup functions for subscriptions or event listeners
+- Properly specify dependencies array in useEffect
+- Use useLayoutEffect for DOM measurements that affect layout
+- Avoid nested useEffect hooks
+
+## Props and TypeScript
+
+- Use TypeScript for type safety
+- Define prop types using interfaces rather than type aliases
+- Make props explicit and avoid passing unnecessary props
+- Destructure props at the function parameter level
+- Use default props for optional parameters
+- Consider using prop spreading sparingly
+
+## Styling Best Practices
+
+- Use CSS-in-JS solutions or CSS Modules to avoid style conflicts
+- Implement responsive designs with media queries
+- Use design systems or component libraries for consistency
+- Keep styling logic separate from business logic
+- Consider accessibility in your styling (color contrast, focus states)
+
+## Testing
+
+- Write tests for components using Jest and React Testing Library
+- Test component behavior rather than implementation details
+- Use mock functions for external dependencies
+- Test user interactions using fireEvent or user-event
+- Implement snapshot testing for UI components
+
+## Error Handling
+
+- Implement error boundaries to catch and display errors
+- Add fallback UI for error states
+- Use try/catch blocks for async operations
+- Provide meaningful error messages to users
+- Log errors to monitoring services
+
+## Forms
+
+- Use controlled components for form elements
+- Consider form libraries like Formik or React Hook Form for complex forms
+- Implement proper form validation
+- Use appropriate HTML5 input types and attributes
+- Ensure form accessibility (labels, error messages, etc.)
+
+## Accessibility
+
+- Ensure proper semantic HTML elements
+- Use appropriate ARIA attributes when necessary
+- Ensure keyboard navigation works correctly
+- Test with screen readers
+- Implement proper focus management
+- Ensure sufficient color contrast and text size
+
+## Code Style and Conventions
+
+- Follow consistent naming conventions
+- Use ESLint and Prettier for code formatting
+- Write descriptive comments and documentation
+- Use absolute imports rather than relative when possible
+- Keep the component folder structure consistent 

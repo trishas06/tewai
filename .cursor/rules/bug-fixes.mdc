@@ -1,0 +1,316 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Bug Fixing Standards and Guidelines
+
+This rule provides comprehensive guidelines and standards for identifying, documenting, and resolving bugs within the project. Use these guidelines to ensure consistent and effective bug fixing across the codebase.
+
+## Bug Identification and Documentation
+
+### Bug Report Structure
+- **Title**: Clear and concise description of the issue
+- **Reproduction Steps**: Numbered list of steps to reproduce the bug
+- **Expected Behavior**: What should happen when following the steps
+- **Actual Behavior**: What actually happens, including error messages
+- **Environment**: Browser, OS, device information where applicable
+- **Screenshots/Videos**: Visual evidence of the issue when possible
+- **Severity**: Critical, Major, Minor, or Cosmetic
+
+### Bug Classification
+1. **UI/UX Issues**: Visual glitches, layout problems, responsive design failures
+2. **Functional Issues**: Features not working as expected, incorrect calculations
+3. **Performance Issues**: Slow rendering, memory leaks, excessive resource usage
+4. **Cross-browser/Platform Issues**: Bugs that only appear in specific environments
+5. **Data Handling Issues**: Incorrect data processing, storage, or retrieval
+6. **Integration Issues**: Problems with API connections, third-party services
+
+## Bug Analysis Process
+
+### Initial Investigation
+```
+When investigating a reported bug in the React app, follow these steps:
+1. Confirm the bug by reproducing it in your development environment
+2. Check browser console for errors or warnings
+3. Use React DevTools to inspect component state and props
+4. Analyze network requests for API-related issues
+5. Review recent code changes that might have introduced the bug
+6. Identify the specific component(s) or function(s) involved
+7. Determine the root cause before attempting to fix
+```
+
+### Root Cause Analysis
+```
+For complex bugs, perform detailed root cause analysis:
+1. Use debugger statements or console logging at strategic points
+2. Compare broken state/behavior with expected behavior
+3. Isolate the issue by creating a minimal reproduction
+4. Check for similar issues in project history or bug tracker
+5. Review related documentation or specifications
+6. Consult with team members familiar with the affected code
+7. Document your findings thoroughly for future reference
+```
+
+## Bug Fixing Best Practices
+
+### General Principles
+- Fix the root cause, not just the symptoms
+- Make the smallest possible change that resolves the issue
+- Maintain code style and project conventions
+- Add tests that verify the bug is fixed
+- Document the fix in code comments where applicable
+- Keep performance in mind when implementing fixes
+
+### Code Approach
+```typescript
+// BAD: Quick fix that doesn't address root cause
+function quickFixExample() {
+  // Just hiding the error without fixing the underlying issue
+  try {
+    potentiallyBuggyFunction();
+  } catch (error) {
+    console.log('Error caught, continuing...');
+  }
+}
+
+// GOOD: Proper fix addressing the root cause
+function properFixExample() {
+  // Check conditions that would cause the error
+  if (isValidInput(input)) {
+    processValidInput(input);
+  } else {
+    handleInvalidInput(input);
+    // Log for monitoring but with actionable information
+    logAnalytics('invalid_input_handled', { inputType: typeof input });
+  }
+}
+```
+
+## Testing Bug Fixes
+
+### Verification Process
+1. Verify the fix resolves the reported issue
+2. Ensure the fix doesn't introduce new bugs
+3. Test edge cases and boundary conditions
+4. Check performance impact
+5. Verify in all supported browsers/devices when applicable
+
+### Test Template for Bug Fixes
+```typescript
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { BuggyComponent } from './BuggyComponent';
+
+describe('BuggyComponent (Bug #123)', () => {
+  it('should no longer crash when receiving empty data', () => {
+    // Arrange - set up the test with the conditions that would trigger the bug
+    const emptyData = [];
+    
+    // Act - render with the problematic input
+    render(<BuggyComponent data={emptyData} />);
+    
+    // Assert - verify the component now handles the case correctly
+    expect(screen.getByText('No data available')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('should handle user interactions correctly after fix', async () => {
+    const user = userEvent.setup();
+    const handleSubmit = jest.fn();
+    
+    render(<BuggyComponent onSubmit={handleSubmit} />);
+    
+    // Test the previously buggy interaction
+    await user.click(screen.getByRole('button', { name: /submit/i }));
+    
+    // Verify the fix works
+    expect(handleSubmit).toHaveBeenCalledTimes(1);
+  });
+});
+```
+
+## Code Review for Bug Fixes
+
+### Review Checklist
+- [ ] Fix addresses the root cause of the bug
+- [ ] Fix is minimally invasive and focused
+- [ ] New tests added that verify the fix
+- [ ] Existing tests still pass
+- [ ] Code follows project style and conventions
+- [ ] No performance regressions
+- [ ] Documentation updated if needed
+
+### Common Pitfalls to Check
+- Hardcoded values that might cause issues in other environments
+- Race conditions in asynchronous code
+- Edge cases not properly handled
+- Overly complex solutions for simple problems
+- Lack of error handling
+- Browser/device compatibility issues
+
+## Bug Fix Documentation
+
+### Commit Message Format
+```
+fix(component): short description of the bug fix
+
+- Detailed explanation of what was happening
+- Root cause identified
+- How the fix addresses the issue
+- Any additional context or notes
+
+Closes #123
+```
+
+### PR Description Template
+```markdown
+## Bug Fix Description
+Fixed issue where [describe the bug briefly]
+
+## Root Cause
+[Explain what was causing the bug]
+
+## Solution
+[Describe how your changes fix the issue]
+
+## Testing Done
+- [List specific tests performed]
+- [Include screenshots if applicable]
+
+## Additional Notes
+[Any other relevant information]
+
+Fixes #123
+```
+
+## Common Bug Types and Solutions
+
+### State Management Issues
+```typescript
+// Problem: Component not re-rendering with state updates
+function BuggyCounter() {
+  // Bug: Mutating state directly
+  const [count, setCount] = useState(0);
+  
+  const increment = () => {
+    count++; // Direct mutation, won't trigger re-render
+  };
+  
+  return <button onClick={increment}>{count}</button>;
+}
+
+// Solution: Use state setter correctly
+function FixedCounter() {
+  const [count, setCount] = useState(0);
+  
+  const increment = () => {
+    setCount(prevCount => prevCount + 1); // Proper state update
+  };
+  
+  return <button onClick={increment}>{count}</button>;
+}
+```
+
+### Event Handling Bugs
+```typescript
+// Problem: Event handler using stale closure
+function BuggyForm() {
+  const [name, setName] = useState('');
+  
+  // Bug: This effect sets up a listener that captures the initial value of 'name'
+  useEffect(() => {
+    const handleSubmit = () => {
+      console.log(`Submitting: ${name}`); // Will always use initial value
+    };
+    
+    document.addEventListener('submit-form', handleSubmit);
+    return () => document.removeEventListener('submit-form', handleSubmit);
+  }, []); // Missing dependency
+  
+  return <input value={name} onChange={(e) => setName(e.target.value)} />;
+}
+
+// Solution: Include all dependencies or use ref
+function FixedForm() {
+  const [name, setName] = useState('');
+  
+  // Fix: Include name in dependency array or use a ref
+  useEffect(() => {
+    const handleSubmit = () => {
+      console.log(`Submitting: ${name}`); // Will use current value
+    };
+    
+    document.addEventListener('submit-form', handleSubmit);
+    return () => document.removeEventListener('submit-form', handleSubmit);
+  }, [name]); // Proper dependency
+  
+  return <input value={name} onChange={(e) => setName(e.target.value)} />;
+}
+```
+
+## Performance Bug Fixes
+
+### Common Performance Issues
+1. Unnecessary re-renders
+2. Expensive calculations in render paths
+3. Memory leaks
+4. Large bundle sizes
+5. Inefficient API calls
+
+### Performance Fix Example
+```typescript
+// Problem: Component re-rendering too often
+const BuggyList = ({ items }) => {
+  // Bug: New function created on every render causing child components to re-render
+  const handleItemClick = (item) => {
+    console.log('Item clicked:', item);
+  };
+  
+  return (
+    <div>
+      {items.map(item => (
+        <ListItem 
+          key={item.id} 
+          item={item} 
+          onClick={handleItemClick} // New function reference on every render
+        />
+      ))}
+    </div>
+  );
+};
+
+// Solution: Memoize the function with useCallback
+const FixedList = ({ items }) => {
+  // Fix: Stable function reference
+  const handleItemClick = useCallback((item) => {
+    console.log('Item clicked:', item);
+  }, []);
+  
+  return (
+    <div>
+      {items.map(item => (
+        <ListItem 
+          key={item.id} 
+          item={item} 
+          onClick={handleItemClick} // Same function reference across renders
+        />
+      ))}
+    </div>
+  );
+};
+```
+
+## Post-Fix Monitoring
+
+### Metrics to Track
+- Error rates before and after fix
+- User engagement with fixed feature
+- Performance metrics for affected components
+- Support tickets or reports related to the issue
+
+### Monitoring Implementation
+- Add logging for edge cases that might still occur
+- Set up alerts for similar patterns
+- Document the fix for future reference
+- Share knowledge with the team about the root cause and solution 

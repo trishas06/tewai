@@ -1,0 +1,207 @@
+---
+description: This document provides comprehensive testing standards and guidelines for React applications. It includes best practices, templates, and common testing scenarios to ensure consistent and effective testing across the codebase.
+globs: 
+alwaysApply: false
+---
+# React Testing Standards and Guidelines
+
+## General Guidelines
+
+### Testing Framework
+- Jest with React Testing Library
+- Support for TypeScript testing
+
+### File Organization
+- Test files should follow the pattern: `ComponentName.test.{tsx,jsx}` or `ComponentName.spec.{tsx,jsx}`
+- Tests should be co-located with their corresponding components
+- Target minimum 80% test coverage for business-critical components
+- Group tests logically by feature or behavior
+
+## Component Testing
+
+### Test Structure
+1. Use descriptive `describe` blocks to group related tests
+2. Write test descriptions in the format: 'should [expected behavior] when [condition]'
+3. Utilize `beforeEach` for common setup code
+4. Implement `afterEach` for cleanup when necessary
+
+### Best Practices
+- Focus on testing behavior over implementation details
+- Use semantic queries that reflect user interactions
+- Prefer `user-event` over `fireEvent` for user interactions
+- Include accessibility testing where applicable
+- Mock external dependencies appropriately
+- Test both success and error states
+
+### Query Priority
+1. `getBy*` - For elements that must be present
+2. `queryBy*` - For elements that may not exist
+3. `findBy*` - For asynchronous elements
+
+## Generic Test Templates
+
+### Basic Component Test
+```typescript
+import { render, screen } from '@testing-library/react';
+import { ComponentUnderTest } from './ComponentUnderTest';
+
+describe('ComponentUnderTest', () => {
+  it('should render successfully', () => {
+    render(<ComponentUnderTest />);
+    expect(screen.getByRole('main')).toBeInTheDocument();
+  });
+
+  it('should display correct content', () => {
+    const testProps = {
+      title: 'Test Title',
+      content: 'Test Content'
+    };
+    render(<ComponentUnderTest {...testProps} />);
+    expect(screen.getByText(testProps.title)).toBeInTheDocument();
+    expect(screen.getByText(testProps.content)).toBeInTheDocument();
+  });
+});
+```
+
+### Interactive Component Test
+```typescript
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { InteractiveComponent } from './InteractiveComponent';
+
+describe('InteractiveComponent', () => {
+  it('should handle user interactions correctly', async () => {
+    const user = userEvent.setup();
+    const handleChange = jest.fn();
+    
+    render(<InteractiveComponent onChange={handleChange} />);
+    
+    const input = screen.getByRole('textbox');
+    await user.type(input, 'test value');
+    
+    expect(handleChange).toHaveBeenCalled();
+    expect(input).toHaveValue('test value');
+  });
+});
+```
+
+### Async Component Test
+```typescript
+import { render, screen } from '@testing-library/react';
+import { AsyncComponent } from './AsyncComponent';
+
+describe('AsyncComponent', () => {
+  it('should handle async operations', async () => {
+    render(<AsyncComponent />);
+    
+    // Test loading state
+    expect(screen.getByRole('progressbar')).toBeInTheDocument();
+    
+    // Test loaded state
+    const content = await screen.findByRole('article');
+    expect(content).toBeInTheDocument();
+  });
+
+  it('should handle errors gracefully', async () => {
+    // Mock failed request
+    jest.spyOn(global, 'fetch').mockRejectedValueOnce(new Error('API Error'));
+    
+    render(<AsyncComponent />);
+    
+    const errorMessage = await screen.findByRole('alert');
+    expect(errorMessage).toHaveTextContent('Error loading data');
+  });
+});
+```
+
+## Common Test Scenarios
+
+### Form Testing
+```typescript
+describe('Form Testing', () => {
+  it('should handle form submission', async () => {
+    const user = userEvent.setup();
+    const onSubmit = jest.fn();
+    
+    render(<FormComponent onSubmit={onSubmit} />);
+    
+    await user.type(screen.getByLabelText('Email'), 'test@example.com');
+    await user.type(screen.getByLabelText('Password'), 'password123');
+    await user.click(screen.getByRole('button', { name: /submit/i }));
+    
+    expect(onSubmit).toHaveBeenCalledWith({
+      email: 'test@example.com',
+      password: 'password123'
+    });
+  });
+});
+```
+
+### State Management Testing
+```typescript
+describe('State Management', () => {
+  it('should manage component state correctly', async () => {
+    const user = userEvent.setup();
+    
+    render(<StateComponent initialCount={0} />);
+    
+    const increment = screen.getByRole('button', { name: /increment/i });
+    await user.click(increment);
+    
+    expect(screen.getByText('Count: 1')).toBeInTheDocument();
+  });
+});
+```
+
+## Testing Utilities
+
+### Custom Render Function
+```typescript
+import { render as rtlRender } from '@testing-library/react';
+import { Provider } from 'react-redux';
+import { BrowserRouter } from 'react-router-dom';
+
+const render = (ui, { store = createStore(), ...renderOptions } = {}) => {
+  const Wrapper = ({ children }) => (
+    <Provider store={store}>
+      <BrowserRouter>
+        {children}
+      </BrowserRouter>
+    </Provider>
+  );
+  
+  return rtlRender(ui, { wrapper: Wrapper, ...renderOptions });
+};
+```
+
+## Setup Requirements
+
+### Required Dependencies
+```json
+{
+  "devDependencies": {
+    "@testing-library/react": "^14.0.0",
+    "@testing-library/jest-dom": "^6.0.0",
+    "@testing-library/user-event": "^14.0.0",
+    "jest": "^29.0.0",
+    "@types/jest": "^29.0.0"
+  }
+}
+```
+
+### Jest Configuration
+```javascript
+// jest.config.js
+module.exports = {
+  testEnvironment: 'jsdom',
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+  moduleNameMapper: {
+    '\\.(css|less|scss)$': 'identity-obj-proxy',
+    '^@/(.*)$': '<rootDir>/src/$1'
+  },
+  collectCoverageFrom: [
+    'src/**/*.{ts,tsx}',
+    '!src/**/*.d.ts'
+  ]
+};
+```

@@ -1,0 +1,625 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+---
+description: This rule provides comprehensive guidelines for implementing security guardrails and input validation throughout the application
+globs: ["src/**/*.{jsx,js}", "*.js"]
+alwaysApply: false
+---
+### 1. Input Validation Guidelines
+```
+Apply these input validation rules consistently across all forms and user inputs in the application:
+
+1. REQUIRED VALIDATION LIBRARIES:
+   - Use Yup for schema validation (add to project dependencies if not present)
+   - Integrate with React Hook Form for form state management
+
+2. COMMON VALIDATION PATTERNS:
+   - Text inputs: Validate length constraints and use appropriate regex patterns
+   - Email inputs: Use RFC-compliant email regex
+   - Numeric inputs: Validate ranges and decimal precision
+   - Dates: Validate date formats and ranges
+   - Files: Validate file types, sizes, and potentially content
+   - Passwords: Enforce strong password requirements (8+ chars, mixed case, numbers, symbols)
+
+3. VALIDATION IMPLEMENTATION APPROACH:
+   - Create validation schemas in separate utility files
+   - Reuse common validation patterns
+   - Provide clear, user-friendly error messages
+   - Implement both client-side and server-side validation
+   - Validate inputs on blur and before form submission
+
+4. HANDLE EDGE CASES:
+   - Support internationalization in validation messages
+   - Handle special characters appropriately
+   - Consider accessibility in validation feedback
+```
+
+---
+
+### 2. Schema Implementation Template
+```
+// Example validation schema implementation for a form:
+
+import * as yup from 'yup';
+
+export const loginFormSchema = yup.object({
+  username: yup
+    .string()
+    .required('Username is required')
+    .trim()
+    .min(3, 'Username must be at least 3 characters')
+    .max(50, 'Username cannot exceed 50 characters'),
+  password: yup
+    .string()
+    .required('Password is required')
+    .min(8, 'Password must be at least 8 characters')
+    .matches(
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
+      'Password must include at least one uppercase letter, one lowercase letter, one number, and one special character'
+    ),
+});
+
+// Example implementation with React Hook Form:
+import { useForm } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
+import { loginFormSchema } from '../utils/validationSchemas';
+
+function LoginForm() {
+  const { 
+    register, 
+    handleSubmit, 
+    formState: { errors } 
+  } = useForm({
+    resolver: yupResolver(loginFormSchema)
+  });
+
+  const onSubmit = (data) => {
+    // Form data has been validated
+    console.log(data);
+  };
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <input {...register('username')} />
+      {errors.username && <p>{errors.username.message}</p>}
+      
+      <input type="password" {...register('password')} />
+      {errors.password && <p>{errors.password.message}</p>}
+      
+      <button type="submit">Submit</button>
+    </form>
+  );
+}
+```
+
+---
+
+### 3. API Data Validation
+```
+// Standardize API request validation pattern:
+
+// 1. Create a validation function
+function validateAPIData(data, schema) {
+  try {
+    const validatedData = schema.validateSync(data, { abortEarly: false });
+    return { isValid: true, data: validatedData, errors: null };
+  } catch (validationError) {
+    const errors = validationError.inner.reduce((acc, error) => {
+      return { ...acc, [error.path]: error.message };
+    }, {});
+    return { isValid: false, data: null, errors };
+  }
+}
+
+// 2. Use it before making API calls
+async function submitFormToAPI(formData) {
+  const { isValid, data, errors } = validateAPIData(formData, formSchema);
+  
+  if (!isValid) {
+    // Handle validation errors
+    return { success: false, errors };
+  }
+  
+  try {
+    // Safe to proceed with API call
+    const response = await axiosInstance.post('/api/endpoint', data);
+    return { success: true, data: response.data };
+  } catch (error) {
+    return { success: false, errors: { server: error.message } };
+  }
+}
+```
+
+---
+
+### 4. Security Guardrails Implementation
+```
+Implement these security guardrails throughout the application:
+
+1. AUTHENTICATION & AUTHORIZATION:
+   - Use JWT tokens with appropriate expiration
+   - Implement token refresh mechanism
+   - Store tokens securely (not in localStorage)
+   - Enforce role-based access control
+   - Implement proper session management
+
+2. DATA PROTECTION:
+   - Sanitize all user inputs to prevent XSS
+   - Implement CSRF protection
+   - Use HTTPS exclusively
+   - Sanitize data displayed from API responses
+   - Validate all file uploads for type, size, and content
+
+3. SECURE CODING PRACTICES:
+   - Avoid direct DOM manipulation when possible
+   - Use Content Security Policy headers
+   - Implement proper error handling without exposing sensitive information
+   - Use parameterized queries for any database operations
+   - Practice the principle of least privilege
+
+4. SENSITIVE DATA HANDLING:
+   - Never log sensitive data
+   - Mask sensitive data in the UI
+   - Implement proper data encryption for sensitive information
+   - Clear sensitive data from memory when no longer needed
+   - Implement proper key management
+```
+
+---
+
+### 5. XSS Prevention Utilities
+```
+// Example XSS prevention utility
+
+// 1. Create a sanitization utility
+import DOMPurify from 'dompurify';
+
+export const sanitizeInput = (input) => {
+  if (typeof input !== 'string') return input;
+  return DOMPurify.sanitize(input);
+};
+
+export const sanitizeObject = (obj) => {
+  if (typeof obj !== 'object' || obj === null) return obj;
+  
+  const sanitized = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (typeof value === 'string') {
+      sanitized[key] = sanitizeInput(value);
+    } else if (typeof value === 'object' && value !== null) {
+      sanitized[key] = sanitizeObject(value);
+    } else {
+      sanitized[key] = value;
+    }
+  }
+  
+  return sanitized;
+};
+
+// 2. Use these utilities when handling user inputs and API responses
+const handleSubmit = (formData) => {
+  const sanitizedData = sanitizeObject(formData);
+  submitToAPI(sanitizedData);
+};
+
+const displayAPIData = (responseData) => {
+  const sanitizedData = sanitizeObject(responseData);
+  setData(sanitizedData);
+};
+```
+
+---
+
+### 6. Rate Limiting and Throttling
+```
+Implement rate limiting and request throttling to prevent abuse:
+
+1. API CALL THROTTLING:
+   - Implement debouncing for search inputs and rapid user interactions
+   - Use axios interceptors to prevent multiple identical requests
+
+2. BUTTON/FORM SUBMISSION PROTECTION:
+   - Disable buttons during form submission
+   - Prevent multiple form submissions
+   - Implement cooldown periods for sensitive operations
+
+3. IMPLEMENTATION EXAMPLE:
+
+// Debounce utility
+export function debounce(func, wait) {
+  let timeout;
+  return function(...args) {
+    const context = this;
+    clearTimeout(timeout);
+    timeout = setTimeout(() => {
+      func.apply(context, args);
+    }, wait);
+  };
+}
+
+// Usage example
+const debouncedSearch = debounce((searchTerm) => {
+  // Perform search operation
+  fetchSearchResults(searchTerm);
+}, 300);
+
+// Rate limiter for API calls
+export class RateLimiter {
+  constructor(maxRequests, timeWindow) {
+    this.maxRequests = maxRequests;
+    this.timeWindow = timeWindow;
+    this.requestTimes = [];
+  }
+
+  canMakeRequest() {
+    const now = Date.now();
+    // Remove old requests outside the time window
+    this.requestTimes = this.requestTimes.filter(
+      time => now - time < this.timeWindow
+    );
+    
+    // Check if we're within the limit
+    if (this.requestTimes.length < this.maxRequests) {
+      this.requestTimes.push(now);
+      return true;
+    }
+    
+    return false;
+  }
+}
+
+// Usage example
+const apiRateLimiter = new RateLimiter(5, 1000); // 5 requests per second
+
+const makeApiCall = () => {
+  if (!apiRateLimiter.canMakeRequest()) {
+    console.warn('Rate limit exceeded, request blocked');
+    return Promise.reject(new Error('Rate limit exceeded'));
+  }
+  
+  return axiosInstance.get('/api/data');
+};
+```
+
+---
+
+### 7. Form Component Implementation with Guardrails
+```
+Implement these patterns in all form components:
+
+1. CONTROLLED INPUTS WITH VALIDATION:
+   - Always use controlled inputs
+   - Validate on blur and before submission
+   - Provide immediate feedback for validation errors
+   - Sanitize inputs before submission
+
+2. FORM STATE MANAGEMENT:
+   - Use React Hook Form for complex forms
+   - Implement proper form state reset after submission
+   - Handle loading states properly
+   - Provide clear success/error feedback
+
+3. FIELD-LEVEL VALIDATION:
+   - Implement field-specific validation rules
+   - Validate related fields together (e.g., password confirmation)
+   - Implement cross-field validation when necessary
+
+4. IMPLEMENTATION EXAMPLE:
+
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
+import * as yup from 'yup';
+import { sanitizeObject } from '../utils/security';
+
+const formSchema = yup.object({
+  email: yup
+    .string()
+    .required('Email is required')
+    .email('Please enter a valid email'),
+  password: yup
+    .string()
+    .required('Password is required')
+    .min(8, 'Password must be at least 8 characters'),
+  confirmPassword: yup
+    .string()
+    .required('Please confirm your password')
+    .oneOf([yup.ref('password')], 'Passwords must match')
+});
+
+function SecureForm() {
+  const [loading, setLoading] = useState(false);
+  const [serverError, setServerError] = useState('');
+  
+  const { 
+    register, 
+    handleSubmit, 
+    formState: { errors },
+    reset 
+  } = useForm({
+    resolver: yupResolver(formSchema),
+    mode: 'onBlur' // Validate on blur
+  });
+  
+  const onSubmit = async (data) => {
+    setLoading(true);
+    setServerError('');
+    
+    try {
+      // Sanitize data before sending to API
+      const sanitizedData = sanitizeObject(data);
+      
+      // API call
+      const response = await apiService.register(sanitizedData);
+      
+      // Handle success
+      reset(); // Clear form
+      // Navigate or show success message
+    } catch (error) {
+      // Handle error
+      setServerError(
+        error.response?.data?.message || 
+        'An error occurred. Please try again.'
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  return (
+    <form onSubmit={handleSubmit(onSubmit)}>
+      {serverError && <div className="error">{serverError}</div>}
+      
+      <div>
+        <label htmlFor="email">Email</label>
+        <input 
+          id="email"
+          type="email" 
+          {...register('email')} 
+        />
+        {errors.email && <p>{errors.email.message}</p>}
+      </div>
+      
+      <div>
+        <label htmlFor="password">Password</label>
+        <input 
+          id="password"
+          type="password" 
+          {...register('password')} 
+        />
+        {errors.password && <p>{errors.password.message}</p>}
+      </div>
+      
+      <div>
+        <label htmlFor="confirmPassword">Confirm Password</label>
+        <input 
+          id="confirmPassword"
+          type="password" 
+          {...register('confirmPassword')} 
+        />
+        {errors.confirmPassword && <p>{errors.confirmPassword.message}</p>}
+      </div>
+      
+      <button 
+        type="submit" 
+        disabled={loading}
+      >
+        {loading ? 'Submitting...' : 'Submit'}
+      </button>
+    </form>
+  );
+}
+```
+
+---
+
+### 8. API Request Security Patterns
+```
+Implement these patterns for all API requests:
+
+1. REQUEST INTERCEPTORS:
+   - Add authentication tokens
+   - Implement request logging if needed
+   - Sanitize request data
+
+2. RESPONSE INTERCEPTORS:
+   - Handle authentication errors
+   - Sanitize response data
+   - Handle global error states
+
+3. CANCEL TOKENS:
+   - Implement cancellation for requests that may become stale
+   - Cancel pending requests on component unmount
+
+4. IMPLEMENTATION EXAMPLE:
+
+import axios from 'axios';
+import { sanitizeObject } from './security';
+
+// Create a custom instance
+const api = axios.create({
+  baseURL: process.env.VITE_API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  timeout: 10000, // 10 seconds
+});
+
+// Request interceptor
+api.interceptors.request.use(
+  (config) => {
+    // Add authentication token
+    const token = getAuthToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    
+    // Sanitize request data if it exists
+    if (config.data) {
+      config.data = sanitizeObject(config.data);
+    }
+    
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// Response interceptor
+api.interceptors.response.use(
+  (response) => {
+    // Sanitize response data
+    if (response.data) {
+      response.data = sanitizeObject(response.data);
+    }
+    return response;
+  },
+  (error) => {
+    // Handle authentication errors
+    if (error.response?.status === 401) {
+      // Clear auth state and redirect to login
+      logout();
+      window.location.href = '/login';
+    }
+    
+    // Handle other errors
+    return Promise.reject(error);
+  }
+);
+
+// Example function with cancel token
+export const searchData = (query) => {
+  const source = axios.CancelToken.source();
+  
+  const promise = api.get('/search', {
+    params: { q: query },
+    cancelToken: source.token
+  });
+  
+  // Add cancel method to the promise
+  promise.cancel = () => {
+    source.cancel('Request cancelled');
+  };
+  
+  return promise;
+};
+
+// Usage in component
+function SearchComponent() {
+  const [query, setQuery] = useState('');
+  
+  useEffect(() => {
+    if (!query) return;
+    
+    const request = searchData(query);
+    
+    return () => {
+      // Cancel request on component unmount or query change
+      request.cancel();
+    };
+  }, [query]);
+  
+  // Rest of component
+}
+```
+
+---
+
+### 9. Protected Routes Implementation
+```
+Implement secure routing with these patterns:
+
+1. AUTHENTICATION CHECKING:
+   - Verify authentication state before rendering protected routes
+   - Redirect to login for unauthenticated users
+   - Implement role-based access control
+
+2. TOKEN VALIDATION:
+   - Validate token expiration
+   - Implement token refresh mechanism
+   - Handle invalid tokens gracefully
+
+3. IMPLEMENTATION EXAMPLE:
+
+import { Navigate, Outlet } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
+
+function ProtectedRoute({ requiredRoles = [] }) {
+  const { user, isAuthenticated, isLoading } = useAuth();
+  
+  // Show loading state
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
+  
+  // Check authentication
+  if (!isAuthenticated) {
+    // Redirect to login with return URL
+    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
+  }
+  
+  // Check role requirements if any
+  if (requiredRoles.length > 0 && !requiredRoles.includes(user.role)) {
+    // Redirect to unauthorized page
+    return <Navigate to="/unauthorized" replace />;
+  }
+  
+  // Render child routes
+  return <Outlet />;
+}
+
+// Usage in router setup
+<Routes>
+  <Route path="/login" element={<Login />} />
+  
+  <Route element={<ProtectedRoute />}>
+    <Route path="/dashboard" element={<Dashboard />} />
+    <Route path="/profile" element={<Profile />} />
+  </Route>
+  
+  <Route element={<ProtectedRoute requiredRoles={['admin']} />}>
+    <Route path="/admin" element={<Admin />} />
+  </Route>
+</Routes>
+```
+
+---
+
+### 10. Security Testing Checklist
+```
+Apply these security testing practices to validate guardrails implementation:
+
+1. AUTHENTICATION TESTING:
+   - Test login with valid/invalid credentials
+   - Test password reset functionality
+   - Test session timeout and renewal
+   - Test token expiration and refresh
+   - Test remember me functionality
+
+2. AUTHORIZATION TESTING:
+   - Test access to protected routes without authentication
+   - Test access to protected routes with incorrect roles
+   - Test API endpoint access control
+
+3. INPUT VALIDATION TESTING:
+   - Test forms with valid/invalid inputs
+   - Test with special characters and potential XSS payloads
+   - Test file uploads with various file types
+
+4. SECURITY HEADERS TESTING:
+   - Validate Content-Security-Policy implementation
+   - Check for proper CORS configuration
+   - Verify X-XSS-Protection and other security headers
+
+5. SENSITIVE DATA HANDLING:
+   - Verify that passwords and sensitive info are not logged
+   - Test that sensitive data is properly masked in UI
+   - Verify that tokens are stored securely
+
+6. ERROR HANDLING TESTING:
+   - Verify that stack traces are not exposed to users
+   - Test error boundaries for proper containment
+   - Validate that error messages don't reveal sensitive information
+``` 

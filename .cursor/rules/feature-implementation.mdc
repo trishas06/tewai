@@ -1,0 +1,123 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+---
+description: Comprehensive guide for implementing new features, covering planning, development workflow, code standards, testing requirements, and deployment procedures.
+globs: 
+alwaysApply: false
+---
+# Feature Implementation Guidelines
+
+**glob**: `**/*.{jsx,tsx,js,ts}`
+
+## Planning Phase
+
+- Begin with a clear feature specification or user story
+- Define acceptance criteria before starting development
+- Break down complex features into smaller, manageable tasks
+- Estimate time requirements for each task
+- Identify potential dependencies on other components or services
+- Review existing components that might be reused or extended
+- Discuss the feature with team members to gather insights
+
+## Development Workflow
+
+- Create a feature branch from the main development branch
+- Follow the naming convention: `feature/feature-name` or `feature/issue-number-feature-name`
+- Make regular, atomic commits with descriptive messages
+- Keep PRs manageable in size (preferably under 500 lines of code)
+- Update documentation alongside code changes
+- Implement features incrementally, starting with core functionality
+- Use feature flags for controlled rollout when appropriate
+
+## Component Implementation
+
+- Create new components in the appropriate directory based on their purpose
+- Follow the established project structure and organization
+- Ensure components are reusable and composable where possible
+- Extract business logic into custom hooks or utility functions
+- Implement proper prop validation and TypeScript interfaces
+- Ensure components render efficiently (avoid unnecessary re-renders)
+- Add appropriate JSDoc comments for complex logic
+
+## State Management
+
+- Identify the appropriate scope for state (local vs. global)
+- For local state, use React hooks (useState, useReducer)
+- For global state, follow existing patterns (Redux, Context API, etc.)
+- Keep state normalized and avoid duplication
+- Implement proper error handling for async operations
+- Consider optimistic UI updates for better user experience
+- Add appropriate loading states for async operations
+
+## API Integration
+
+- Use existing API utilities and patterns for consistency
+- Implement proper error handling and loading states
+- Consider retry mechanisms for unstable network conditions
+- Cache responses when appropriate to improve performance
+- Validate API responses against expected schemas
+- Write descriptive error messages for debugging purposes
+
+## Responsive Design and Accessibility
+
+- Ensure the feature works on all supported screen sizes
+- Follow responsive design principles from the start
+- Meet WCAG 2.1 AA accessibility standards
+- Test with keyboard navigation
+- Ensure proper color contrast and text readability
+- Use semantic HTML elements and appropriate ARIA attributes
+- Test with screen readers when implementing complex UI
+
+## Testing Requirements
+
+- Write unit tests for all new components and utilities
+- Implement integration tests for complex interactions
+- Add end-to-end tests for critical user journeys
+- Include edge cases and error scenarios in test coverage
+- Aim for test coverage of at least 80% for new code
+- Test across different browsers if required by project standards
+- Utilize test-driven development (TDD) when appropriate
+
+## Performance Considerations
+
+- Optimize component rendering (React.memo, useMemo, useCallback)
+- Implement code splitting for large feature components
+- Minimize bundle size by avoiding unnecessary dependencies
+- Consider lazy loading for non-critical components
+- Optimize images and assets used in the feature
+- Implement appropriate caching strategies
+- Monitor and benchmark performance during development
+
+## Code Review Checklist
+
+- Adherence to project coding standards and patterns
+- No duplicate or unnecessary code
+- Proper error handling and edge case management
+- Adequate test coverage
+- Responsive design implementation
+- Accessibility compliance
+- Performance considerations
+- Security best practices
+- Proper documentation
+
+## Deployment Procedures
+
+- Complete all items in the code review checklist
+- Verify the feature works in all supported environments
+- Test the feature in a staging environment
+- Prepare release notes documenting the feature
+- Plan rollback strategy in case of issues
+- Consider gradual rollout using feature flags
+- Monitor application metrics after deployment
+
+## Documentation
+
+- Update technical documentation reflecting the new feature
+- Document any API changes or new endpoints
+- Update user documentation or help resources
+- Include screenshots or videos for visual features
+- Document any configuration or environment requirements
+- Add comments for complex logic or algorithms 

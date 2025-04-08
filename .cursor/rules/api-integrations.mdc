@@ -1,0 +1,220 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# API Integration Guidelines
+
+## Overview
+This document provides standards and best practices for API integration within the project. Follow these guidelines to ensure consistent, secure, and maintainable API implementations.
+
+## Base Configuration
+
+### API Client Setup
+- Use axios as the primary HTTP client
+- Implement a base API client with common configurations
+- Configure request/response interceptors for global error handling
+- Set default headers and timeout values
+
+```typescript
+// Example base configuration
+const apiClient = axios.create({
+  baseURL: process.env.REACT_APP_API_BASE_URL,
+  timeout: 30000,
+  headers: {
+    'Content-Type': 'application/json'
+  }
+});
+```
+
+## Error Handling
+
+### Standard Error Response Format
+```typescript
+interface ApiError {
+  status: number;
+  message: string;
+  code?: string;
+  details?: Record<string, any>;
+}
+```
+
+### Error Handling Guidelines
+1. Implement centralized error handling
+2. Use appropriate HTTP status codes
+3. Log errors with sufficient context
+4. Provide user-friendly error messages
+5. Handle network errors gracefully
+
+## Authentication
+
+### Best Practices
+- Store tokens securely using HTTP-only cookies
+- Implement token refresh mechanism
+- Handle token expiration gracefully
+- Use environment variables for sensitive data
+
+```typescript
+// Example authentication header
+apiClient.interceptors.request.use(config => {
+  const token = getAuthToken();
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+```
+
+## API Request Structure
+
+### Endpoint Organization
+- Group related endpoints by feature/domain
+- Use consistent naming conventions
+- Implement proper versioning strategy
+
+### Request/Response Types
+```typescript
+// Example type definitions
+interface ApiRequest<T> {
+  endpoint: string;
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE';
+  data?: T;
+  params?: Record<string, any>;
+  headers?: Record<string, string>;
+}
+
+interface ApiResponse<T> {
+  data: T;
+  status: number;
+  headers: Record<string, string>;
+}
+```
+
+## Rate Limiting and Caching
+
+### Rate Limiting
+- Implement retry mechanisms with exponential backoff
+- Respect API rate limits
+- Monitor API usage
+
+### Caching Strategy
+- Use appropriate caching mechanisms (React Query, SWR)
+- Implement cache invalidation strategies
+- Define cache duration per endpoint
+
+## Security
+
+### Security Measures
+1. Validate all API inputs
+2. Implement CSRF protection
+3. Use HTTPS only
+4. Sanitize response data
+5. Implement request signing when required
+
+## Testing
+
+### API Testing Guidelines
+- Mock API responses in tests
+- Test error scenarios
+- Validate request/response schemas
+- Test authentication flows
+- Use proper test environment configuration
+
+```typescript
+// Example test setup
+jest.mock('axios');
+
+describe('API Integration', () => {
+  it('should handle successful requests', async () => {
+    // Test implementation
+  });
+  
+  it('should handle error scenarios', async () => {
+    // Test implementation
+  });
+});
+```
+
+## Documentation
+
+### API Documentation Standards
+1. Document all endpoints
+2. Include request/response examples
+3. Document error codes and messages
+4. Keep documentation up-to-date
+5. Use OpenAPI/Swagger for API documentation
+
+## Performance
+
+### Performance Guidelines
+- Implement request cancellation for stale requests
+- Use appropriate data fetching strategies
+- Monitor API performance
+- Optimize payload size
+
+## Environment Configuration
+
+### Environment Variables
+```env
+REACT_APP_API_BASE_URL=https://api.example.com
+REACT_APP_API_TIMEOUT=30000
+REACT_APP_API_VERSION=v1
+```
+
+## Monitoring and Logging
+
+### Monitoring Guidelines
+1. Log API request/response metrics
+2. Monitor error rates
+3. Track API performance
+4. Implement proper error tracking
+5. Use appropriate logging levels
+
+## Version Control
+
+### Version Control Guidelines
+1. Use semantic versioning for API versions
+2. Document breaking changes
+3. Maintain backwards compatibility
+4. Provide migration guides
+
+## Usage Example
+
+```typescript
+// Example API service implementation
+class ApiService {
+  static async fetchData<T>(request: ApiRequest<T>): Promise<ApiResponse<T>> {
+    try {
+      const response = await apiClient({
+        url: request.endpoint,
+        method: request.method,
+        data: request.data,
+        params: request.params,
+        headers: request.headers
+      });
+      
+      return {
+        data: response.data,
+        status: response.status,
+        headers: response.headers
+      };
+    } catch (error) {
+      handleApiError(error);
+      throw error;
+    }
+  }
+}
+```
+
+## Contribution Guidelines
+
+### When Adding New API Integration
+1. Follow the established patterns
+2. Add appropriate documentation
+3. Include necessary tests
+4. Update API documentation
+5. Review security implications
+
+---
+
+*Note: This document should be regularly updated to reflect current best practices and project requirements.* 

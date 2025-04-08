@@ -1,0 +1,194 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# React.js Debugging Guidelines
+
+## Overview
+This document provides standardized debugging practices for React.js applications. Follow these guidelines to maintain consistent debugging approaches across the codebase.
+
+## Debug Tools and Extensions
+
+### Required Browser Extensions
+- React Developer Tools
+- Redux DevTools (if using Redux)
+- Chrome DevTools
+
+### VS Code Extensions
+- Debugger for Chrome
+- Error Lens
+- ESLint
+
+## Debugging Practices
+
+### 1. Console Logging Best Practices
+```javascript
+// ❌ Avoid
+console.log(data);
+
+// ✅ Use descriptive logging
+console.log('[ComponentName]:', { 
+  action: 'updateState',
+  previousValue: prevState,
+  newValue: newState 
+});
+```
+
+### 2. React DevTools Usage
+- Always check component props and state
+- Monitor component re-renders
+- Inspect component hierarchy
+- Profile performance issues
+
+### 3. Error Boundaries
+```javascript
+class ErrorBoundary extends React.Component {
+  state = { hasError: false, error: null };
+  
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  
+  componentDidCatch(error, errorInfo) {
+    console.error('[ErrorBoundary]:', {
+      error,
+      errorInfo,
+      component: this.props.componentName
+    });
+  }
+}
+```
+
+### 4. Common Debug Points
+- State updates not reflecting in UI
+- Infinite re-render loops
+- Memory leaks in useEffect
+- Event handler issues
+- API integration problems
+
+### 5. Performance Debugging
+```javascript
+// Use React Profiler
+import { Profiler } from 'react';
+
+<Profiler id="ComponentName" onRender={(id, phase, actualDuration) => {
+  console.log(`[${id}] ${phase}: ${actualDuration}ms`);
+}}>
+  <Component />
+</Profiler>
+```
+
+### 6. Network Debugging
+- Use Network tab in DevTools
+- Implement API error logging
+- Monitor request/response cycles
+- Check for CORS issues
+
+### 7. State Management Debugging
+```javascript
+// Redux debugging
+const store = createStore(
+  reducer,
+  window.__REDUX_DEVTOOLS_EXTENSION__ && window.__REDUX_DEVTOOLS_EXTENSION__()
+);
+
+// Context API debugging
+const MyContext = React.createContext();
+const MyProvider = ({ children }) => {
+  const [state, setState] = useState(initialState);
+  console.log('[ContextProvider] State updated:', state);
+  return (
+    <MyContext.Provider value={{ state, setState }}>
+      {children}
+    </MyContext.Provider>
+  );
+};
+```
+
+## Debug Commands
+
+### Launch Debugger
+```bash
+# Start app in debug mode
+npm start -- --inspect
+
+# Attach VS Code debugger
+{
+  "type": "chrome",
+  "request": "launch",
+  "name": "Launch Chrome against localhost",
+  "url": "http://localhost:3000",
+  "webRoot": "${workspaceFolder}"
+}
+```
+
+### Testing Debug
+```javascript
+// Jest debugging
+test.only('debug this test', () => {
+  // Your test code
+});
+
+// React Testing Library debug
+import { screen } from '@testing-library/react';
+screen.debug();
+```
+
+## Common Issues and Solutions
+
+### 1. Stale Closures
+```javascript
+// ❌ Problem
+useEffect(() => {
+  const interval = setInterval(() => {
+    setCount(count + 1);
+  }, 1000);
+  return () => clearInterval(interval);
+}, []);
+
+// ✅ Solution
+useEffect(() => {
+  const interval = setInterval(() => {
+    setCount(prev => prev + 1);
+  }, 1000);
+  return () => clearInterval(interval);
+}, []);
+```
+
+### 2. Memory Leaks
+```javascript
+// ❌ Problem
+useEffect(() => {
+  const subscription = api.subscribe(data => {
+    setState(data);
+  });
+}, []);
+
+// ✅ Solution
+useEffect(() => {
+  const subscription = api.subscribe(data => {
+    setState(data);
+  });
+  return () => subscription.unsubscribe();
+}, []);
+```
+
+## Debugging Checklist
+
+1. [ ] Console is clear of errors and warnings
+2. [ ] Components are rendering as expected
+3. [ ] State updates are working correctly
+4. [ ] Network requests are successful
+5. [ ] Performance metrics are within acceptable range
+6. [ ] Memory usage is stable
+7. [ ] Error boundaries are in place
+8. [ ] Event handlers are properly bound
+9. [ ] Dependencies array in hooks are correct
+10. [ ] Clean-up functions are implemented where needed
+
+## Additional Resources
+
+- [React Documentation - Debugging](mdc:https:/reactjs.org/docs/error-boundaries.html)
+- [Chrome DevTools Documentation](mdc:https:/developers.google.com/web/tools/chrome-devtools)
+- [React Developer Tools Guide](mdc:https:/react.dev/learn/react-developer-tools) 

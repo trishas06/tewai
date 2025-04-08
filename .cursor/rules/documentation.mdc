@@ -1,0 +1,89 @@
+---
+description: This rule will be helpful in generating AI assisted documentation
+globs: 
+alwaysApply: false
+---
+### 1. General Overview of the React App
+```
+Analyze the entire codebase of my React frontend application. Provide a high-level overview of the project, including:
+- The purpose of the app based on the code structure and naming conventions.
+- Key folders (e.g., src, components, pages, utils) and their roles.
+- Main entry point (e.g., index.js or App.js) and how the app initializes.
+- Any notable libraries or frameworks detected (e.g., Redux, React Router).
+Generate the documentation in Markdown format with clear headings and concise descriptions.
+```
+
+---
+
+### 2. Detailed Component Documentation
+```
+Read the full code structure of my React app in the 'src' directory. Identify all React components (functional and class-based) and generate detailed documentation that includes:
+- Component name and file location.
+- Props (including types if TypeScript is used) and their descriptions.
+- State variables (if any) and their purpose.
+- Key hooks (e.g., useState, useEffect) and what they do.
+- A brief explanation of the component’s functionality.
+Output the result as a Markdown file with a table of contents linking to each component section.
+```
+
+---
+
+### 3. File and Folder Structure Breakdown
+```
+Examine the folder structure of my React frontend app starting from the root directory. Create a detailed breakdown of the file and folder hierarchy, including:
+- A tree-like representation of all directories and files.
+- A short description of each folder’s purpose (e.g., 'components' for reusable UI elements, 'hooks' for custom hooks).
+- Highlight key files (e.g., App.js, index.js, package.json) and explain their roles.
+Format the output in Markdown with a collapsible tree structure if possible.
+```
+
+---
+
+### 4. Routing and Navigation Documentation
+```
+Analyze the React app’s codebase and detect the routing setup (e.g., React Router). Generate documentation that includes:
+- A list of all defined routes and their corresponding components/pages.
+- The file where routing is configured (e.g., App.js or a dedicated routes file).
+- Any route parameters or dynamic segments and their usage.
+- Navigation logic (e.g., useNavigate, Link components) and examples from the code.
+Provide the output in Markdown with a table summarizing the routes.
+```
+
+---
+
+### 5. State Management Documentation
+```
+Scan the React app’s code for state management patterns (e.g., useState, useReducer, Redux, Context API). Produce documentation that covers:
+- The type of state management used and where it’s implemented.
+- Key state variables or stores, their structure, and purpose.
+- Actions or reducers (if applicable) and how they modify the state.
+- Examples of state usage in components.
+Generate the output as a Markdown file with code snippets extracted from the codebase.
+```
+
+---
+
+### 6. API Integration Details
+```
+Inspect the React app’s code for API calls or data fetching logic (e.g., fetch, axios, useEffect). Create documentation that includes:
+- A list of all API endpoints called, inferred from the code.
+- The purpose of each API call based on context (e.g., fetching user data, submitting a form).
+- Files or hooks where API logic is implemented.
+- Error handling or loading states associated with these calls.
+Output the result in Markdown with a section for each API interaction.
+```
+
+---
+
+### 7. Comprehensive Full-App Documentation
+```
+Read the entire React frontend app’s codebase and generate a complete documentation package. Include:
+- An overview of the app’s purpose and tech stack.
+- A folder/file structure breakdown.
+- A list of all components with their props, state, and functionality.
+- Routing setup and navigation details.
+- State management approach and key variables.
+- API integrations and data flow.
+- Any custom hooks or utilities with their purpose.
+Format the output as a single Markdown file with a table of contents, headings, and subheadings for easy navigation.
+```
