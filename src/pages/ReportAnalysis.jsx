@@ -31,10 +31,28 @@ import {
   KeyboardArrowDown as PromptDownIcon,
   Delete as DeleteIcon,
   QuestionAnswer as QuestionAnswerIcon,
+  Flag as FlagIcon,
+  Warning as WarningIcon,
 } from '@mui/icons-material';
 import axiosInstance from '../utils/axiosInstance';
 import GenerateGuidanceReport from '../components/GenerateGuidanceReport';
 import SuccessPopup from '../components/SuccessPopup';
+
+// Flag enum
+const FlagType = {
+  MATCH: 'Match',
+  NO_MATCH: 'No match',
+  RAISE: 'Raise',
+  NO_FLAG: 'No flag',
+};
+
+// Flag color mapping
+const flagColors = {
+  [FlagType.MATCH]: 'success',
+  [FlagType.NO_MATCH]: 'error',
+  [FlagType.RAISE]: 'warning',
+  [FlagType.NO_FLAG]: 'default',
+};
 
 function ReportAnalysis({ reportId }) {
   const [loading, setLoading] = useState(true);
@@ -76,6 +94,9 @@ function ReportAnalysis({ reportId }) {
                 pageNumber: item.pageNumber,
                 originalDescriptionKey: item.descriptionKey,
                 originalPageNumber: item.pageNumber,
+                ...(item?.flag
+                  ? { flag: item.flag, originalFlag: item.flag }
+                  : {}),
               });
               return acc;
             },
@@ -119,13 +140,15 @@ function ReportAnalysis({ reportId }) {
             descriptionKey: item.descriptionKey,
             pageNumber: item.pageNumber,
             question: item.question,
+            ...(item?.flag ? { flag: item.flag } : {}),
             ...(item?.record_updated
               ? { record_updated: item.record_updated }
               : {}),
           };
           if (
             item.descriptionKey !== item.originalDescriptionKey ||
-            item.pageNumber !== item.originalPageNumber
+            item.pageNumber !== item.originalPageNumber ||
+            item.flag !== item.originalFlag
           ) {
             return {
               ...data,
@@ -154,6 +177,7 @@ function ReportAnalysis({ reportId }) {
             ...item,
             originalDescriptionKey: item.descriptionKey,
             originalPageNumber: item.pageNumber,
+            ...(item?.flag ? { originalFlag: item.flag } : {}),
           })),
         }))
       );
@@ -179,6 +203,7 @@ function ReportAnalysis({ reportId }) {
           ...item,
           descriptionKey: item.originalDescriptionKey,
           pageNumber: item.originalPageNumber,
+          flag: item.originalFlag,
         })),
       }))
     );
@@ -288,101 +313,180 @@ function ReportAnalysis({ reportId }) {
           </Box>
         </Box>
 
-        {analysisData.map((section, index) => (
-          <Accordion key={index} sx={{ mb: 1 }}>
-            <AccordionSummary
-              expandIcon={<ExpandMoreIcon />}
-              aria-controls={`panel${index}-content`}
-              id={`panel${index}-header`}
+        {analysisData.map((section, index) => {
+          // Check if any item in the section has NO_MATCH or RAISE flag
+          const hasNoMatch = section.items.some(
+            (item) => item.flag === FlagType.NO_MATCH
+          );
+          const hasRaiseFlag = section.items.some(
+            (item) => item.flag === FlagType.RAISE
+          );
+
+          return (
+            <Accordion
+              key={index}
+              sx={{
+                mb: 1,
+              }}
             >
-              <Typography fontWeight="medium">{section.category}</Typography>
-            </AccordionSummary>
-            <AccordionDetails>
-              {section.items.map((item, itemIndex) => (
+              <AccordionSummary
+                expandIcon={<ExpandMoreIcon />}
+                aria-controls={`panel${index}-content`}
+                id={`panel${index}-header`}
+              >
                 <Box
-                  key={itemIndex}
                   sx={{
-                    mb: itemIndex !== section.items.length - 1 ? 3 : 0,
-                    p: 2,
-                    bgcolor: 'background.default',
-                    borderRadius: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    width: '100%',
                   }}
                 >
-                  <Typography
-                    variant="subtitle2"
-                    color="primary"
-                    gutterBottom
-                    sx={{ fontWeight: 'bold' }}
-                  >
-                    {item.question}
+                  <Typography fontWeight="medium">
+                    {section.category}
                   </Typography>
-                  {isEditing ? (
-                    <>
-                      <TextField
-                        fullWidth
-                        multiline
-                        minRows={3}
-                        value={item.descriptionKey}
-                        onChange={(e) =>
-                          handleInputChange(
-                            section.category,
-                            item.question,
-                            'descriptionKey',
-                            e.target.value
-                          )
-                        }
-                        disabled={saving}
-                        sx={{ mb: 2 }}
-                      />
-                      <TextField
-                        fullWidth
-                        value={item.pageNumber}
-                        onChange={(e) =>
-                          handleInputChange(
-                            section.category,
-                            item.question,
-                            'pageNumber',
-                            e.target.value
-                          )
-                        }
-                        disabled={saving}
-                        sx={{ mb: 2 }}
-                      />
-                    </>
-                  ) : (
-                    <>
-                      <Typography
-                        variant="body2"
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    {hasNoMatch && (
+                      <WarningIcon
                         sx={{
-                          whiteSpace: 'pre-wrap',
-                          mb: 1,
-                        }}
-                      >
-                        {item.descriptionKey}
-                      </Typography>
-                      <Chip
-                        label={item.pageNumber}
-                        size="small"
-                        variant="filled"
-                        color="primary"
-                        sx={{
-                          mt: 1,
-                          bgcolor: '#e3f2fd',
-                          color: '#1976d2',
-                          fontWeight: 500,
-                          border: '1px solid #90caf9',
-                          '& .MuiChip-label': {
-                            color: 'inherit',
-                          },
+                          color: 'warning.main',
+                          ml: 1,
+                          fontSize: '1.2rem',
                         }}
                       />
-                    </>
-                  )}
+                    )}
+                    {hasRaiseFlag && (
+                      <FlagIcon
+                        sx={{
+                          color: 'success.main',
+                          ml: 1,
+                          fontSize: '1.2rem',
+                        }}
+                      />
+                    )}
+                  </Box>
                 </Box>
-              ))}
-            </AccordionDetails>
-          </Accordion>
-        ))}
+              </AccordionSummary>
+              <AccordionDetails>
+                {section.items.map((item, itemIndex) => (
+                  <Box
+                    key={itemIndex}
+                    sx={{
+                      mb: itemIndex !== section.items.length - 1 ? 3 : 0,
+                      p: 2,
+                      bgcolor: 'background.default',
+                      borderRadius: 1,
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'flex-start',
+                        mb: 1,
+                        width: '100%',
+                      }}
+                    >
+                      <Typography
+                        variant="subtitle2"
+                        color="primary"
+                        sx={{ fontWeight: 'bold' }}
+                      >
+                        {item.question}
+                      </Typography>
+                      <Box
+                        sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+                      >
+                        {item.flag === FlagType.RAISE && (
+                          <FlagIcon
+                            sx={{
+                              color: 'success.main',
+                              fontSize: '1.2rem',
+                            }}
+                          />
+                        )}
+                        {item.flag !== FlagType.NO_FLAG &&
+                          item.flag !== FlagType.RAISE &&
+                          item?.flag !== 'False' &&
+                          item?.flag !== 'True' && (
+                            <Chip
+                              label={item.flag}
+                              size="small"
+                              color={flagColors[item.flag]}
+                              sx={{ ml: 1 }}
+                            />
+                          )}
+                      </Box>
+                    </Box>
+                    {isEditing ? (
+                      <>
+                        <TextField
+                          fullWidth
+                          multiline
+                          minRows={3}
+                          value={item.descriptionKey}
+                          onChange={(e) =>
+                            handleInputChange(
+                              section.category,
+                              item.question,
+                              'descriptionKey',
+                              e.target.value
+                            )
+                          }
+                          disabled={saving}
+                          sx={{ mb: 2 }}
+                        />
+                        <TextField
+                          fullWidth
+                          value={item.pageNumber}
+                          onChange={(e) =>
+                            handleInputChange(
+                              section.category,
+                              item.question,
+                              'pageNumber',
+                              e.target.value
+                            )
+                          }
+                          disabled={saving}
+                          sx={{ mb: 2 }}
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            whiteSpace: 'pre-wrap',
+                            mb: 1,
+                          }}
+                        >
+                          {item.descriptionKey}
+                        </Typography>
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                          <Chip
+                            label={item.pageNumber}
+                            size="small"
+                            variant="filled"
+                            color="primary"
+                            sx={{
+                              bgcolor: '#e3f2fd',
+                              color: '#1976d2',
+                              fontWeight: 500,
+                              border: '1px solid #90caf9',
+                              '& .MuiChip-label': {
+                                color: 'inherit',
+                              },
+                            }}
+                          />
+                        </Box>
+                      </>
+                    )}
+                  </Box>
+                ))}
+              </AccordionDetails>
+            </Accordion>
+          );
+        })}
       </Paper>
 
       <Dialog
