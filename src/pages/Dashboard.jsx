@@ -48,6 +48,7 @@ import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
 
 import authService from '../services/authService';
 import dashboardService from '../services/dashboardService';
+import { ALLOWED_STATUSES } from '../utils/allowedStatuses';
 
 // Table header cells
 const headCells = [
@@ -395,10 +396,7 @@ function Dashboard() {
                       <IconButton
                         size="small"
                         title="View Loss Report"
-                        disabled={
-                          row.status !== 'Generated' &&
-                          row.status !== 'Validated'
-                        }
+                        disabled={!ALLOWED_STATUSES.includes(row.status)}
                         onClick={() => handleNavigateToLossReport(row)}
                       >
                         <DescriptionIcon sx={{ fontSize: 20 }} />

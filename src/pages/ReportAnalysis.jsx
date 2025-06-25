@@ -91,9 +91,7 @@ function ReportAnalysis({ reportId }) {
               }
               acc[headerKey].push({
                 ...item,
-                pageNumber: item.pageNumber,
                 originalDescriptionKey: item.descriptionKey,
-                originalPageNumber: item.pageNumber,
                 ...(item?.flag
                   ? { flag: item.flag, originalFlag: item.flag }
                   : {}),
@@ -138,7 +136,6 @@ function ReportAnalysis({ reportId }) {
           let data = {
             headerKey: section.category,
             descriptionKey: item.descriptionKey,
-            pageNumber: item.pageNumber,
             question: item.question,
             ...(item?.flag ? { flag: item.flag } : {}),
             ...(item?.record_updated
@@ -147,7 +144,6 @@ function ReportAnalysis({ reportId }) {
           };
           if (
             item.descriptionKey !== item.originalDescriptionKey ||
-            item.pageNumber !== item.originalPageNumber ||
             item.flag !== item.originalFlag
           ) {
             return {
@@ -176,7 +172,6 @@ function ReportAnalysis({ reportId }) {
           items: section.items.map((item) => ({
             ...item,
             originalDescriptionKey: item.descriptionKey,
-            originalPageNumber: item.pageNumber,
             ...(item?.flag ? { originalFlag: item.flag } : {}),
           })),
         }))
@@ -202,7 +197,6 @@ function ReportAnalysis({ reportId }) {
         items: section.items.map((item) => ({
           ...item,
           descriptionKey: item.originalDescriptionKey,
-          pageNumber: item.originalPageNumber,
           flag: item.originalFlag,
         })),
       }))
@@ -436,20 +430,6 @@ function ReportAnalysis({ reportId }) {
                           disabled={saving}
                           sx={{ mb: 2 }}
                         />
-                        <TextField
-                          fullWidth
-                          value={item.pageNumber}
-                          onChange={(e) =>
-                            handleInputChange(
-                              section.category,
-                              item.question,
-                              'pageNumber',
-                              e.target.value
-                            )
-                          }
-                          disabled={saving}
-                          sx={{ mb: 2 }}
-                        />
                       </>
                     ) : (
                       <>
@@ -462,23 +442,6 @@ function ReportAnalysis({ reportId }) {
                         >
                           {item.descriptionKey}
                         </Typography>
-                        <Box sx={{ display: 'flex', gap: 1 }}>
-                          <Chip
-                            label={item.pageNumber}
-                            size="small"
-                            variant="filled"
-                            color="primary"
-                            sx={{
-                              bgcolor: '#e3f2fd',
-                              color: '#1976d2',
-                              fontWeight: 500,
-                              border: '1px solid #90caf9',
-                              '& .MuiChip-label': {
-                                color: 'inherit',
-                              },
-                            }}
-                          />
-                        </Box>
                       </>
                     )}
                   </Box>

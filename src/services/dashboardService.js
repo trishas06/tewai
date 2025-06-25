@@ -1,7 +1,14 @@
 import axiosInstance from '../utils/axiosInstance';
+import { ALLOWED_STATUSES } from '../utils/allowedStatuses';
 
 export const dashboardService = {
-  getClaimsData: async (page, rowsPerPage, filters = {}, searchTerm = '') => {
+  getClaimsData: async (
+    page,
+    rowsPerPage,
+    filters = {},
+    searchTerm = '',
+    filterAllowedStatuses = true
+  ) => {
     try {
       const response = await axiosInstance.get('/get_lossreport_data');
 
@@ -75,6 +82,10 @@ export const dashboardService = {
         data = data.filter(
           (item) => new Date(item.createdOn) <= new Date(filters.endDate)
         );
+      }
+
+      if (filterAllowedStatuses) {
+        data = data.filter((item) => ALLOWED_STATUSES.includes(item.status));
       }
 
       // Calculate pagination values

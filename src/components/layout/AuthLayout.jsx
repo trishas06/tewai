@@ -37,7 +37,13 @@ function AuthLayout({ children }) {
   useEffect(() => {
     const fetchNotifications = async () => {
       try {
-        const result = await dashboardService.getClaimsData(0, 1000, {}, '');
+        const result = await dashboardService.getClaimsData(
+          0,
+          1000,
+          {},
+          '',
+          false
+        );
         const formattedNotifications = result.data
           .map((item) => {
             const date = new Date(item.createdOn);
@@ -78,7 +84,7 @@ function AuthLayout({ children }) {
                 month: 'short',
                 day: 'numeric',
               }),
-              timeLabel
+              timeLabel,
             };
           })
           .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
@@ -104,12 +110,14 @@ function AuthLayout({ children }) {
   };
 
   return (
-    <Box sx={{ 
-      display: 'flex', 
-      minHeight: '100vh', 
-      bgcolor: 'background.default',
-      color: 'text.primary'
-    }}>
+    <Box
+      sx={{
+        display: 'flex',
+        minHeight: '100vh',
+        bgcolor: 'background.default',
+        color: 'text.primary',
+      }}
+    >
       <Sidebar isExpanded={isExpanded} onToggle={handleSidebarToggle} />
       <Box
         component="main"
@@ -120,15 +128,20 @@ function AuthLayout({ children }) {
           pb: '56px', // Footer height
           pr: '24px',
           minHeight: '100vh',
-          transition: theme => theme.transitions.create('margin-left', {
-            easing: theme.transitions.easing.sharp,
-            duration: theme.transitions.duration.standard,
-          }),
+          transition: (theme) =>
+            theme.transitions.create('margin-left', {
+              easing: theme.transitions.easing.sharp,
+              duration: theme.transitions.duration.standard,
+            }),
           bgcolor: 'background.default',
-          color: 'text.primary'
+          color: 'text.primary',
         }}
       >
-        <Header isExpanded={isExpanded} notifications={notifications} loading={notificationsLoading} />
+        <Header
+          isExpanded={isExpanded}
+          notifications={notifications}
+          loading={notificationsLoading}
+        />
         {children}
         <Footer isExpanded={isExpanded} />
       </Box>
@@ -141,4 +154,4 @@ function AuthLayout({ children }) {
   );
 }
 
-export default AuthLayout; 
+export default AuthLayout;
