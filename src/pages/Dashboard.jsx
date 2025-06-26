@@ -426,7 +426,11 @@ function Dashboard() {
                   <TableCell>{row.policyNo}</TableCell>
                   <TableCell>{row.policyForm}</TableCell>
                   <TableCell>{row.adjusterName}</TableCell>
-                  <TableCell>{row.createdOn}</TableCell>
+                  <TableCell
+                    sx={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                  >
+                    {row.createdOn}
+                  </TableCell>
                   <TableCell>
                     <Chip
                       label={row.status}
