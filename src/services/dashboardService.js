@@ -44,10 +44,12 @@ export const dashboardService = {
         const term = searchTerm.toLowerCase();
         data = data.filter(
           (item) =>
-            item.claimNo.toLowerCase().includes(term) ||
-            item.carrier.toLowerCase().includes(term) ||
-            item.policyForm.toLowerCase().includes(term) ||
-            item.adjusterName.toLowerCase().includes(term)
+            (item.claimNo && item.claimNo.toLowerCase().includes(term)) ||
+            (item.carrier && item.carrier.toLowerCase().includes(term)) ||
+            (item.policyNo && item.policyNo.toLowerCase().includes(term)) ||
+            (item.policyForm && item.policyForm.toLowerCase().includes(term)) ||
+            (item.adjusterName && item.adjusterName.toLowerCase().includes(term)) ||
+            (item.originalData.loss_report_name && item.originalData.loss_report_name.toLowerCase().includes(term))
         );
       }
 
@@ -73,14 +75,18 @@ export const dashboardService = {
       }
 
       if (filters.startDate) {
+        const start = new Date(filters.startDate);
+        start.setHours(0, 0, 0, 0);
         data = data.filter(
-          (item) => new Date(item.createdOn) >= new Date(filters.startDate)
+          (item) => new Date(item.createdOn) >= start
         );
       }
 
       if (filters.endDate) {
+        const end = new Date(filters.endDate);
+        end.setHours(23, 59, 59, 999);
         data = data.filter(
-          (item) => new Date(item.createdOn) <= new Date(filters.endDate)
+          (item) => new Date(item.createdOn) <= end
         );
       }
 
@@ -120,18 +126,28 @@ export const dashboardService = {
       }));
 
       // Extract unique values for filters
-      const carriers = [...new Set(data.map((item) => item.carrier))].filter(
-        Boolean
-      );
-      const policyForms = [
-        ...new Set(data.map((item) => item.policyForm)),
-      ].filter(Boolean);
-      const adjusters = [
-        ...new Set(data.map((item) => item.adjusterName)),
-      ].filter(Boolean);
-      const statuses = [...new Set(data.map((item) => item.status))].filter(
-        Boolean
-      );
+      let carriers = [...new Set(data.map((item) => item.carrier))].filter(Boolean);
+      let policyForms = [...new Set(data.map((item) => item.policyForm))].filter(Boolean);
+      let adjusters = [...new Set(data.map((item) => item.adjusterName))].filter(Boolean);
+      let statuses = [...new Set(data.map((item) => item.status))].filter(Boolean);
+
+      // Only include statuses that are in ALLOWED_STATUSES
+      statuses = statuses.filter((status) => ALLOWED_STATUSES.includes(status));
+
+      // Helper to bring 'NA' to the top if present
+      const bringNAToTop = (arr) => {
+        const idx = arr.findIndex((v) => v === 'NA');
+        if (idx > -1) {
+          arr.splice(idx, 1);
+          arr.unshift('NA');
+        }
+        return arr;
+      };
+
+      carriers = bringNAToTop(carriers);
+      policyForms = bringNAToTop(policyForms);
+      adjusters = bringNAToTop(adjusters);
+      statuses = bringNAToTop(statuses);
 
       return {
         carriers,

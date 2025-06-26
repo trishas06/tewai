@@ -14,11 +14,27 @@ import { NotificationsOutlined as NotificationsIcon } from '@mui/icons-material'
 const getStatusColor = (status) => {
   switch (status) {
     case 'Failed':
-      return { color: '#f44336', bgcolor: '#ffebee' };
+      return { color: '#f44336', bgcolor: '#ffcdd2' };
+    case 'Corrupted File':
+      return { color: '#f44336', bgcolor: '#ffcdd2' };
+    case 'Empty PDF':
+      return { color: '#f44336', bgcolor: '#ffcdd2' };
+    case 'Password Protected':
+      return { color: '#f44336', bgcolor: '#ffcdd2' };
+    case 'Invalid File Format':
+      return { color: '#f44336', bgcolor: '#ffcdd2' };
+    case 'File Not Found':
+      return { color: '#f44336', bgcolor: '#ffcdd2' };
+    case 'Validation Failed':
+      return { color: '#f44336', bgcolor: '#ffcdd2' };
     case 'Generated':
       return { color: '#1976d2', bgcolor: '#e3f2fd' };
     case 'Validated':
       return { color: '#4caf50', bgcolor: '#e8f5e9' };
+    case 'Missing Prelim Document':
+      return { color: '#ff9800', bgcolor: '#fff9c4' };
+    case 'Unsearchable PDF':
+      return { color: '#ff9800', bgcolor: '#fff9c4' };
     default:
       return { color: '#757575', bgcolor: '#f5f5f5' };
   }
@@ -38,7 +54,9 @@ function Notifications({ notifications, loading }) {
   return (
     <>
       <Tooltip
-        title={notificationAnchorEl ? 'Close notifications' : 'Show notifications'}
+        title={
+          notificationAnchorEl ? 'Close notifications' : 'Show notifications'
+        }
       >
         <IconButton
           onClick={handleToggleNotifications}
@@ -139,4 +157,4 @@ function Notifications({ notifications, loading }) {
   );
 }
 
-export default Notifications; 
+export default Notifications;

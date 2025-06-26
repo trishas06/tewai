@@ -31,6 +31,7 @@ import {
   Chip,
   OutlinedInput,
   CircularProgress,
+  Tooltip,
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -52,6 +53,7 @@ import { ALLOWED_STATUSES } from '../utils/allowedStatuses';
 
 // Table header cells
 const headCells = [
+  { id: 'fileName', label: 'Report Name' },
   { id: 'claimNo', label: 'Claim No.' },
   { id: 'carrier', label: 'Carrier' },
   { id: 'policyNo', label: 'Policy No.' },
@@ -66,11 +68,15 @@ const headCells = [
 const getStatusColor = (status) => {
   switch (status) {
     case 'Failed':
-      return { color: '#f44336', bgcolor: '#ffebee' };
+      return { color: '#f44336', bgcolor: '#ffcdd2' };
     case 'Generated':
       return { color: '#1976d2', bgcolor: '#e3f2fd' };
     case 'Validated':
       return { color: '#4caf50', bgcolor: '#e8f5e9' };
+    case 'Missing Prelim Document':
+      return { color: '#ff9800', bgcolor: '#fff9c4' };
+    case 'Unsearchable PDF':
+      return { color: '#ff9800', bgcolor: '#fff9c4' };
     default:
       return { color: '#757575', bgcolor: '#f5f5f5' };
   }
@@ -143,13 +149,38 @@ function MultiSelect({ label, options, value, onChange }) {
         renderValue={(selected) => (
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
             {selected.map((value) => (
-              <Chip key={value} label={value} />
+              <Chip
+                key={value}
+                label={value}
+                sx={{
+                  bgcolor: '#e3f2fd', // MUI primary light
+                  color: '#1976d2',   // MUI primary main
+                  fontWeight: 500,
+                }}
+              />
             ))}
           </Box>
         )}
       >
         {options.map((option) => (
-          <MenuItem key={option} value={option}>
+          <MenuItem
+            key={option}
+            value={option}
+            sx={{
+              '&.Mui-selected': {
+                bgcolor: '#1976d2', // MUI primary main
+                color: 'white',
+              },
+              '&.Mui-selected:hover': {
+                bgcolor: '#115293', // MUI primary dark
+                color: 'white',
+              },
+              '&:hover': {
+                bgcolor: '#e3f2fd', // MUI primary light
+                color: '#1976d2',
+              },
+            }}
+          >
             {option}
           </MenuItem>
         ))}
@@ -361,19 +392,35 @@ function Dashboard() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={8} align="center">
+                <TableCell colSpan={9} align="center">
                   <CircularProgress size={40} />
                 </TableCell>
               </TableRow>
             ) : rows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} align="center">
+                <TableCell colSpan={9} align="center">
                   No records found
                 </TableCell>
               </TableRow>
             ) : (
               rows.map((row) => (
                 <TableRow key={generateUniqueKey(row)} hover>
+                  <TableCell>
+                    <Tooltip title={row.originalData.loss_report_name || ''} arrow>
+                      <span style={{
+                        display: 'inline-block',
+                        maxWidth: 250,
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        verticalAlign: 'middle',
+                      }}>
+                        {(row.originalData.loss_report_name && row.originalData.loss_report_name.length > 15)
+                          ? row.originalData.loss_report_name.slice(0, 12) + '...'
+                          : row.originalData.loss_report_name || ''}
+                      </span>
+                    </Tooltip>
+                  </TableCell>
                   <TableCell>{row.claimNo}</TableCell>
                   <TableCell>{row.carrier}</TableCell>
                   <TableCell>{row.policyNo}</TableCell>
