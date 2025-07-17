@@ -10,7 +10,6 @@ import {
   List,
   ListItem,
   ListItemText,
-  ListItemSecondaryAction,
   Button,
   Dialog,
   DialogTitle,
@@ -18,15 +17,11 @@ import {
   DialogActions,
   TextField,
   Switch,
-  FormControlLabel,
-  Fab,
   Alert,
   Tooltip,
 } from '@mui/material';
 import {
   ExpandMore as ExpandMoreIcon,
-  North as MoveUpIcon,
-  South as MoveSouthIcon,
   Edit as EditIcon,
   Save as SaveIcon,
   Add as AddIcon,
@@ -40,7 +35,7 @@ import {
 import axiosInstance from '../utils/axiosInstance';
 import SuccessPopup from '../components/SuccessPopup';
 
-function ReportAnalysisPrompts() {
+function PrelimReportAnalysisPrompts() {
   const [data, setData] = useState([]);
   const [backupData, setBackupData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -61,24 +56,21 @@ function ReportAnalysisPrompts() {
   const [editingPrompt, setEditingPrompt] = useState(null);
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
 
-  // Add this function at the top of the component
   const generateUniqueId = () => {
     return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   };
 
-  // Fetch prompts data from API
   useEffect(() => {
     const fetchPrompts = async () => {
       try {
-        const response = await axiosInstance.get('/get_prompts');
-        // Map the response data to match our component's structure
+        const response = await axiosInstance.get('/get_prompts_prelim');
         const formattedData = response.data.question_answer.map((item) => ({
-          id: generateUniqueId(), // Generate unique id instead of using order
+          id: generateUniqueId(),
           category: item.category,
-          enabled: item.questions.every((q) => q.is_enable), // Category is enabled if all questions are enabled
+          enabled: item.questions.every((q) => q.is_enable),
           order: item.order,
           prompts: item.questions.map((q) => ({
-            id: generateUniqueId(), // Generate unique id for prompts too
+            id: generateUniqueId(),
             question: q.question,
             enabled: q.is_enable,
             order: q.order,
@@ -92,11 +84,9 @@ function ReportAnalysisPrompts() {
         setLoading(false);
       }
     };
-
     fetchPrompts();
   }, []);
 
-  // Calculate if all items are enabled
   const isAllEnabled = data.every(
     (category) =>
       category.enabled && category.prompts.every((prompt) => prompt.enabled)
@@ -121,21 +111,17 @@ function ReportAnalysisPrompts() {
   const handleMoveCategory = (categoryIndex, direction) => {
     const newData = [...data];
     if (direction === 'up' && categoryIndex > 0) {
-      // Swap categories
       [newData[categoryIndex], newData[categoryIndex - 1]] = [
         newData[categoryIndex - 1],
         newData[categoryIndex],
       ];
-      // Update orders
       newData[categoryIndex].order = categoryIndex + 1;
       newData[categoryIndex - 1].order = categoryIndex;
     } else if (direction === 'down' && categoryIndex < newData.length - 1) {
-      // Swap categories
       [newData[categoryIndex], newData[categoryIndex + 1]] = [
         newData[categoryIndex + 1],
         newData[categoryIndex],
       ];
-      // Update orders
       newData[categoryIndex].order = categoryIndex + 1;
       newData[categoryIndex + 1].order = categoryIndex + 2;
     }
@@ -147,7 +133,6 @@ function ReportAnalysisPrompts() {
     const category = newData[categoryIndex];
     const newEnabled = !category.enabled;
     category.enabled = newEnabled;
-    // Toggle all prompts within the category
     category.prompts = category.prompts.map((prompt) => ({
       ...prompt,
       enabled: newEnabled,
@@ -159,27 +144,21 @@ function ReportAnalysisPrompts() {
     const newData = [...data];
     const category = newData[categoryIndex];
     const prompts = [...category.prompts];
-
     if (direction === 'up' && promptIndex > 0) {
-      // Swap prompts
       [prompts[promptIndex], prompts[promptIndex - 1]] = [
         prompts[promptIndex - 1],
         prompts[promptIndex],
       ];
-      // Update orders
       prompts[promptIndex].order = promptIndex + 1;
       prompts[promptIndex - 1].order = promptIndex;
     } else if (direction === 'down' && promptIndex < prompts.length - 1) {
-      // Swap prompts
       [prompts[promptIndex], prompts[promptIndex + 1]] = [
         prompts[promptIndex + 1],
         prompts[promptIndex],
       ];
-      // Update orders
       prompts[promptIndex].order = promptIndex + 1;
       prompts[promptIndex + 1].order = promptIndex + 2;
     }
-
     newData[categoryIndex] = { ...category, prompts };
     setData(newData);
   };
@@ -189,26 +168,20 @@ function ReportAnalysisPrompts() {
     const category = newData[categoryIndex];
     const prompts = [...category.prompts];
     const newPromptEnabled = !prompts[promptIndex].enabled;
-
     prompts[promptIndex] = {
       ...prompts[promptIndex],
       enabled: newPromptEnabled,
     };
-
-    // If category has only one prompt, toggle category status along with the prompt
     if (prompts.length === 1) {
       category.enabled = newPromptEnabled;
     } else {
-      // For categories with multiple prompts, category is enabled only if any prompt is enabled
       category.enabled = prompts.some((prompt) => prompt.enabled);
     }
-
     newData[categoryIndex] = { ...category, prompts };
     setData(newData);
   };
 
   const handleEditClick = () => {
-    // Create a deep copy of current data as backup
     setBackupData(JSON.parse(JSON.stringify(data)));
     setIsEditing(true);
     setValidationError('');
@@ -216,23 +189,17 @@ function ReportAnalysisPrompts() {
   };
 
   const handleSave = async () => {
-    // Check if any newly added category has no prompts
     const categoriesWithNoPrompts = data
       .filter((category) => newlyAddedCategories.has(category.id))
       .filter((category) => category.prompts.length === 0)
       .map((category) => category.category);
-
     if (categoriesWithNoPrompts.length > 0) {
       setValidationError(
-        `Please add at least one prompt to the following categories: ${categoriesWithNoPrompts.join(
-          ', '
-        )}`
+        `Please add at least one prompt to the following categories: ${categoriesWithNoPrompts.join(", ")}`
       );
       return;
     }
-
     try {
-      // Format data according to API structure
       const formattedData = {
         question_answer: data.map((category) => ({
           category: category.category,
@@ -241,15 +208,11 @@ function ReportAnalysisPrompts() {
             is_enable: prompt.enabled,
             order: prompt.order,
             question: prompt.question,
-            type: prompt.type || 'text', // Use existing type or default to 'text'
+            type: prompt.type || 'text',
           })),
         })),
       };
-
-      // Make API call to update prompts
-      await axiosInstance.post('/update_default_prompts', formattedData);
-
-      // Clear backup as we're committing the changes
+      await axiosInstance.post('/update_default_prompts_prelim', formattedData);
       setBackupData(null);
       setIsEditing(false);
       setValidationError('');
@@ -262,7 +225,6 @@ function ReportAnalysisPrompts() {
   };
 
   const handleCancel = () => {
-    // Restore from backup
     if (backupData) {
       setData(backupData);
       setBackupData(null);
@@ -270,7 +232,7 @@ function ReportAnalysisPrompts() {
     setIsEditing(false);
     setValidationError('');
     setNewlyAddedCategories(new Set());
-    setExpandedCategory(null); // Close any open accordions
+    setExpandedCategory(null);
   };
 
   const handleAddPrompt = (category) => {
@@ -317,22 +279,15 @@ function ReportAnalysisPrompts() {
       const newOrder = parseInt(newCategoryOrder) || data.length + 1;
       const newData = [...data];
       const newId = generateUniqueId();
-
       if (editingCategory) {
-        // Update existing category
         const index = newData.findIndex(cat => cat.id === editingCategory.id);
         if (index !== -1) {
-          // Remove the category from its current position
           newData.splice(index, 1);
-          
-          // Create updated category with new order
           const updatedCategory = {
             ...editingCategory,
             category: newCategory.trim(),
             order: newOrder,
           };
-
-          // Insert at new position
           if (newOrder <= 1) {
             newData.unshift(updatedCategory);
           } else if (newOrder > newData.length) {
@@ -342,7 +297,6 @@ function ReportAnalysisPrompts() {
           }
         }
       } else {
-        // Create new category
         const newCategoryItem = {
           id: newId,
           category: newCategory.trim(),
@@ -350,8 +304,6 @@ function ReportAnalysisPrompts() {
           order: newOrder,
           prompts: [],
         };
-
-        // Insert at specific position or append
         if (newOrder <= 1) {
           newData.unshift(newCategoryItem);
         } else if (newOrder > newData.length) {
@@ -360,12 +312,9 @@ function ReportAnalysisPrompts() {
           newData.splice(newOrder - 1, 0, newCategoryItem);
         }
       }
-
-      // Update orders for all categories
       newData.forEach((cat, index) => {
         cat.order = index + 1;
       });
-
       setData(newData);
       if (!editingCategory) {
         setNewlyAddedCategories((prev) => new Set([...prev, newId]));
@@ -381,22 +330,15 @@ function ReportAnalysisPrompts() {
       const newData = data.map((category) => {
         if (category.category === selectedCategory) {
           const prompts = [...category.prompts];
-          
           if (editingPrompt) {
-            // Update existing prompt
             const index = prompts.findIndex(p => p.id === editingPrompt.id);
             if (index !== -1) {
-              // Remove the prompt from its current position
               prompts.splice(index, 1);
-              
-              // Create updated prompt with new order
               const updatedPrompt = {
                 ...editingPrompt,
                 question: newPrompt.trim(),
                 order: parseInt(newPromptOrder) || prompts.length + 1,
               };
-
-              // Insert at new position
               if (updatedPrompt.order <= 1) {
                 prompts.unshift(updatedPrompt);
               } else if (updatedPrompt.order > prompts.length) {
@@ -406,7 +348,6 @@ function ReportAnalysisPrompts() {
               }
             }
           } else {
-            // Create new prompt
             const newId = generateUniqueId();
             const newPromptItem = {
               id: newId,
@@ -415,8 +356,6 @@ function ReportAnalysisPrompts() {
               order: parseInt(newPromptOrder) || prompts.length + 1,
               type: 'text',
             };
-
-            // Insert at specific position or append
             if (newPromptItem.order <= 1) {
               prompts.unshift(newPromptItem);
             } else if (newPromptItem.order > prompts.length) {
@@ -425,12 +364,9 @@ function ReportAnalysisPrompts() {
               prompts.splice(newPromptItem.order - 1, 0, newPromptItem);
             }
           }
-
-          // Update orders for all prompts
           prompts.forEach((prompt, index) => {
             prompt.order = index + 1;
           });
-
           return { ...category, prompts };
         }
         return category;
@@ -445,14 +381,10 @@ function ReportAnalysisPrompts() {
     event.stopPropagation();
     const newData = [...data];
     newData.splice(categoryIndex, 1);
-
-    // Update order for remaining categories
     newData.forEach((category, index) => {
       category.order = index + 1;
     });
-
     setData(newData);
-    // If the deleted category was expanded, collapse it
     if (expandedCategory === data[categoryIndex].category) {
       setExpandedCategory(null);
     }
@@ -463,12 +395,9 @@ function ReportAnalysisPrompts() {
     const category = newData[categoryIndex];
     const prompts = [...category.prompts];
     prompts.splice(promptIndex, 1);
-
-    // Update order for remaining prompts
     prompts.forEach((prompt, index) => {
       prompt.order = index + 1;
     });
-
     newData[categoryIndex] = { ...category, prompts };
     setData(newData);
   };
@@ -481,7 +410,6 @@ function ReportAnalysisPrompts() {
     setOpenInfoDialog(false);
   };
 
-  // Add loading and error states to the UI
   if (loading) {
     return (
       <Box sx={{ p: 3, textAlign: 'center' }}>
@@ -511,7 +439,7 @@ function ReportAnalysisPrompts() {
         >
           <Box>
             <Typography variant="body2" color="text.secondary">
-              Manage categories and prompts for the final loss report analysis
+              Manage categories and prompts for the prelim loss report analysis
             </Typography>
           </Box>
           <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
@@ -1043,4 +971,4 @@ function ReportAnalysisPrompts() {
   );
 }
 
-export default ReportAnalysisPrompts; 
+export default PrelimReportAnalysisPrompts; 

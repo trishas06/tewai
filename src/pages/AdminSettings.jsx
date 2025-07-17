@@ -8,6 +8,7 @@ import {
 } from '@mui/material';
 import ReportAnalysisPrompts from './ReportAnalysisPrompts';
 import ChatbotPredefinedQuestions from './ChatbotPredefinedQuestions';
+import PrelimReportAnalysisPrompts from './PrelimReportAnalysisPrompts';
 
 function AdminSettings() {
   const [selectedTab, setSelectedTab] = useState(0);
@@ -31,12 +32,14 @@ function AdminSettings() {
           onChange={handleTabChange}
           sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}
         >
-          <Tab label="Report Analysis Prompts" />
+          <Tab label="Final Report Analysis Prompts" />
+          <Tab label="Prelim Report Analysis Prompts" />
           <Tab label="Chatbot Predefined Questions" />
         </Tabs>
 
         {selectedTab === 0 && <ReportAnalysisPrompts />}
-        {selectedTab === 1 && <ChatbotPredefinedQuestions />}
+        {selectedTab === 1 && <PrelimReportAnalysisPrompts />}
+        {selectedTab === 2 && <ChatbotPredefinedQuestions />}
       </Paper>
     </Box>
   );
