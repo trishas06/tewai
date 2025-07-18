@@ -50,9 +50,11 @@ import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
 import authService from '../services/authService';
 import dashboardService from '../services/dashboardService';
 import { ALLOWED_STATUSES } from '../utils/allowedStatuses';
+import { UserRoleContext } from '../components/layout/AuthLayout';
 
 // Table header cells
 const headCells = [
+  { id: 'reportType', label: 'Report Type' },
   { id: 'fileName', label: 'Report Name' },
   { id: 'claimNo', label: 'Claim No.' },
   { id: 'carrier', label: 'Carrier' },
@@ -154,7 +156,7 @@ function MultiSelect({ label, options, value, onChange }) {
                 label={value}
                 sx={{
                   bgcolor: '#e3f2fd', // MUI primary light
-                  color: '#1976d2',   // MUI primary main
+                  color: '#1976d2', // MUI primary main
                   fontWeight: 500,
                 }}
               />
@@ -215,6 +217,7 @@ function Dashboard() {
     statuses: [],
   });
   const [tempFilters, setTempFilters] = useState({ ...filters });
+
 
   // Fetch initial data and filter options
   useEffect(() => {
@@ -405,18 +408,35 @@ function Dashboard() {
             ) : (
               rows.map((row) => (
                 <TableRow key={generateUniqueKey(row)} hover>
+                  <TableCell
+                    sx={{
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      width: 110,
+                    }}
+                  >
+                    {row.prelim_folder ? 'Prelim' : 'Final'} Report
+                  </TableCell>
                   <TableCell>
-                    <Tooltip title={row.originalData.loss_report_name || ''} arrow>
-                      <span style={{
-                        display: 'inline-block',
-                        maxWidth: 250,
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        verticalAlign: 'middle',
-                      }}>
-                        {(row.originalData.loss_report_name && row.originalData.loss_report_name.length > 15)
-                          ? row.originalData.loss_report_name.slice(0, 12) + '...'
+                    <Tooltip
+                      title={row.originalData.loss_report_name || ''}
+                      arrow
+                    >
+                      <span
+                        style={{
+                          display: 'inline-block',
+                          maxWidth: 250,
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          verticalAlign: 'middle',
+                        }}
+                      >
+                        {row.originalData.loss_report_name &&
+                        row.originalData.loss_report_name.length > 15
+                          ? row.originalData.loss_report_name.slice(0, 12) +
+                            '...'
                           : row.originalData.loss_report_name || ''}
                       </span>
                     </Tooltip>
@@ -427,7 +447,11 @@ function Dashboard() {
                   <TableCell>{row.policyForm}</TableCell>
                   <TableCell>{row.adjusterName}</TableCell>
                   <TableCell
-                    sx={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                    sx={{
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                    }}
                   >
                     {row.createdOn}
                   </TableCell>

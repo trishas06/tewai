@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import {
   Box,
   Paper,
@@ -39,6 +39,7 @@ import {
 } from '@mui/icons-material';
 import axiosInstance from '../utils/axiosInstance';
 import SuccessPopup from '../components/SuccessPopup';
+import { UserRoleContext } from '../components/layout/AuthLayout';
 
 function ReportAnalysisPrompts() {
   const [data, setData] = useState([]);
@@ -60,6 +61,7 @@ function ReportAnalysisPrompts() {
   const [editingCategory, setEditingCategory] = useState(null);
   const [editingPrompt, setEditingPrompt] = useState(null);
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const userRole = useContext(UserRoleContext);
 
   // Add this function at the top of the component
   const generateUniqueId = () => {
@@ -515,7 +517,7 @@ function ReportAnalysisPrompts() {
             </Typography>
           </Box>
           <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-            {isEditing && (
+            {isEditing && userRole !== 'Adjuster' && (
               <>
                 <Box sx={{ display: 'flex', alignItems: 'center', mr: 2 }}>
                   <Switch
@@ -536,14 +538,16 @@ function ReportAnalysisPrompts() {
                 </Button>
               </>
             )}
-            <Button
-              variant="contained"
-              startIcon={isEditing ? <SaveIcon /> : <EditIcon />}
-              onClick={isEditing ? handleSave : handleEditClick}
-            >
-              {isEditing ? 'Save' : 'Edit'}
-            </Button>
-            {isEditing && (
+            {userRole !== 'Adjuster' && (
+              <Button
+                variant="contained"
+                startIcon={isEditing ? <SaveIcon /> : <EditIcon />}
+                onClick={isEditing ? handleSave : handleEditClick}
+              >
+                {isEditing ? 'Save' : 'Edit'}
+              </Button>
+            )}
+            {isEditing && userRole !== 'Adjuster' && (
               <Button
                 variant="contained"
                 startIcon={<AddIcon />}

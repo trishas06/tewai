@@ -22,6 +22,7 @@ export const dashboardService = {
         adjusterName: item.adjuster_name || '',
         createdOn: new Date(item.created_at).toLocaleString(),
         status: item.status || 'Pending',
+        prelim_folder: item.prelim_folder || '',
         originalData: {
           adjuster_name: item.adjuster_name || '',
           carrier: item.carrier || '',
@@ -36,6 +37,7 @@ export const dashboardService = {
           policy_number: item.policy_number || '',
           report_id: item.report_id || '',
           status: item.status || '',
+          prelim_folder: item.prelim_folder || '',
         },
       }));
 
@@ -48,8 +50,10 @@ export const dashboardService = {
             (item.carrier && item.carrier.toLowerCase().includes(term)) ||
             (item.policyNo && item.policyNo.toLowerCase().includes(term)) ||
             (item.policyForm && item.policyForm.toLowerCase().includes(term)) ||
-            (item.adjusterName && item.adjusterName.toLowerCase().includes(term)) ||
-            (item.originalData.loss_report_name && item.originalData.loss_report_name.toLowerCase().includes(term))
+            (item.adjusterName &&
+              item.adjusterName.toLowerCase().includes(term)) ||
+            (item.originalData.loss_report_name &&
+              item.originalData.loss_report_name.toLowerCase().includes(term))
         );
       }
 
@@ -77,17 +81,13 @@ export const dashboardService = {
       if (filters.startDate) {
         const start = new Date(filters.startDate);
         start.setHours(0, 0, 0, 0);
-        data = data.filter(
-          (item) => new Date(item.createdOn) >= start
-        );
+        data = data.filter((item) => new Date(item.createdOn) >= start);
       }
 
       if (filters.endDate) {
         const end = new Date(filters.endDate);
         end.setHours(23, 59, 59, 999);
-        data = data.filter(
-          (item) => new Date(item.createdOn) <= end
-        );
+        data = data.filter((item) => new Date(item.createdOn) <= end);
       }
 
       if (filterAllowedStatuses) {
@@ -126,10 +126,18 @@ export const dashboardService = {
       }));
 
       // Extract unique values for filters
-      let carriers = [...new Set(data.map((item) => item.carrier))].filter(Boolean);
-      let policyForms = [...new Set(data.map((item) => item.policyForm))].filter(Boolean);
-      let adjusters = [...new Set(data.map((item) => item.adjusterName))].filter(Boolean);
-      let statuses = [...new Set(data.map((item) => item.status))].filter(Boolean);
+      let carriers = [...new Set(data.map((item) => item.carrier))].filter(
+        Boolean
+      );
+      let policyForms = [
+        ...new Set(data.map((item) => item.policyForm)),
+      ].filter(Boolean);
+      let adjusters = [
+        ...new Set(data.map((item) => item.adjusterName)),
+      ].filter(Boolean);
+      let statuses = [...new Set(data.map((item) => item.status))].filter(
+        Boolean
+      );
 
       // Only include statuses that are in ALLOWED_STATUSES
       statuses = statuses.filter((status) => ALLOWED_STATUSES.includes(status));

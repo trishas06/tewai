@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import {
   Box,
   Typography,
@@ -21,6 +21,7 @@ import {
 import axiosInstance from '../utils/axiosInstance';
 import GenerateGuidanceReport from '../components/GenerateGuidanceReport';
 import SuccessPopup from '../components/SuccessPopup';
+import { UserRoleContext } from '../components/layout/AuthLayout';
 
 function ReportSummary({ reportId }) {
   const [isEditingSummary, setIsEditingSummary] = useState(false);
@@ -32,6 +33,7 @@ function ReportSummary({ reportId }) {
   const [openDialog, setOpenDialog] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const userRole = useContext(UserRoleContext);
 
   useEffect(() => {
     const fetchSummaryData = async () => {
@@ -145,21 +147,21 @@ function ReportSummary({ reportId }) {
               >
                 <Typography variant="h6">Report Summary</Typography>
                 <Box sx={{ display: 'flex', gap: 1 }}>
-                  {isEditingSummary && (
+                  {isEditingSummary && userRole !== 'Adjuster' && (
                     <Button onClick={handleCancelSummary} disabled={saving}>
                       Cancel
                     </Button>
                   )}
-                  <Button
-                    variant="contained"
-                    startIcon={isEditingSummary ? <SaveIcon /> : <EditIcon />}
-                    onClick={
-                      isEditingSummary ? handleSaveSummary : handleEditClick
-                    }
-                    disabled={saving}
-                  >
-                    {isEditingSummary ? (saving ? 'Saving...' : 'Save') : 'Edit'}
-                  </Button>
+                  {userRole !== 'Adjuster' && (
+                    <Button
+                      variant="contained"
+                      startIcon={isEditingSummary ? <SaveIcon /> : <EditIcon />}
+                      onClick={isEditingSummary ? handleSaveSummary : handleEditClick}
+                      disabled={saving}
+                    >
+                      {isEditingSummary ? (saving ? 'Saving...' : 'Save') : 'Edit'}
+                    </Button>
+                  )}
                   <GenerateGuidanceReport
                     reportId={reportId}
                     hasSummaryChanges={hasChanges}
@@ -167,14 +169,13 @@ function ReportSummary({ reportId }) {
                   />
                 </Box>
               </Box>
-
               <TextField
                 fullWidth
                 multiline
                 minRows={10}
                 value={summary}
                 onChange={(e) => setSummary(e.target.value)}
-                disabled={!isEditingSummary || saving}
+                disabled={userRole === 'Adjuster' || !isEditingSummary || saving}
                 variant="standard"
                 InputProps={{
                   disableUnderline: !isEditingSummary,
@@ -235,16 +236,18 @@ function ReportSummary({ reportId }) {
             time.
           </Typography>
         </DialogContent>
-        <DialogActions sx={{ p: 2, pt: 0 }}>
-          <Button onClick={handleDialogClose}>Cancel</Button>
-          <Button
-            variant="contained"
-            onClick={handleConfirmEdit}
-            startIcon={<EditIcon />}
-          >
-            Continue Editing
-          </Button>
-        </DialogActions>
+        {userRole !== 'Adjuster' && (
+          <DialogActions sx={{ p: 2, pt: 0 }}>
+            <Button onClick={handleDialogClose}>Cancel</Button>
+            <Button
+              variant="contained"
+              onClick={handleConfirmEdit}
+              startIcon={<EditIcon />}
+            >
+              Continue Editing
+            </Button>
+          </DialogActions>
+        )}
       </Dialog>
     </Box>
   );

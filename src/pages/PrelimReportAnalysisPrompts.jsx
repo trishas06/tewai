@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import {
   Box,
   Paper,
@@ -34,6 +34,7 @@ import {
 } from '@mui/icons-material';
 import axiosInstance from '../utils/axiosInstance';
 import SuccessPopup from '../components/SuccessPopup';
+import { UserRoleContext } from '../components/layout/AuthLayout';
 
 function PrelimReportAnalysisPrompts() {
   const [data, setData] = useState([]);
@@ -55,6 +56,7 @@ function PrelimReportAnalysisPrompts() {
   const [editingCategory, setEditingCategory] = useState(null);
   const [editingPrompt, setEditingPrompt] = useState(null);
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const userRole = useContext(UserRoleContext);
 
   const generateUniqueId = () => {
     return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -443,7 +445,7 @@ function PrelimReportAnalysisPrompts() {
             </Typography>
           </Box>
           <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-            {isEditing && (
+            {isEditing && userRole !== 'Adjuster' && (
               <>
                 <Box sx={{ display: 'flex', alignItems: 'center', mr: 2 }}>
                   <Switch
@@ -464,14 +466,16 @@ function PrelimReportAnalysisPrompts() {
                 </Button>
               </>
             )}
-            <Button
-              variant="contained"
-              startIcon={isEditing ? <SaveIcon /> : <EditIcon />}
-              onClick={isEditing ? handleSave : handleEditClick}
-            >
-              {isEditing ? 'Save' : 'Edit'}
-            </Button>
-            {isEditing && (
+            {userRole !== 'Adjuster' && (
+              <Button
+                variant="contained"
+                startIcon={isEditing ? <SaveIcon /> : <EditIcon />}
+                onClick={isEditing ? handleSave : handleEditClick}
+              >
+                {isEditing ? 'Save' : 'Edit'}
+              </Button>
+            )}
+            {isEditing && userRole !== 'Adjuster' && (
               <Button
                 variant="contained"
                 startIcon={<AddIcon />}

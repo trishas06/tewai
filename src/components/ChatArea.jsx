@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useContext } from 'react';
 import {
   Box,
   Paper,
@@ -14,6 +14,7 @@ import {
   SmartToy as SmartToyIcon,
   Edit as EditIcon,
 } from '@mui/icons-material';
+import { UserRoleContext } from './layout/AuthLayout';
 
 export default function ChatArea({
   messages,
@@ -31,6 +32,7 @@ export default function ChatArea({
   handleUpdateMessage,
 }) {
   const scrollableDivRef = useRef(null);
+  const userRole = useContext(UserRoleContext);
 
   // Auto scroll to bottom when messages change
   useEffect(() => {
@@ -191,7 +193,7 @@ export default function ChatArea({
                           </Typography>
                         )}
                       </Typography>
-                      {msg.role === 'bot' && (
+                      {msg.role === 'bot' && userRole !== 'Adjuster' && (
                         <IconButton
                           className="edit-button"
                           size="small"

@@ -9,6 +9,8 @@ import {
   AdminPanelSettings as AdminPanelSettingsIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useContext } from 'react';
+import { UserRoleContext } from './AuthLayout';
 
 const drawerWidth = 240;
 const collapsedWidth = 64;
@@ -25,6 +27,14 @@ const menuItems = [
 function Sidebar({ isExpanded, onToggle }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const userRole = useContext(UserRoleContext);
+
+  // Only Admin and Developer can see Admin Settings
+  const filteredMenuItems = menuItems.filter(
+    (item) =>
+      item.text !== 'Admin Settings' ||
+      (userRole && userRole !== 'Adjuster')
+  );
 
   return (
     <Drawer
@@ -60,7 +70,7 @@ function Sidebar({ isExpanded, onToggle }) {
         </Tooltip>
       </Box>
       <List>
-        {menuItems.map((item) => (
+        {filteredMenuItems.map((item) => (
           <ListItem key={item.text} disablePadding>
             <ListItemButton
               onClick={() => navigate(item.path)}

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import {
   Box,
   Typography,
@@ -37,6 +37,7 @@ import {
 import axiosInstance from '../utils/axiosInstance';
 import GenerateGuidanceReport from '../components/GenerateGuidanceReport';
 import SuccessPopup from '../components/SuccessPopup';
+import { UserRoleContext } from '../components/layout/AuthLayout';
 
 // Flag enum
 const FlagType = {
@@ -63,6 +64,7 @@ function ReportAnalysis({ reportId }) {
   const [openDialog, setOpenDialog] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const userRole = useContext(UserRoleContext);
 
   useEffect(() => {
     const fetchAnalysisData = async () => {
@@ -281,7 +283,7 @@ function ReportAnalysis({ reportId }) {
             </Typography>
           </Box>
           <Box sx={{ display: 'flex', gap: 1 }}>
-            {isEditing && (
+            {isEditing && userRole !== 'Adjuster' && (
               <Button
                 variant="outlined"
                 color="error"
@@ -291,14 +293,16 @@ function ReportAnalysis({ reportId }) {
                 Cancel
               </Button>
             )}
-            <Button
-              variant="contained"
-              startIcon={isEditing ? <SaveIcon /> : <EditIcon />}
-              onClick={isEditing ? handleSave : handleEditClick}
-              disabled={saving}
-            >
-              {isEditing ? (saving ? 'Saving...' : 'Save') : 'Edit'}
-            </Button>
+            {userRole !== 'Adjuster' && (
+              <Button
+                variant="contained"
+                startIcon={isEditing ? <SaveIcon /> : <EditIcon />}
+                onClick={isEditing ? handleSave : handleEditClick}
+                disabled={saving}
+              >
+                {isEditing ? (saving ? 'Saving...' : 'Save') : 'Edit'}
+              </Button>
+            )}
             <GenerateGuidanceReport
               reportId={reportId}
               hasAnalysisChanges={hasChanges}
@@ -488,16 +492,18 @@ function ReportAnalysis({ reportId }) {
             time.
           </Typography>
         </DialogContent>
-        <DialogActions sx={{ p: 2, pt: 0 }}>
-          <Button onClick={handleDialogClose}>Cancel</Button>
-          <Button
-            variant="contained"
-            onClick={handleConfirmEdit}
-            startIcon={<EditIcon />}
-          >
-            Continue Editing
-          </Button>
-        </DialogActions>
+        {userRole !== 'Adjuster' && (
+          <DialogActions sx={{ p: 2, pt: 0 }}>
+            <Button onClick={handleDialogClose}>Cancel</Button>
+            <Button
+              variant="contained"
+              onClick={handleConfirmEdit}
+              startIcon={<EditIcon />}
+            >
+              Continue Editing
+            </Button>
+          </DialogActions>
+        )}
       </Dialog>
       <SuccessPopup
         open={showSuccessPopup}

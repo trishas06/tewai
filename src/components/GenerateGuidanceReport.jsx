@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useContext } from 'react';
 import {
   Button,
   Dialog,
@@ -15,6 +15,7 @@ import {
   Warning as WarningIcon,
 } from '@mui/icons-material';
 import axiosInstance from '../utils/axiosInstance';
+import { UserRoleContext } from './layout/AuthLayout';
 
 function GenerateGuidanceReport({ 
   reportId, 
@@ -26,6 +27,7 @@ function GenerateGuidanceReport({
   const [openSuccessDialog, setOpenSuccessDialog] = useState(false);
   const [openWarningDialog, setOpenWarningDialog] = useState(false);
   const [generatingReport, setGeneratingReport] = useState(false);
+  const userRole = useContext(UserRoleContext);
 
   const handleGenerateGuidanceReport = async () => {
     // Check if any changes have been made
@@ -72,7 +74,7 @@ function GenerateGuidanceReport({
         variant="contained"
         color="primary"
         onClick={handleGenerateGuidanceReport}
-        disabled={generatingReport}
+        disabled={generatingReport || userRole === 'Adjuster'}
         startIcon={generatingReport ? <CircularProgress size={20} /> : null}
       >
         {generatingReport ? 'Generating...' : 'Generate Guidance Report'}

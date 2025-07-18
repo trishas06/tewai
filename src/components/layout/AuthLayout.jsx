@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, createContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Box } from '@mui/material';
 import Header from './Header';
@@ -8,11 +8,14 @@ import SessionTimeoutDialog from '../SessionTimeoutDialog';
 import { SESSION_TIMEOUT_EVENT } from '../../utils/axiosInstance';
 import dashboardService from '../../services/dashboardService';
 
+export const UserRoleContext = createContext('');
+
 function AuthLayout({ children }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [showSessionTimeout, setShowSessionTimeout] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [notificationsLoading, setNotificationsLoading] = useState(true);
+  const [userRole, setUserRole] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -100,6 +103,21 @@ function AuthLayout({ children }) {
     fetchNotifications();
   }, []);
 
+  useEffect(() => {
+    // Set user role from localStorage
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        setUserRole(user.role || '');
+      } catch {
+        setUserRole('');
+      }
+    } else {
+      setUserRole('');
+    }
+  }, []);
+
   const handleSidebarToggle = () => {
     setIsExpanded(!isExpanded);
   };
@@ -110,47 +128,49 @@ function AuthLayout({ children }) {
   };
 
   return (
-    <Box
-      sx={{
-        display: 'flex',
-        minHeight: '100vh',
-        bgcolor: 'background.default',
-        color: 'text.primary',
-      }}
-    >
-      <Sidebar isExpanded={isExpanded} onToggle={handleSidebarToggle} />
+    <UserRoleContext.Provider value={userRole}>
       <Box
-        component="main"
         sx={{
-          flexGrow: 1,
-          ml: '24px',
-          pt: '64px', // Header height
-          pb: '56px', // Footer height
-          pr: '24px',
+          display: 'flex',
           minHeight: '100vh',
-          transition: (theme) =>
-            theme.transitions.create('margin-left', {
-              easing: theme.transitions.easing.sharp,
-              duration: theme.transitions.duration.standard,
-            }),
           bgcolor: 'background.default',
           color: 'text.primary',
         }}
       >
-        <Header
-          isExpanded={isExpanded}
-          notifications={notifications}
-          loading={notificationsLoading}
-        />
-        {children}
-        <Footer isExpanded={isExpanded} />
-      </Box>
+        <Sidebar isExpanded={isExpanded} onToggle={handleSidebarToggle} />
+        <Box
+          component="main"
+          sx={{
+            flexGrow: 1,
+            ml: '24px',
+            pt: '64px', // Header height
+            pb: '56px', // Footer height
+            pr: '24px',
+            minHeight: '100vh',
+            transition: (theme) =>
+              theme.transitions.create('margin-left', {
+                easing: theme.transitions.easing.sharp,
+                duration: theme.transitions.duration.standard,
+              }),
+            bgcolor: 'background.default',
+            color: 'text.primary',
+          }}
+        >
+          <Header
+            isExpanded={isExpanded}
+            notifications={notifications}
+            loading={notificationsLoading}
+          />
+          {children}
+          <Footer isExpanded={isExpanded} />
+        </Box>
 
-      <SessionTimeoutDialog
-        open={showSessionTimeout}
-        onClose={handleSessionTimeoutClose}
-      />
-    </Box>
+        <SessionTimeoutDialog
+          open={showSessionTimeout}
+          onClose={handleSessionTimeoutClose}
+        />
+      </Box>
+    </UserRoleContext.Provider>
   );
 }
 
