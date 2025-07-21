@@ -5,6 +5,8 @@ import Dashboard from './pages/Dashboard';
 import AuthLayout from './components/layout/AuthLayout';
 import LossReport from './pages/LossReport';
 import AdminSettings from './pages/AdminSettings';
+import UserManagement from './pages/user-management/UserManagement';
+import UserForm from './pages/user-management/UserForm';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 
@@ -122,6 +124,24 @@ function App() {
                 <AdminSettings />
               </AuthLayout>
             } 
+            />
+            <Route path="/user-management" element={
+              <AuthLayout>
+                <UserManagement />
+              </AuthLayout>
+            }
+            />
+            <Route path="/user-form" element={
+              <AuthLayout>
+                <UserForm />
+              </AuthLayout>
+            }
+            />
+            <Route path="/user-form/:id" element={
+              <AuthLayout>
+                <UserForm />
+              </AuthLayout>
+            }
             />
             
             {/* Add other authenticated routes here */}

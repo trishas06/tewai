@@ -78,6 +78,13 @@ export const dashboardService = {
         data = data.filter((item) => filters.statuses.includes(item.status));
       }
 
+      if (filters.reportTypes && filters.reportTypes.length > 0) {
+        data = data.filter((item) => {
+          const reportType = item.prelim_folder ? 'Prelim' : 'Final';
+          return filters.reportTypes.includes(reportType);
+        });
+      }
+
       if (filters.startDate) {
         const start = new Date(filters.startDate);
         start.setHours(0, 0, 0, 0);

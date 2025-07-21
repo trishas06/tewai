@@ -7,6 +7,7 @@ import {
   MenuOpen as MenuOpenIcon,
   Menu as MenuIcon,
   AdminPanelSettings as AdminPanelSettingsIcon,
+  PeopleAlt as PeopleAltIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useContext } from 'react';
@@ -18,6 +19,7 @@ const collapsedWidth = 64;
 const menuItems = [
   { text: 'Dashboard', icon: <DescriptionIcon />, path: '/dashboard' },
   { text: 'Admin Settings', icon: <AdminPanelSettingsIcon />, path: '/admin-settings' },
+  { text: 'User Management', icon: <PeopleAltIcon />, path: '/user-management' },
   // { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
   // { text: 'Loss Reports', icon: <DescriptionIcon />, path: '/loss-reports' },
   // { text: 'Analytics', icon: <AssessmentIcon />, path: '/analytics' },
@@ -32,7 +34,7 @@ function Sidebar({ isExpanded, onToggle }) {
   // Only Admin and Developer can see Admin Settings
   const filteredMenuItems = menuItems.filter(
     (item) =>
-      item.text !== 'Admin Settings' ||
+      (item.text !== 'Admin Settings' && item.text !== 'User Management') ||
       (userRole && userRole !== 'Adjuster')
   );
 

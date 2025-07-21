@@ -164,7 +164,7 @@ function MultiSelect({ label, options, value, onChange }) {
           </Box>
         )}
       >
-        {options.map((option) => (
+        {(options || []).map((option) => (
           <MenuItem
             key={option}
             value={option}
@@ -204,6 +204,7 @@ function Dashboard() {
     policyForms: [],
     adjusters: [],
     statuses: [],
+    reportTypes: [],
     startDate: null,
     endDate: null,
   });
@@ -215,6 +216,7 @@ function Dashboard() {
     policyForms: [],
     adjusters: [],
     statuses: [],
+    reportTypes: ['Prelim', 'Final'],
   });
   const [tempFilters, setTempFilters] = useState({ ...filters });
 
@@ -230,7 +232,7 @@ function Dashboard() {
 
         // Fetch filter options
         const options = await dashboardService.getFilterOptions();
-        setFilterOptions(options);
+        setFilterOptions(prevOptions => ({ ...prevOptions, ...options }));
         setLoading(false);
       } catch (error) {
         console.error('Error fetching initial data:', error);
@@ -306,6 +308,7 @@ function Dashboard() {
       policyForms: [],
       adjusters: [],
       statuses: [],
+      reportTypes: [],
       startDate: null,
       endDate: null,
     });
@@ -504,6 +507,12 @@ function Dashboard() {
       >
         <DialogTitle>Filter Claims</DialogTitle>
         <DialogContent>
+          <MultiSelect
+            label="Report Type"
+            options={filterOptions.reportTypes}
+            value={tempFilters.reportTypes}
+            onChange={handleMultiSelectChange('reportTypes')}
+          />
           <MultiSelect
             label="Carrier"
             options={filterOptions.carriers}
