@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext } from 'react';
+import { useState, useContext } from 'react';
 import {
   Box,
   Avatar,
@@ -21,21 +21,15 @@ import { ColorModeContext } from '../../App';
 import { useTheme } from '@mui/material/styles';
 import logo from '../../assets/images/logo.svg';
 import Notifications from '../Notifications';
+import { useUser } from '../../contexts/UserContext';
 
 function Header({ isExpanded, notifications, loading }) {
   const [anchorEl, setAnchorEl] = useState(null);
-  const [user, setUser] = useState(null);
+  const { user, clearUser } = useUser();
 
   const navigate = useNavigate();
   const theme = useTheme();
   const colorMode = useContext(ColorModeContext);
-
-  useEffect(() => {
-    const userData = localStorage.getItem('user');
-    if (userData) {
-      setUser(JSON.parse(userData));
-    }
-  }, []);
 
   const handleOpenMenu = (event) => {
     setAnchorEl(event.currentTarget);
@@ -46,19 +40,26 @@ function Header({ isExpanded, notifications, loading }) {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    clearUser();
     navigate('/login');
   };
 
-  const getInitials = (name) => {
-    if (!name) return '';
-    return name
-      .split(' ')
-      .map((part) => part[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
+  const getInitials = (firstName, lastName) => {
+    if (!firstName && !lastName) return '';
+    const first = firstName ? firstName[0] : '';
+    const last = lastName ? lastName[0] : '';
+    return (first + last).toUpperCase();
+  };
+
+  const getDisplayName = (user) => {
+    if (!user) return 'Loading...';
+    if (user.first_name && user.last_name) {
+      return `${user.first_name} ${user.last_name}`;
+    }
+    if (user.first_name) return user.first_name;
+    if (user.last_name) return user.last_name;
+    if (user.username) return user.username;
+    return 'User';
   };
 
   return (
@@ -141,14 +142,14 @@ function Header({ isExpanded, notifications, loading }) {
                 bgcolor: 'secondary.main',
               }}
             >
-              {user ? getInitials(user.name) : ''}
+              {user ? getInitials(user.first_name, user.last_name) : ''}
             </Avatar>
             <Box>
               <Typography
                 variant="subtitle2"
                 sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}
               >
-                {user ? user.name : 'Loading...'}
+                {getDisplayName(user)}
               </Typography>
               <Typography variant="caption" sx={{ opacity: 0.9 }}>
                 {user?.role || 'User'}

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useUser } from '../../contexts/UserContext';
 import {
   Box,
   Button,
@@ -47,11 +48,6 @@ function getToken() {
   return localStorage.getItem('token');
 }
 
-function getCurrentUsername() {
-  // Replace with your actual username retrieval logic
-  return localStorage.getItem('username');
-}
-
 // Table header cells
 const headCells = [
   { id: 'name', label: 'Name' },
@@ -62,6 +58,7 @@ const headCells = [
 
 function UserManagement() {
   const navigate = useNavigate();
+  const { user: currentUser } = useUser();
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -72,7 +69,6 @@ function UserManagement() {
   const [confirmMultiDelete, setConfirmMultiDelete] = useState(false);
 
   const token = getToken();
-  const currentUsername = getCurrentUsername();
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -101,9 +97,8 @@ function UserManagement() {
   };
 
   const handleDeleteUsers = async () => {
-    // Prevent self-deletion
-    const usersToDelete = rows.filter(u => selected.includes(u.user_id));
-    if (usersToDelete.some(u => u.username === currentUsername)) {
+    // Prevent self-deletion by comparing user_id
+    if (currentUser && selected.includes(currentUser.user_id)) {
       alert("You cannot delete yourself.");
       return;
     }
@@ -127,7 +122,8 @@ function UserManagement() {
   };
 
   const handleDeleteSingleUser = async (user_id, username) => {
-    if (username === currentUsername) {
+    // Prevent self-deletion by comparing user_id
+    if (currentUser && user_id === currentUser.user_id) {
       alert("You cannot delete yourself.");
       return;
     }
@@ -155,6 +151,7 @@ function UserManagement() {
     if (event.target.checked) {
       const newSelecteds = rows
         .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+        .filter(user => user.user_id !== currentUser?.user_id) // Exclude current user
         .map((n) => n.user_id);
       setSelected(newSelecteds);
       return;
@@ -241,9 +238,18 @@ function UserManagement() {
             <TableRow>
               <TableCell padding="checkbox">
                 <Checkbox
-                  indeterminate={selected.length > 0 && selected.length < filteredUsers.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).length}
-                  checked={filteredUsers.length > 0 && selected.length === filteredUsers.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).length && selected.length > 0}
+                  indeterminate={selected.length > 0 && selected.length < filteredUsers
+                    .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                    .filter(user => user.user_id !== currentUser?.user_id).length}
+                  checked={filteredUsers.length > 0 && 
+                    selected.length === filteredUsers
+                      .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                      .filter(user => user.user_id !== currentUser?.user_id).length && 
+                    selected.length > 0}
                   onChange={handleSelectAllClick}
+                  disabled={filteredUsers
+                    .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                    .every(user => user.user_id === currentUser?.user_id)}
                 />
               </TableCell>
               {headCells.map((cell) => (
@@ -272,7 +278,9 @@ function UserManagement() {
                     selected={isItemSelected}
                   >
                     <TableCell padding="checkbox">
-                      <Checkbox checked={isItemSelected} />
+                      {row.user_id !== currentUser?.user_id && (
+                        <Checkbox checked={isItemSelected} />
+                      )}
                     </TableCell>
                     <TableCell>{`${row.first_name} ${row.last_name}`}</TableCell>
                     <TableCell>{row.username}</TableCell>
@@ -281,9 +289,11 @@ function UserManagement() {
                       <IconButton onClick={() => handleEditUser(row.user_id)}>
                         <EditIcon />
                       </IconButton>
-                      <IconButton onClick={() => handleDeleteSingleUser(row.user_id, row.username)}>
-                        <DeleteIcon />
-                      </IconButton>
+                      {row.user_id !== currentUser?.user_id && (
+                        <IconButton onClick={() => handleDeleteSingleUser(row.user_id, row.username)}>
+                          <DeleteIcon />
+                        </IconButton>
+                      )}
                     </TableCell>
                   </TableRow>
                 );

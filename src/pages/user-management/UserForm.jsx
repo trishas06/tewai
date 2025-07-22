@@ -15,6 +15,8 @@ import {
 } from '@mui/material';
 import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import userService from '../../services/userService';
+import { useUser } from '../../contexts/UserContext';
+import { authService } from '../../services/authService';
 
 function getToken() {
   // Replace with your actual token retrieval logic
@@ -25,6 +27,7 @@ function UserForm() {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const { user: currentUser, updateUser } = useUser();
   const isEditMode = Boolean(id);
   const token = getToken();
 
@@ -66,6 +69,18 @@ function UserForm() {
           },
           token
         );
+        
+        // If the user edited their own profile, refresh user info in global state
+        if (currentUser && currentUser.user_id === id) {
+          try {
+            const userInfoResponse = await authService.getUserInfo(token);
+            if (userInfoResponse.status === 'success' && userInfoResponse.user) {
+              updateUser(userInfoResponse.user);
+            }
+          } catch (error) {
+            console.error('Failed to refresh user info after profile update:', error);
+          }
+        }
       } else {
         await userService.createUser(
           {

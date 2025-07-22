@@ -48,6 +48,7 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
 
 import authService from '../services/authService';
+import { useUser } from '../contexts/UserContext';
 import dashboardService from '../services/dashboardService';
 import { ALLOWED_STATUSES } from '../utils/allowedStatuses';
 import { UserRoleContext } from '../components/layout/AuthLayout';
@@ -193,6 +194,7 @@ function MultiSelect({ label, options, value, onChange }) {
 
 function Dashboard() {
   const navigate = useNavigate();
+  const { user, loading: userLoading, isAuthenticated } = useUser();
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -221,15 +223,26 @@ function Dashboard() {
   const [tempFilters, setTempFilters] = useState({ ...filters });
 
 
-  // Fetch initial data and filter options
+  // Check authentication first - handled by UserContext
   useEffect(() => {
+    if (userLoading) {
+      return; // Wait for UserContext to finish loading
+    }
+
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+  }, [userLoading, isAuthenticated, navigate]);
+
+  // Fetch initial data and filter options only after authentication
+  useEffect(() => {
+    if (userLoading || !isAuthenticated) {
+      return;
+    }
+
     const fetchInitialData = async () => {
       try {
-        if (!authService.isAuthenticated()) {
-          navigate('/login');
-          return;
-        }
-
         // Fetch filter options
         const options = await dashboardService.getFilterOptions();
         setFilterOptions(prevOptions => ({ ...prevOptions, ...options }));
@@ -241,10 +254,14 @@ function Dashboard() {
     };
 
     fetchInitialData();
-  }, [navigate]);
+  }, [userLoading, isAuthenticated]);
 
-  // Fetch data when page, rowsPerPage, filters, or search term changes
+  // Fetch data when page, rowsPerPage, filters, or search term changes (only if authenticated)
   useEffect(() => {
+    if (userLoading || !isAuthenticated) {
+      return;
+    }
+
     const fetchData = async () => {
       try {
         setLoading(true);
@@ -264,7 +281,7 @@ function Dashboard() {
     };
 
     fetchData();
-  }, [page, rowsPerPage, filters, searchTerm]);
+  }, [userLoading, isAuthenticated, page, rowsPerPage, filters, searchTerm]);
 
   // Handle page change
   const handleChangePage = (event, newPage) => {

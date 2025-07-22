@@ -9,6 +9,7 @@ import UserManagement from './pages/user-management/UserManagement';
 import UserForm from './pages/user-management/UserForm';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
+import { UserProvider } from './contexts/UserContext';
 
 export const ColorModeContext = createContext({ toggleColorMode: () => {} });
 
@@ -98,10 +99,11 @@ function App() {
   );
 
   return (
-    <ColorModeContext.Provider value={colorMode}>
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <Router>
+    <UserProvider>
+      <ColorModeContext.Provider value={colorMode}>
+        <ThemeProvider theme={theme}>
+          <CssBaseline />
+          <Router>
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
@@ -141,7 +143,7 @@ function App() {
               <AuthLayout>
                 <UserForm />
               </AuthLayout>
-            }
+            } 
             />
             
             {/* Add other authenticated routes here */}
@@ -153,9 +155,10 @@ function App() {
             } /> 
             */}
           </Routes>
-        </Router>
-      </ThemeProvider>
-    </ColorModeContext.Provider>
+          </Router>
+        </ThemeProvider>
+      </ColorModeContext.Provider>
+    </UserProvider>
   );
 }
 

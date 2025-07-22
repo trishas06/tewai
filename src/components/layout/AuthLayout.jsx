@@ -7,6 +7,7 @@ import Footer from './Footer';
 import SessionTimeoutDialog from '../SessionTimeoutDialog';
 import { SESSION_TIMEOUT_EVENT } from '../../utils/axiosInstance';
 import dashboardService from '../../services/dashboardService';
+import { useUser } from '../../contexts/UserContext';
 
 export const UserRoleContext = createContext('');
 
@@ -15,14 +16,18 @@ function AuthLayout({ children }) {
   const [showSessionTimeout, setShowSessionTimeout] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [notificationsLoading, setNotificationsLoading] = useState(true);
-  const [userRole, setUserRole] = useState('');
+  const { user, loading: userLoading, isAuthenticated } = useUser();
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check if user is authenticated
-    const token = localStorage.getItem('token');
-    if (!token) {
+    // Check if user is authenticated after UserContext finishes loading
+    if (userLoading) {
+      return; // Wait for UserContext to finish loading
+    }
+
+    if (!isAuthenticated) {
       navigate('/login');
+      return;
     }
 
     // Listen for session timeout events
@@ -35,9 +40,14 @@ function AuthLayout({ children }) {
     return () => {
       window.removeEventListener(SESSION_TIMEOUT_EVENT, handleSessionTimeout);
     };
-  }, [navigate]);
+  }, [userLoading, isAuthenticated, navigate]);
 
   useEffect(() => {
+    // Only fetch notifications if user is authenticated and not loading
+    if (userLoading || !isAuthenticated) {
+      return;
+    }
+
     const fetchNotifications = async () => {
       try {
         const result = await dashboardService.getClaimsData(
@@ -101,22 +111,9 @@ function AuthLayout({ children }) {
     };
 
     fetchNotifications();
-  }, []);
+  }, [userLoading, isAuthenticated]);
 
-  useEffect(() => {
-    // Set user role from localStorage
-    const userStr = localStorage.getItem('user');
-    if (userStr) {
-      try {
-        const user = JSON.parse(userStr);
-        setUserRole(user.role || '');
-      } catch {
-        setUserRole('');
-      }
-    } else {
-      setUserRole('');
-    }
-  }, []);
+
 
   const handleSidebarToggle = () => {
     setIsExpanded(!isExpanded);
@@ -127,8 +124,13 @@ function AuthLayout({ children }) {
     navigate('/login');
   };
 
+  // Don't render children until user context finishes loading and authentication is verified
+  if (userLoading || !isAuthenticated) {
+    return null;
+  }
+
   return (
-    <UserRoleContext.Provider value={userRole}>
+    <UserRoleContext.Provider value={user?.role || ''}>
       <Box
         sx={{
           display: 'flex',

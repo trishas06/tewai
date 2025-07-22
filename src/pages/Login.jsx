@@ -12,10 +12,17 @@ function Login() {
     setError('');
     
     try {
-      await authService.login(email, password);
-      navigate('/dashboard');
+      const userData = await authService.login(email, password);
+      if (userData && userData.token) {
+        // Force a full page reload to ensure all context is properly initialized
+        window.location.href = '/dashboard';
+      } else {
+        throw new Error('Invalid user data received');
+      }
     } catch (error) {
+      console.error('Login error:', error);
       setError(
+        error.message || 
         error.response?.data?.message || 
         'Failed to login. Please check your credentials.'
       );
