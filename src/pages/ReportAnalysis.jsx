@@ -55,7 +55,7 @@ const flagColors = {
   [FlagType.NO_FLAG]: 'default',
 };
 
-function ReportAnalysis({ reportId }) {
+function ReportAnalysis({ reportId, prelim_folder }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
@@ -77,7 +77,10 @@ function ReportAnalysis({ reportId }) {
         }
 
         const response = await axiosInstance.get('/get_question_answer', {
-          params: { report_id: reportId },
+          params: {
+            report_id: reportId,
+            ...(prelim_folder ? { prelim_folder: prelim_folder } : {}),
+          },
         });
 
         if (
