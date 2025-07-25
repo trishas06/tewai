@@ -66,17 +66,23 @@ function LossReport() {
           throw new Error('Missing required report parameters');
         }
 
-        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/get_pdf_new`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/pdf',
-          },
-          body: JSON.stringify({
-            report_id: rowData.report_id,
-            report_name: rowData.loss_report_name,
-          }),
-        });
+        const response = await fetch(
+          `${import.meta.env.VITE_API_BASE_URL}/get_pdf_new`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Accept: 'application/pdf',
+            },
+            body: JSON.stringify({
+              report_id: rowData.report_id,
+              report_name: rowData.loss_report_name,
+              ...(rowData.prelim_folder
+                ? { prelim_folder: rowData.prelim_folder }
+                : {}),
+            }),
+          }
+        );
 
         if (!response.ok) {
           throw new Error('Failed to fetch PDF');
@@ -84,8 +90,8 @@ function LossReport() {
 
         // Create a blob URL directly from the response
         const pdfUrl = URL.createObjectURL(await response.blob());
-        
-        setData(prevData => ({
+
+        setData((prevData) => ({
           ...prevData,
           pdfUrl,
         }));
@@ -219,11 +225,13 @@ function LossReport() {
         </TabPanel>
 
         <TabPanel value={activeTab} index={2}>
-          <ReportAnalysis reportId={data?.report_id} />
+          <ReportAnalysis
+            reportId={data?.report_id}
+            prelim_folder={data?.prelim_folder}
+          />
         </TabPanel>
 
         <TabPanel value={activeTab} index={3}>
-          
           <ChatBot reportId={data?.report_id} userId />
         </TabPanel>
       </Paper>
