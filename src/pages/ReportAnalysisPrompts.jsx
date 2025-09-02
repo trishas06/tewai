@@ -77,7 +77,7 @@ function ReportAnalysisPrompts() {
         const formattedData = response.data.question_answer.map((item) => ({
           id: generateUniqueId(), // Generate unique id instead of using order
           category: item.category,
-          enabled: item.questions.every((q) => q.is_enable), // Category is enabled if all questions are enabled
+          enabled: item.questions.some((q) => q.is_enable), // Category is enabled if all questions are enabled
           order: item.order,
           prompts: item.questions.map((q) => ({
             id: generateUniqueId(), // Generate unique id for prompts too
@@ -85,6 +85,7 @@ function ReportAnalysisPrompts() {
             enabled: q.is_enable,
             order: q.order,
             type: q.type,
+            execution_mode: q.execution_mode,
           })),
         }));
         setData(formattedData);
@@ -243,6 +244,7 @@ function ReportAnalysisPrompts() {
             is_enable: prompt.enabled,
             order: prompt.order,
             question: prompt.question,
+            execution_mode: prompt.execution_mode,
             type: prompt.type || 'text', // Use existing type or default to 'text'
           })),
         })),
@@ -322,11 +324,11 @@ function ReportAnalysisPrompts() {
 
       if (editingCategory) {
         // Update existing category
-        const index = newData.findIndex(cat => cat.id === editingCategory.id);
+        const index = newData.findIndex((cat) => cat.id === editingCategory.id);
         if (index !== -1) {
           // Remove the category from its current position
           newData.splice(index, 1);
-          
+
           // Create updated category with new order
           const updatedCategory = {
             ...editingCategory,
@@ -383,14 +385,14 @@ function ReportAnalysisPrompts() {
       const newData = data.map((category) => {
         if (category.category === selectedCategory) {
           const prompts = [...category.prompts];
-          
+
           if (editingPrompt) {
             // Update existing prompt
-            const index = prompts.findIndex(p => p.id === editingPrompt.id);
+            const index = prompts.findIndex((p) => p.id === editingPrompt.id);
             if (index !== -1) {
               // Remove the prompt from its current position
               prompts.splice(index, 1);
-              
+
               // Create updated prompt with new order
               const updatedPrompt = {
                 ...editingPrompt,
@@ -416,6 +418,7 @@ function ReportAnalysisPrompts() {
               enabled: true,
               order: parseInt(newPromptOrder) || prompts.length + 1,
               type: 'text',
+              execution_mode: 'sequential',
             };
 
             // Insert at specific position or append
@@ -605,7 +608,7 @@ function ReportAnalysisPrompts() {
                       alignItems: 'center',
                     }}
                   >
-                    <Tooltip title={categoryIndex === 0 ? "" : "Move Up"}>
+                    <Tooltip title={categoryIndex === 0 ? '' : 'Move Up'}>
                       <span>
                         <IconButton
                           size="small"
@@ -615,15 +618,21 @@ function ReportAnalysisPrompts() {
                             handleMoveCategory(categoryIndex, 'up');
                           }}
                           sx={{
-                            bgcolor: categoryIndex === 0 ? 'action.disabledBackground' : 'primary.main',
+                            bgcolor:
+                              categoryIndex === 0
+                                ? 'action.disabledBackground'
+                                : 'primary.main',
                             width: 24,
                             height: 24,
                             '&:hover': {
-                              bgcolor: categoryIndex === 0 ? 'action.disabledBackground' : 'primary.dark',
+                              bgcolor:
+                                categoryIndex === 0
+                                  ? 'action.disabledBackground'
+                                  : 'primary.dark',
                             },
                             '&.Mui-disabled': {
                               bgcolor: 'action.disabledBackground',
-                            }
+                            },
                           }}
                         >
                           <PromptUpIcon sx={{ fontSize: 16, color: 'white' }} />
@@ -631,7 +640,11 @@ function ReportAnalysisPrompts() {
                       </span>
                     </Tooltip>
 
-                    <Tooltip title={categoryIndex === data.length - 1 ? "" : "Move Down"}>
+                    <Tooltip
+                      title={
+                        categoryIndex === data.length - 1 ? '' : 'Move Down'
+                      }
+                    >
                       <span>
                         <IconButton
                           size="small"
@@ -641,18 +654,26 @@ function ReportAnalysisPrompts() {
                             handleMoveCategory(categoryIndex, 'down');
                           }}
                           sx={{
-                            bgcolor: categoryIndex === data.length - 1 ? 'action.disabledBackground' : 'primary.main',
+                            bgcolor:
+                              categoryIndex === data.length - 1
+                                ? 'action.disabledBackground'
+                                : 'primary.main',
                             width: 24,
                             height: 24,
                             '&:hover': {
-                              bgcolor: categoryIndex === data.length - 1 ? 'action.disabledBackground' : 'primary.dark',
+                              bgcolor:
+                                categoryIndex === data.length - 1
+                                  ? 'action.disabledBackground'
+                                  : 'primary.dark',
                             },
                             '&.Mui-disabled': {
                               bgcolor: 'action.disabledBackground',
-                            }
+                            },
                           }}
                         >
-                          <PromptDownIcon sx={{ fontSize: 16, color: 'white' }} />
+                          <PromptDownIcon
+                            sx={{ fontSize: 16, color: 'white' }}
+                          />
                         </IconButton>
                       </span>
                     </Tooltip>
@@ -733,48 +754,84 @@ function ReportAnalysisPrompts() {
                           mr: 2,
                         }}
                       >
-                        <Tooltip title={promptIndex === 0 ? "" : "Move Up"}>
+                        <Tooltip title={promptIndex === 0 ? '' : 'Move Up'}>
                           <span>
                             <IconButton
                               size="small"
                               disabled={promptIndex === 0}
-                              onClick={() => handleMovePrompt(categoryIndex, promptIndex, 'up')}
+                              onClick={() =>
+                                handleMovePrompt(
+                                  categoryIndex,
+                                  promptIndex,
+                                  'up'
+                                )
+                              }
                               sx={{
-                                bgcolor: promptIndex === 0 ? 'action.disabledBackground' : 'primary.main',
+                                bgcolor:
+                                  promptIndex === 0
+                                    ? 'action.disabledBackground'
+                                    : 'primary.main',
                                 width: 24,
                                 height: 24,
                                 '&:hover': {
-                                  bgcolor: promptIndex === 0 ? 'action.disabledBackground' : 'primary.dark',
+                                  bgcolor:
+                                    promptIndex === 0
+                                      ? 'action.disabledBackground'
+                                      : 'primary.dark',
                                 },
                                 '&.Mui-disabled': {
                                   bgcolor: 'action.disabledBackground',
-                                }
+                                },
                               }}
                             >
-                              <PromptUpIcon sx={{ fontSize: 16, color: 'white' }} />
+                              <PromptUpIcon
+                                sx={{ fontSize: 16, color: 'white' }}
+                              />
                             </IconButton>
                           </span>
                         </Tooltip>
 
-                        <Tooltip title={promptIndex === section.prompts.length - 1 ? "" : "Move Down"}>
+                        <Tooltip
+                          title={
+                            promptIndex === section.prompts.length - 1
+                              ? ''
+                              : 'Move Down'
+                          }
+                        >
                           <span>
                             <IconButton
                               size="small"
-                              disabled={promptIndex === section.prompts.length - 1}
-                              onClick={() => handleMovePrompt(categoryIndex, promptIndex, 'down')}
+                              disabled={
+                                promptIndex === section.prompts.length - 1
+                              }
+                              onClick={() =>
+                                handleMovePrompt(
+                                  categoryIndex,
+                                  promptIndex,
+                                  'down'
+                                )
+                              }
                               sx={{
-                                bgcolor: promptIndex === section.prompts.length - 1 ? 'action.disabledBackground' : 'primary.main',
+                                bgcolor:
+                                  promptIndex === section.prompts.length - 1
+                                    ? 'action.disabledBackground'
+                                    : 'primary.main',
                                 width: 24,
                                 height: 24,
                                 '&:hover': {
-                                  bgcolor: promptIndex === section.prompts.length - 1 ? 'action.disabledBackground' : 'primary.dark',
+                                  bgcolor:
+                                    promptIndex === section.prompts.length - 1
+                                      ? 'action.disabledBackground'
+                                      : 'primary.dark',
                                 },
                                 '&.Mui-disabled': {
                                   bgcolor: 'action.disabledBackground',
-                                }
+                                },
                               }}
                             >
-                              <PromptDownIcon sx={{ fontSize: 16, color: 'white' }} />
+                              <PromptDownIcon
+                                sx={{ fontSize: 16, color: 'white' }}
+                              />
                             </IconButton>
                           </span>
                         </Tooltip>
@@ -785,15 +842,21 @@ function ReportAnalysisPrompts() {
                       primary={prompt.question}
                       primaryTypographyProps={{
                         variant: 'body2',
-                        color: prompt.enabled ? 'text.primary' : 'text.disabled',
+                        color: prompt.enabled
+                          ? 'text.primary'
+                          : 'text.disabled',
                       }}
                     />
                     {isEditing && (
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Box
+                        sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+                      >
                         <Tooltip title="Edit Prompt">
                           <IconButton
                             size="small"
-                            onClick={() => handleEditPrompt(section.category, prompt)}
+                            onClick={() =>
+                              handleEditPrompt(section.category, prompt)
+                            }
                             sx={{
                               color: 'primary.main',
                               '&:hover': {
@@ -806,13 +869,17 @@ function ReportAnalysisPrompts() {
                         </Tooltip>
                         <Switch
                           checked={prompt.enabled}
-                          onChange={() => handleTogglePrompt(categoryIndex, promptIndex)}
+                          onChange={() =>
+                            handleTogglePrompt(categoryIndex, promptIndex)
+                          }
                           color="primary"
                         />
                         <Tooltip title="Delete Prompt">
                           <IconButton
                             size="small"
-                            onClick={() => handleDeletePrompt(categoryIndex, promptIndex)}
+                            onClick={() =>
+                              handleDeletePrompt(categoryIndex, promptIndex)
+                            }
                             sx={{
                               color: 'error.main',
                               '&:hover': {
@@ -1047,4 +1114,4 @@ function ReportAnalysisPrompts() {
   );
 }
 
-export default ReportAnalysisPrompts; 
+export default ReportAnalysisPrompts;

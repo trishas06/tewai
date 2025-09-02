@@ -12,8 +12,13 @@ import {
   MenuItem,
   InputLabel,
   FormControl,
+  InputAdornment,
 } from '@mui/material';
-import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
+import {
+  ArrowBack as ArrowBackIcon,
+  Visibility,
+  VisibilityOff,
+} from '@mui/icons-material';
 import userService from '../../services/userService';
 import { useUser } from '../../contexts/UserContext';
 import { authService } from '../../services/authService';
@@ -37,6 +42,10 @@ function UserForm() {
   const [role, setRole] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
+  const handleClickShowPassword = () => setShowPassword(!showPassword);
+  const handleMouseDownPassword = (event) => event.preventDefault();
 
   useEffect(() => {
     if (isEditMode) {
@@ -69,16 +78,22 @@ function UserForm() {
           },
           token
         );
-        
+
         // If the user edited their own profile, refresh user info in global state
         if (currentUser && currentUser.user_id === id) {
           try {
             const userInfoResponse = await authService.getUserInfo(token);
-            if (userInfoResponse.status === 'success' && userInfoResponse.user) {
+            if (
+              userInfoResponse.status === 'success' &&
+              userInfoResponse.user
+            ) {
               updateUser(userInfoResponse.user);
             }
           } catch (error) {
-            console.error('Failed to refresh user info after profile update:', error);
+            console.error(
+              'Failed to refresh user info after profile update:',
+              error
+            );
           }
         }
       } else {
@@ -161,11 +176,25 @@ function UserForm() {
               <Grid item xs={12} sm={6}>
                 <TextField
                   label="Password"
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   fullWidth
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          aria-label="toggle password visibility"
+                          onClick={handleClickShowPassword}
+                          onMouseDown={handleMouseDownPassword}
+                          edge="end"
+                        >
+                          {showPassword ? <VisibilityOff /> : <Visibility />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
                 />
               </Grid>
             )}

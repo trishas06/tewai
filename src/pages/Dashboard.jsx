@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Button,
-  Container,
   TextField,
   Typography,
   Paper,
@@ -16,11 +15,7 @@ import {
   TablePagination,
   IconButton,
   InputAdornment,
-  Badge,
-  Menu,
   MenuItem,
-  Divider,
-  ListItemText,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -35,19 +30,17 @@ import {
 } from '@mui/material';
 import {
   Search as SearchIcon,
-  Edit as EditIcon,
   FilterList as FilterListIcon,
-  Notifications as NotificationsIcon,
   FirstPage as FirstPageIcon,
   LastPage as LastPageIcon,
   KeyboardArrowLeft,
   KeyboardArrowRight,
   Description as DescriptionIcon,
+  Close as CloseIcon,
 } from '@mui/icons-material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
 
-import authService from '../services/authService';
 import { useUser } from '../contexts/UserContext';
 import dashboardService from '../services/dashboardService';
 import { ALLOWED_STATUSES } from '../utils/allowedStatuses';
@@ -141,6 +134,14 @@ function TablePaginationActions(props) {
 
 // Multi-select component for filter dialog
 function MultiSelect({ label, options, value, onChange }) {
+  // Handle removing a specific chip
+  const handleDelete = (chipValue) => (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const newValue = value.filter((item) => item !== chipValue);
+    onChange({ target: { value: newValue } });
+  };
+
   return (
     <FormControl fullWidth margin="normal">
       <InputLabel>{label}</InputLabel>
@@ -150,16 +151,40 @@ function MultiSelect({ label, options, value, onChange }) {
         onChange={onChange}
         input={<OutlinedInput label={label} />}
         renderValue={(selected) => (
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+          <Box 
+            sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}
+            onClick={(e) => e.stopPropagation()} // Prevent clicks on the container from opening select
+          >
             {selected.map((value) => (
               <Chip
                 key={value}
                 label={value}
+                onDelete={handleDelete(value)}
+                deleteIcon={
+                  <CloseIcon
+                    sx={{
+                      color: '#1976d2 !important', // MUI primary main - matching chip text color
+                      fontSize: '18px !important',
+                      '&:hover': {
+                        color: '#115293 !important', // MUI primary dark on hover
+                      },
+                    }}
+                    onMouseDown={(e) => e.stopPropagation()} // Additional prevention
+                  />
+                }
                 sx={{
                   bgcolor: '#e3f2fd', // MUI primary light
                   color: '#1976d2', // MUI primary main
                   fontWeight: 500,
+                  '& .MuiChip-deleteIcon': {
+                    color: '#1976d2',
+                    fontSize: '18px',
+                    '&:hover': {
+                      color: '#115293',
+                    },
+                  },
                 }}
+                onClick={(e) => e.stopPropagation()} // Prevent chip clicks from opening select
               />
             ))}
           </Box>
@@ -194,7 +219,7 @@ function MultiSelect({ label, options, value, onChange }) {
 
 function Dashboard() {
   const navigate = useNavigate();
-  const { user, loading: userLoading, isAuthenticated } = useUser();
+  const { loading: userLoading, isAuthenticated } = useUser();
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
