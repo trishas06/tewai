@@ -17,11 +17,11 @@ import {
   Brightness7 as Brightness7Icon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import { ColorModeContext } from '../../App';
 import { useTheme } from '@mui/material/styles';
 import logo from '../../assets/images/logo.svg';
 import Notifications from '../Notifications';
 import { useUser } from '../../contexts/UserContext';
+import { ColorModeContext } from '../../contexts/ColorModeContext';
 
 function Header({ isExpanded, notifications, loading }) {
   const [anchorEl, setAnchorEl] = useState(null);
@@ -140,6 +140,7 @@ function Header({ isExpanded, notifications, loading }) {
                 width: 32,
                 height: 32,
                 bgcolor: 'secondary.main',
+                color: 'white'
               }}
             >
               {user ? getInitials(user.first_name, user.last_name) : ''}

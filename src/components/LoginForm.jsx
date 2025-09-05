@@ -1,15 +1,23 @@
 import { useState } from 'react';
-import { 
-  Box, 
-  Button, 
-  TextField, 
-  Alert 
+import { Link } from 'react-router-dom';
+import {
+  Box,
+  Button,
+  TextField,
+  Alert,
+  IconButton,
+  InputAdornment,
 } from '@mui/material';
+import { Visibility, VisibilityOff } from '@mui/icons-material';
 
 function LoginForm({ onSubmit, error }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
+  const handleClickShowPassword = () => setShowPassword(!showPassword);
+  const handleMouseDownPassword = (event) => event.preventDefault();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -28,13 +36,13 @@ function LoginForm({ onSubmit, error }) {
           {error}
         </Alert>
       )}
-      
+
       <TextField
         margin="normal"
         required
         fullWidth
         id="username"
-        label="Username"
+        label="Username/Email"
         name="username"
         autoComplete="username"
         autoFocus
@@ -47,11 +55,25 @@ function LoginForm({ onSubmit, error }) {
         fullWidth
         name="password"
         label="Password"
-        type="password"
+        type={showPassword ? 'text' : 'password'}
         id="password"
         autoComplete="current-password"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
+        InputProps={{
+          endAdornment: (
+            <InputAdornment position="end">
+              <IconButton
+                aria-label="toggle password visibility"
+                onClick={handleClickShowPassword}
+                onMouseDown={handleMouseDownPassword}
+                edge="end"
+              >
+                {showPassword ? <VisibilityOff /> : <Visibility />}
+              </IconButton>
+            </InputAdornment>
+          ),
+        }}
       />
       <Button
         type="submit"
@@ -62,8 +84,20 @@ function LoginForm({ onSubmit, error }) {
       >
         {loading ? 'Logging in...' : 'Login'}
       </Button>
+      
+      <Box sx={{ textAlign: 'center' }}>
+        <Button
+          component={Link}
+          to="/forgot-password"
+          variant="text"
+          color="primary"
+          sx={{ textTransform: 'none', textDecoration: 'underline' }}
+        >
+          Forgot Password?
+        </Button>
+      </Box>
     </Box>
   );
 }
 
-export default LoginForm; 
+export default LoginForm;

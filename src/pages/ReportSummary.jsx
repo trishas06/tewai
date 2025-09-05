@@ -182,9 +182,10 @@ function ReportSummary({ reportId }) {
                 }}
                 sx={{
                   '& .MuiInputBase-input.Mui-disabled': {
-                    WebkitTextFillColor: 'rgba(0, 0, 0, 0.87)',
+                    WebkitTextFillColor: 'unset',
                     color: 'text.primary',
                     padding: 0,
+                    opacity: 1,
                   },
                   '& .MuiInputBase-root': {
                     padding: 0,
@@ -214,7 +215,7 @@ function ReportSummary({ reportId }) {
             pb: 1,
           }}
         >
-          <InfoIcon sx={{ color: '#FFA500' }} />
+          <InfoIcon sx={{ color: 'warning.main' }} />
           <Typography variant="h6">Edit Information</Typography>
           <IconButton
             aria-label="close"

@@ -1,6 +1,8 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { createContext, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import Login from './pages/Login';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import Dashboard from './pages/Dashboard';
 import AuthLayout from './components/layout/AuthLayout';
 import LossReport from './pages/LossReport';
@@ -9,20 +11,26 @@ import UserManagement from './pages/user-management/UserManagement';
 import UserForm from './pages/user-management/UserForm';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import { UserProvider } from './contexts/UserContext';
+import { UserProvider, useUser } from './contexts/UserContext';
+import { ColorModeContext } from './contexts/ColorModeContext';
+import { useSecurity } from './hooks/useSecurity';
+import SecurityStyles from './components/SecurityStyles';
 
-export const ColorModeContext = createContext({ toggleColorMode: () => {} });
-
-function App() {
+function AppContent() {
   const [mode, setMode] = useState('light');
+  const { user } = useUser();
+
+  // Apply security measures based on user role
+  useSecurity(user?.role);
 
   const colorMode = useMemo(
     () => ({
       toggleColorMode: () => {
         setMode((prevMode) => (prevMode === 'light' ? 'dark' : 'light'));
       },
+      mode,
     }),
-    [],
+    [mode],
   );
 
   const theme = useMemo(
@@ -32,13 +40,28 @@ function App() {
           mode,
           primary: {
             main: 'rgb(91, 155, 152)',
-            light: 'rgb(120, 175, 172)',
+            light: mode === 'light' ? 'rgb(120, 175, 172)' : 'rgba(91, 155, 152, 0.25)',
             dark: 'rgb(70, 135, 132)',
           },
           secondary: {
             main: '#9c27b0',
-            light: '#ba68c8',
+            light: mode === 'light' ? '#ba68c8' : 'rgba(156, 39, 176, 0.25)',
             dark: '#7b1fa2',
+          },
+          success: {
+            main: mode === 'light' ? '#4caf50' : '#81c784',
+            light: mode === 'light' ? '#e8f5e9' : 'rgba(76, 175, 80, 0.25)',
+            dark: mode === 'light' ? '#388e3c' : '#4caf50',
+          },
+          error: {
+            main: mode === 'light' ? '#f44336' : '#e57373',
+            light: mode === 'light' ? '#ffcdd2' : 'rgba(244, 67, 54, 0.25)',
+            dark: mode === 'light' ? '#d32f2f' : '#f44336',
+          },
+          warning: {
+            main: mode === 'light' ? '#ff9800' : '#ffb74d',
+            light: mode === 'light' ? '#fff3c4' : 'rgba(255, 152, 0, 0.25)',
+            dark: mode === 'light' ? '#f57c00' : '#ff9800',
           },
           background: {
             default: mode === 'light' ? '#f5f5f5' : '#121212',
@@ -99,13 +122,15 @@ function App() {
   );
 
   return (
-    <UserProvider>
-      <ColorModeContext.Provider value={colorMode}>
-        <ThemeProvider theme={theme}>
-          <CssBaseline />
-          <Router>
+    <ColorModeContext.Provider value={colorMode}>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <SecurityStyles userRole={user?.role} />
+        <Router>
           <Routes>
             <Route path="/login" element={<Login />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             
             {/* Authenticated Routes */}
@@ -155,9 +180,16 @@ function App() {
             } /> 
             */}
           </Routes>
-          </Router>
-        </ThemeProvider>
-      </ColorModeContext.Provider>
+                  </Router>
+      </ThemeProvider>
+    </ColorModeContext.Provider>
+  );
+}
+
+function App() {
+  return (
+    <UserProvider>
+      <AppContent />
     </UserProvider>
   );
 }

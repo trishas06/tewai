@@ -16,32 +16,20 @@ import {
   TablePagination,
   IconButton,
   InputAdornment,
-  Menu,
-  MenuItem,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
-  FormControl,
-  InputLabel,
-  Select,
-  Chip,
-  OutlinedInput,
   CircularProgress,
-  Tooltip,
   Checkbox,
 } from '@mui/material';
 import {
   Search as SearchIcon,
-  FilterList as FilterListIcon,
-  FirstPage as FirstPageIcon,
-  LastPage as LastPageIcon,
-  KeyboardArrowLeft,
-  KeyboardArrowRight,
   Edit as EditIcon,
   Delete as DeleteIcon,
 } from '@mui/icons-material';
 import userService from '../../services/userService';
+import { useTheme } from '@mui/material/styles';
 
 function getToken() {
   // Replace with your actual token retrieval logic
@@ -50,22 +38,27 @@ function getToken() {
 
 // Table header cells
 const headCells = [
-  { id: 'name', label: 'Name' },
-  { id: 'username', label: 'Username' },
-  { id: 'role', label: 'Role' },
-  { id: 'actions', label: 'Actions' },
+  { id: 'name', label: 'Name', align: 'left' },
+  { id: 'username', label: 'Username', align: 'left' },
+  { id: 'email', label: 'Email', align: 'left' },
+  { id: 'role', label: 'Role', align: 'left' },
+  { id: 'actions', label: 'Actions', align: 'left' },
 ];
 
 function UserManagement() {
   const navigate = useNavigate();
   const { user: currentUser } = useUser();
+  const theme = useTheme();
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [rows, setRows] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selected, setSelected] = useState([]);
-  const [confirmDelete, setConfirmDelete] = useState({ open: false, user: null });
+  const [confirmDelete, setConfirmDelete] = useState({
+    open: false,
+    user: null,
+  });
   const [confirmMultiDelete, setConfirmMultiDelete] = useState(false);
 
   const token = getToken();
@@ -92,14 +85,14 @@ function UserManagement() {
   };
 
   const handleEditUser = (user_id) => {
-    const userToEdit = rows.find(user => user.user_id === user_id);
+    const userToEdit = rows.find((user) => user.user_id === user_id);
     navigate(`/user-form/${user_id}`, { state: { user: userToEdit } });
   };
 
   const handleDeleteUsers = async () => {
     // Prevent self-deletion by comparing user_id
     if (currentUser && selected.includes(currentUser.user_id)) {
-      alert("You cannot delete yourself.");
+      alert('You cannot delete yourself.');
       return;
     }
     setConfirmMultiDelete(true);
@@ -109,7 +102,7 @@ function UserManagement() {
     setLoading(true);
     try {
       await userService.deleteUser(selected, token);
-      setRows(rows.filter(u => !selected.includes(u.user_id)));
+      setRows(rows.filter((u) => !selected.includes(u.user_id)));
       setSelected([]);
     } finally {
       setLoading(false);
@@ -124,7 +117,7 @@ function UserManagement() {
   const handleDeleteSingleUser = async (user_id, username) => {
     // Prevent self-deletion by comparing user_id
     if (currentUser && user_id === currentUser.user_id) {
-      alert("You cannot delete yourself.");
+      alert('You cannot delete yourself.');
       return;
     }
     setConfirmDelete({ open: true, user: { user_id, username } });
@@ -135,8 +128,8 @@ function UserManagement() {
     setLoading(true);
     try {
       await userService.deleteUser([user_id], token);
-      setRows(rows.filter(u => u.user_id !== user_id));
-      setSelected(selected.filter(id => id !== user_id));
+      setRows(rows.filter((u) => u.user_id !== user_id));
+      setSelected(selected.filter((id) => id !== user_id));
     } finally {
       setLoading(false);
       setConfirmDelete({ open: false, user: null });
@@ -147,16 +140,27 @@ function UserManagement() {
     setConfirmDelete({ open: false, user: null });
   };
 
+  // Helper function to get selectable users on current page
+  const getSelectableUsers = () => {
+    return filteredUsers
+      .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+      .filter(
+        (user) =>
+          !(
+            user.user_id === currentUser?.user_id ||
+            (currentUser.role === 'Developer' && user?.role === 'Admin')
+          )
+      );
+  };
+
   const handleSelectAllClick = (event) => {
     if (event.target.checked) {
-      const newSelecteds = rows
-        .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-        .filter(user => user.user_id !== currentUser?.user_id) // Exclude current user
-        .map((n) => n.user_id);
+      const selectableUsers = getSelectableUsers();
+      const newSelecteds = selectableUsers.map((user) => user.user_id);
       setSelected(newSelecteds);
-      return;
+    } else {
+      setSelected([]);
     }
-    setSelected([]);
   };
 
   const handleClick = (event, user_id) => {
@@ -172,7 +176,7 @@ function UserManagement() {
     } else if (selectedIndex > 0) {
       newSelected = newSelected.concat(
         selected.slice(0, selectedIndex),
-        selected.slice(selectedIndex + 1),
+        selected.slice(selectedIndex + 1)
       );
     }
     setSelected(newSelected);
@@ -180,11 +184,12 @@ function UserManagement() {
 
   const isSelected = (user_id) => selected.indexOf(user_id) !== -1;
 
-  const filteredUsers = rows.filter((user) =>
-    user.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.role.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredUsers = rows.filter(
+    (user) =>
+      user.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.role.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -200,12 +205,12 @@ function UserManagement() {
           onChange={handleSearchChange}
           sx={{
             width: 300,
-            bgcolor: 'white',
+            bgcolor: 'background.paper',
           }}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <SearchIcon sx={{ color: '#757575' }} />
+                <SearchIcon sx={{ color: 'text.secondary' }} />
               </InputAdornment>
             ),
           }}
@@ -232,28 +237,50 @@ function UserManagement() {
         </Box>
       </Box>
 
-      <TableContainer component={Paper}>
-        <Table>
+      <TableContainer
+        component={Paper}
+        sx={{
+          boxShadow: '0px 2px 8px rgba(0,0,0,0.1)',
+          borderRadius: 2,
+          overflow: 'hidden',
+        }}
+      >
+        <Table sx={{ minWidth: 650 }}>
           <TableHead>
-            <TableRow>
-              <TableCell padding="checkbox">
+            <TableRow sx={{ bgcolor: theme.palette.mode === 'dark' ? 'grey.900' : 'grey.50' }}>
+              <TableCell
+                padding="checkbox"
+                sx={{
+                  width: 48,
+                  pl: 2,
+                  pr: 1,
+                }}
+              >
                 <Checkbox
-                  indeterminate={selected.length > 0 && selected.length < filteredUsers
-                    .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                    .filter(user => user.user_id !== currentUser?.user_id).length}
-                  checked={filteredUsers.length > 0 && 
-                    selected.length === filteredUsers
-                      .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                      .filter(user => user.user_id !== currentUser?.user_id).length && 
-                    selected.length > 0}
+                  indeterminate={
+                    selected.length > 0 &&
+                    selected.length < getSelectableUsers().length
+                  }
+                  checked={
+                    getSelectableUsers().length > 0 &&
+                    selected.length === getSelectableUsers().length &&
+                    selected.length > 0
+                  }
                   onChange={handleSelectAllClick}
-                  disabled={filteredUsers
-                    .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                    .every(user => user.user_id === currentUser?.user_id)}
+                  disabled={getSelectableUsers().length === 0}
                 />
               </TableCell>
               {headCells.map((cell) => (
-                <TableCell key={cell.id}>{cell.label}</TableCell>
+                <TableCell
+                  key={cell.id}
+                  align={cell.align}
+                  sx={{
+                    fontWeight: 600,
+                    ...(cell.id === 'actions' && { width: 240, maxWidth: 240, pl:12 }),
+                  }}
+                >
+                  {cell.label}
+                </TableCell>
               ))}
             </TableRow>
           </TableHead>
@@ -265,39 +292,135 @@ function UserManagement() {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredUsers.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((row) => {
-                const isItemSelected = isSelected(row.user_id);
-                return (
-                  <TableRow
-                    hover
-                    onClick={(event) => handleClick(event, row.user_id)}
-                    role="checkbox"
-                    aria-checked={isItemSelected}
-                    tabIndex={-1}
-                    key={row.user_id}
-                    selected={isItemSelected}
-                  >
-                    <TableCell padding="checkbox">
-                      {row.user_id !== currentUser?.user_id && (
-                        <Checkbox checked={isItemSelected} />
-                      )}
-                    </TableCell>
-                    <TableCell>{`${row.first_name} ${row.last_name}`}</TableCell>
-                    <TableCell>{row.username}</TableCell>
-                    <TableCell>{row.role}</TableCell>
-                    <TableCell>
-                      <IconButton onClick={() => handleEditUser(row.user_id)}>
-                        <EditIcon />
-                      </IconButton>
-                      {row.user_id !== currentUser?.user_id && (
-                        <IconButton onClick={() => handleDeleteSingleUser(row.user_id, row.username)}>
-                          <DeleteIcon />
-                        </IconButton>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                );
-              })
+              filteredUsers
+                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                .map((row) => {
+                  const isItemSelected = isSelected(row.user_id);
+                  const isDeleteRestricted =
+                    row.user_id === currentUser?.user_id ||
+                    (currentUser.role === 'Developer' && row?.role === 'Admin');
+                  return (
+                    <TableRow
+                      hover
+                      onClick={(event) => {
+                        if (isDeleteRestricted) {
+                          return;
+                        }
+                        return handleClick(event, row.user_id);
+                      }}
+                      role="checkbox"
+                      aria-checked={isItemSelected}
+                      tabIndex={-1}
+                      key={row.user_id}
+                      selected={isItemSelected}
+                      sx={{
+                        '&:nth-of-type(odd)': { 
+                          bgcolor: theme.palette.mode === 'dark' ? 'grey.900' : 'grey.50'
+                        },
+                        '&:hover': { 
+                          bgcolor: theme.palette.mode === 'dark' 
+                            ? 'rgba(91, 155, 152, 0.08) !important'
+                            : 'primary.light !important'
+                        },
+                        cursor: 'pointer',
+                        height: 56,
+                      }}
+                    >
+                      <TableCell
+                        padding="checkbox"
+                        sx={{
+                          width: 48,
+                          pl: 2,
+                          pr: 1,
+                          verticalAlign: 'middle',
+                        }}
+                      >
+                        <Checkbox
+                          checked={isItemSelected}
+                          disabled={isDeleteRestricted}
+                        />
+                      </TableCell>
+                      <TableCell
+                        align="left"
+                        sx={{ verticalAlign: 'middle', py: 1.5 }}
+                      >
+                        {`${row.first_name} ${row.last_name}`}
+                      </TableCell>
+                      <TableCell
+                        align="left"
+                        sx={{ verticalAlign: 'middle', py: 1.5 }}
+                      >
+                        {row.username}
+                      </TableCell>
+                      <TableCell
+                        align="left"
+                        sx={{ verticalAlign: 'middle', py: 1.5 }}
+                      >
+                        {row.email}
+                      </TableCell>
+                      <TableCell
+                        align="left"
+                        sx={{
+                          fontWeight: 500,
+                          verticalAlign: 'middle',
+                          py: 1.5,
+                        }}
+                      >
+                        {row.role}
+                      </TableCell>
+                      <TableCell
+                        align="left"
+                        sx={{
+                          width: 120,
+                          maxWidth: 120,
+                          verticalAlign: 'middle',
+                          py: 1.5,
+                          pl: 12
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            display: 'flex',
+                            justifyContent: 'left',
+                            alignItems: 'center',
+                            gap: 0.5,
+                            height: '100%',
+                          }}
+                        >
+                          <IconButton
+                            onClick={() => handleEditUser(row.user_id)}
+                            size="small"
+                            sx={{
+                              color: 'primary.main',
+                              '&:hover': { bgcolor: 'primary.light' },
+                              p: 0.75,
+                            }}
+                          >
+                            <EditIcon fontSize="small" />
+                          </IconButton>
+                          {!isDeleteRestricted && (
+                            <IconButton
+                              onClick={() =>
+                                handleDeleteSingleUser(
+                                  row.user_id,
+                                  row.username
+                                )
+                              }
+                              size="small"
+                              sx={{
+                                color: 'error.main',
+                                '&:hover': { bgcolor: 'error.light' },
+                                p: 0.75,
+                              }}
+                            >
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          )}
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
             )}
           </TableBody>
         </Table>
@@ -322,22 +445,31 @@ function UserManagement() {
         </DialogContent>
         <DialogActions>
           <Button onClick={cancelMultiDeleteUsers}>Cancel</Button>
-          <Button onClick={confirmMultiDeleteUsers} color="error" variant="contained">Delete</Button>
+          <Button
+            onClick={confirmMultiDeleteUsers}
+            color="error"
+            variant="contained"
+          >
+            Delete
+          </Button>
         </DialogActions>
       </Dialog>
       {/* Confirmation Dialog for single delete */}
       <Dialog open={confirmDelete.open} onClose={cancelDeleteUser}>
         <DialogTitle>Confirm Deletion</DialogTitle>
         <DialogContent>
-          Are you sure you want to delete user <b>{confirmDelete.user?.username}</b>?
+          Are you sure you want to delete user{' '}
+          <b>{confirmDelete.user?.username}</b>?
         </DialogContent>
         <DialogActions>
           <Button onClick={cancelDeleteUser}>Cancel</Button>
-          <Button onClick={confirmDeleteUser} color="error" variant="contained">Delete</Button>
+          <Button onClick={confirmDeleteUser} color="error" variant="contained">
+            Delete
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>
   );
 }
 
-export default UserManagement; 
+export default UserManagement;

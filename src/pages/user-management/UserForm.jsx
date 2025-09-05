@@ -12,11 +12,17 @@ import {
   MenuItem,
   InputLabel,
   FormControl,
+  InputAdornment,
 } from '@mui/material';
-import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
+import {
+  ArrowBack as ArrowBackIcon,
+  Visibility,
+  VisibilityOff,
+} from '@mui/icons-material';
 import userService from '../../services/userService';
 import { useUser } from '../../contexts/UserContext';
 import { authService } from '../../services/authService';
+import { validateEmail } from '../../utils/validation';
 
 function getToken() {
   // Replace with your actual token retrieval logic
@@ -34,9 +40,29 @@ function UserForm() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [role, setRole] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [emailError, setEmailError] = useState('');
+
+  const handleClickShowPassword = () => setShowPassword(!showPassword);
+  const handleMouseDownPassword = (event) => event.preventDefault();
+
+  const handleEmailChange = (e) => {
+    const value = e.target.value;
+    setEmail(value);
+    setEmailError('');
+
+    // Real-time email validation
+    if (value) {
+      const validation = validateEmail(value);
+      if (!validation.isValid) {
+        setEmailError(validation.error);
+      }
+    }
+  };
 
   useEffect(() => {
     if (isEditMode) {
@@ -45,6 +71,7 @@ function UserForm() {
         setFirstName(user.first_name || '');
         setLastName(user.last_name || '');
         setUsername(user.username || '');
+        setEmail(user.email || '');
         setRole(user.role || '');
       }
     }
@@ -56,29 +83,48 @@ function UserForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validate email before submission
+    const emailValidation = validateEmail(email);
+    if (!emailValidation.isValid) {
+      setEmailError(emailValidation.error);
+      return;
+    }
+    
     setLoading(true);
     try {
       if (isEditMode) {
-        await userService.updateUser(
-          {
-            user_id: id,
-            first_name: firstName,
-            last_name: lastName,
-            username,
-            role,
-          },
-          token
-        );
+        const updateData = {
+          user_id: id,
+          first_name: firstName,
+          last_name: lastName,
+          username,
+          email,
+          role,
+        };
         
+        // Include password if it's provided
+        if (password.trim()) {
+          updateData.password = password;
+        }
+        
+        await userService.updateUser(updateData, token);
+
         // If the user edited their own profile, refresh user info in global state
         if (currentUser && currentUser.user_id === id) {
           try {
             const userInfoResponse = await authService.getUserInfo(token);
-            if (userInfoResponse.status === 'success' && userInfoResponse.user) {
+            if (
+              userInfoResponse.status === 'success' &&
+              userInfoResponse.user
+            ) {
               updateUser(userInfoResponse.user);
             }
           } catch (error) {
-            console.error('Failed to refresh user info after profile update:', error);
+            console.error(
+              'Failed to refresh user info after profile update:',
+              error
+            );
           }
         }
       } else {
@@ -87,6 +133,7 @@ function UserForm() {
             first_name: firstName,
             last_name: lastName,
             username,
+            email,
             role,
             password,
           },
@@ -143,6 +190,18 @@ function UserForm() {
               />
             </Grid>
             <Grid item xs={12} sm={6}>
+              <TextField
+                label="Email"
+                type="email"
+                fullWidth
+                value={email}
+                onChange={handleEmailChange}
+                error={!!emailError}
+                helperText={emailError}
+                required
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
               <FormControl fullWidth required>
                 <InputLabel id="role-label">Role</InputLabel>
                 <Select
@@ -157,15 +216,30 @@ function UserForm() {
                 </Select>
               </FormControl>
             </Grid>
-            {!isEditMode && (
+            {(!isEditMode || 
+              (isEditMode && (currentUser?.role === 'Admin' || currentUser?.user_id === id))) && (
               <Grid item xs={12} sm={6}>
                 <TextField
                   label="Password"
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   fullWidth
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  required
+                  required={!isEditMode}
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          aria-label="toggle password visibility"
+                          onClick={handleClickShowPassword}
+                          onMouseDown={handleMouseDownPassword}
+                          edge="end"
+                        >
+                          {showPassword ? <VisibilityOff /> : <Visibility />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
                 />
               </Grid>
             )}

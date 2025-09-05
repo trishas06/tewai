@@ -9,20 +9,16 @@ import {
   Tabs,
   Tab,
   Divider,
-  IconButton,
-  Stack,
 } from '@mui/material';
-import {
-  ArrowBack as ArrowBackIcon,
-  ZoomIn as ZoomInIcon,
-  ZoomOut as ZoomOutIcon,
-  NavigateNext as NextIcon,
-  NavigateBefore as PrevIcon,
-} from '@mui/icons-material';
+import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import ReportSummary from './ReportSummary';
 import ReportAnalysis from './ReportAnalysis';
 import ChatBot from '../components/ChatBot';
-import GenerateGuidanceReport from '../components/GenerateGuidanceReport';
+
+function getToken() {
+  // Replace with your actual token retrieval logic
+  return localStorage.getItem('token');
+}
 
 // Lazy load just the PDF viewer content
 const PDFViewerContent = lazy(() => import('./PDFViewerContent'));
@@ -56,6 +52,8 @@ function LossReport() {
   const [activeTab, setActiveTab] = useState(0);
   const [error, setError] = useState(null);
 
+  const token = getToken();
+
   useEffect(() => {
     const fetchReportData = async () => {
       try {
@@ -67,12 +65,13 @@ function LossReport() {
         }
 
         const response = await fetch(
-          `${import.meta.env.VITE_API_BASE_URL}/get_pdf_new`,
+          `${import.meta.env.VITE_API_BASE_URL}/get_pdf`,
           {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
               Accept: 'application/pdf',
+              Authorization: `Bearer ${token}`,
             },
             body: JSON.stringify({
               report_id: rowData.report_id,
