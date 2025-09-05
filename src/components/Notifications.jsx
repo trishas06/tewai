@@ -9,39 +9,49 @@ import {
   Chip,
 } from '@mui/material';
 import { NotificationsOutlined as NotificationsIcon } from '@mui/icons-material';
+import { useTheme } from '@mui/material/styles';
 
-// Status chip colors (matching Dashboard)
-const getStatusColor = (status) => {
+// Status chip colors (matching Dashboard) - consistent solid backgrounds with white text for all modes
+const getStatusColor = (status, theme) => {
   switch (status) {
     case 'Failed':
-      return { color: '#f44336', bgcolor: '#ffcdd2' };
     case 'Corrupted File':
-      return { color: '#f44336', bgcolor: '#ffcdd2' };
     case 'Empty PDF':
-      return { color: '#f44336', bgcolor: '#ffcdd2' };
     case 'Password Protected':
-      return { color: '#f44336', bgcolor: '#ffcdd2' };
     case 'Invalid File Format':
-      return { color: '#f44336', bgcolor: '#ffcdd2' };
     case 'File Not Found':
-      return { color: '#f44336', bgcolor: '#ffcdd2' };
     case 'Validation Failed':
-      return { color: '#f44336', bgcolor: '#ffcdd2' };
+      return { 
+        color: '#ffffff',
+        bgcolor: theme.palette.error.main 
+      };
     case 'Generated':
-      return { color: '#1976d2', bgcolor: '#e3f2fd' };
+      return { 
+        color: '#ffffff',
+        bgcolor: theme.palette.primary.main 
+      };
     case 'Validated':
-      return { color: '#4caf50', bgcolor: '#e8f5e9' };
+      return { 
+        color: '#ffffff',
+        bgcolor: theme.palette.success.main 
+      };
     case 'Missing Prelim Document':
-      return { color: '#ff9800', bgcolor: '#fff9c4' };
     case 'Unsearchable PDF':
-      return { color: '#ff9800', bgcolor: '#fff9c4' };
+      return { 
+        color: '#ffffff',
+        bgcolor: theme.palette.warning.main 
+      };
     default:
-      return { color: '#757575', bgcolor: '#f5f5f5' };
+      return { 
+        color: theme.palette.text.secondary, 
+        bgcolor: theme.palette.mode === 'dark' ? theme.palette.grey[800] : theme.palette.grey[100] 
+      };
   }
 };
 
 function Notifications({ notifications, loading }) {
   const [notificationAnchorEl, setNotificationAnchorEl] = useState(null);
+  const theme = useTheme();
 
   const handleToggleNotifications = (event) => {
     if (notificationAnchorEl) {
@@ -119,16 +129,16 @@ function Notifications({ notifications, loading }) {
                     <Chip
                       label={notification.status}
                       size="small"
-                      sx={{
-                        color: getStatusColor(notification.status).color,
-                        bgcolor: getStatusColor(notification.status).bgcolor,
-                        fontWeight: 500,
-                        height: 20,
-                        '& .MuiChip-label': {
-                          px: 1,
-                          fontSize: '0.75rem',
-                        },
-                      }}
+                                          sx={{
+                      color: getStatusColor(notification.status, theme).color,
+                      bgcolor: getStatusColor(notification.status, theme).bgcolor,
+                      fontWeight: 500,
+                      height: 20,
+                      '& .MuiChip-label': {
+                        px: 1,
+                        fontSize: '0.75rem',
+                      },
+                    }}
                     />
                   </Box>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>

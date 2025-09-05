@@ -859,7 +859,7 @@ function PrelimReportAnalysisPrompts() {
         }}
       >
         <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <InfoIcon sx={{ color: '#FFB400' }} />
+          <InfoIcon sx={{ color: 'warning.main' }} />
           Prompts
           <IconButton
             aria-label="close"

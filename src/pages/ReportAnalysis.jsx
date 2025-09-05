@@ -473,7 +473,7 @@ function ReportAnalysis({ reportId, prelim_folder }) {
             pb: 1,
           }}
         >
-          <InfoIcon sx={{ color: '#FFA500' }} />
+          <InfoIcon sx={{ color: 'warning.main' }} />
           <Typography variant="h6">Edit Information</Typography>
           <IconButton
             aria-label="close"

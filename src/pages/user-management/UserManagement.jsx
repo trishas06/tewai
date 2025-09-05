@@ -29,6 +29,7 @@ import {
   Delete as DeleteIcon,
 } from '@mui/icons-material';
 import userService from '../../services/userService';
+import { useTheme } from '@mui/material/styles';
 
 function getToken() {
   // Replace with your actual token retrieval logic
@@ -40,13 +41,14 @@ const headCells = [
   { id: 'name', label: 'Name', align: 'left' },
   { id: 'username', label: 'Username', align: 'left' },
   { id: 'email', label: 'Email', align: 'left' },
-  { id: 'role', label: 'Role', align: 'center' },
-  { id: 'actions', label: 'Actions', align: 'center' },
+  { id: 'role', label: 'Role', align: 'left' },
+  { id: 'actions', label: 'Actions', align: 'left' },
 ];
 
 function UserManagement() {
   const navigate = useNavigate();
   const { user: currentUser } = useUser();
+  const theme = useTheme();
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -203,12 +205,12 @@ function UserManagement() {
           onChange={handleSearchChange}
           sx={{
             width: 300,
-            bgcolor: 'white',
+            bgcolor: 'background.paper',
           }}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <SearchIcon sx={{ color: '#757575' }} />
+                <SearchIcon sx={{ color: 'text.secondary' }} />
               </InputAdornment>
             ),
           }}
@@ -245,7 +247,7 @@ function UserManagement() {
       >
         <Table sx={{ minWidth: 650 }}>
           <TableHead>
-            <TableRow sx={{ bgcolor: '#f5f5f5' }}>
+            <TableRow sx={{ bgcolor: theme.palette.mode === 'dark' ? 'grey.900' : 'grey.50' }}>
               <TableCell
                 padding="checkbox"
                 sx={{
@@ -274,7 +276,7 @@ function UserManagement() {
                   align={cell.align}
                   sx={{
                     fontWeight: 600,
-                    ...(cell.id === 'actions' && { width: 120, maxWidth: 120 }),
+                    ...(cell.id === 'actions' && { width: 240, maxWidth: 240, pl:12 }),
                   }}
                 >
                   {cell.label}
@@ -312,8 +314,14 @@ function UserManagement() {
                       key={row.user_id}
                       selected={isItemSelected}
                       sx={{
-                        '&:nth-of-type(odd)': { bgcolor: '#fafafa' },
-                        '&:hover': { bgcolor: '#e3f2fd !important' },
+                        '&:nth-of-type(odd)': { 
+                          bgcolor: theme.palette.mode === 'dark' ? 'grey.900' : 'grey.50'
+                        },
+                        '&:hover': { 
+                          bgcolor: theme.palette.mode === 'dark' 
+                            ? 'rgba(91, 155, 152, 0.08) !important'
+                            : 'primary.light !important'
+                        },
                         cursor: 'pointer',
                         height: 56,
                       }}
@@ -351,7 +359,7 @@ function UserManagement() {
                         {row.email}
                       </TableCell>
                       <TableCell
-                        align="center"
+                        align="left"
                         sx={{
                           fontWeight: 500,
                           verticalAlign: 'middle',
@@ -361,18 +369,19 @@ function UserManagement() {
                         {row.role}
                       </TableCell>
                       <TableCell
-                        align="center"
+                        align="left"
                         sx={{
                           width: 120,
                           maxWidth: 120,
                           verticalAlign: 'middle',
                           py: 1.5,
+                          pl: 12
                         }}
                       >
                         <Box
                           sx={{
                             display: 'flex',
-                            justifyContent: 'center',
+                            justifyContent: 'left',
                             alignItems: 'center',
                             gap: 0.5,
                             height: '100%',
@@ -382,8 +391,8 @@ function UserManagement() {
                             onClick={() => handleEditUser(row.user_id)}
                             size="small"
                             sx={{
-                              color: '#1976d2',
-                              '&:hover': { bgcolor: '#e3f2fd' },
+                              color: 'primary.main',
+                              '&:hover': { bgcolor: 'primary.light' },
                               p: 0.75,
                             }}
                           >
@@ -399,8 +408,8 @@ function UserManagement() {
                               }
                               size="small"
                               sx={{
-                                color: '#d32f2f',
-                                '&:hover': { bgcolor: '#ffebee' },
+                                color: 'error.main',
+                                '&:hover': { bgcolor: 'error.light' },
                                 p: 0.75,
                               }}
                             >

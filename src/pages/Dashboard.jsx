@@ -45,6 +45,7 @@ import { useUser } from '../contexts/UserContext';
 import dashboardService from '../services/dashboardService';
 import { ALLOWED_STATUSES } from '../utils/allowedStatuses';
 import { UserRoleContext } from '../components/layout/AuthLayout';
+import { useTheme } from '@mui/material/styles';
 
 // Table header cells
 const headCells = [
@@ -60,21 +61,35 @@ const headCells = [
   { id: 'actions', label: 'Action' },
 ];
 
-// Status chip colors
-const getStatusColor = (status) => {
+// Status chip colors - consistent solid backgrounds with white text for all modes
+const getStatusColor = (status, theme) => {
   switch (status) {
     case 'Failed':
-      return { color: '#f44336', bgcolor: '#ffcdd2' };
+      return { 
+        color: '#ffffff',
+        bgcolor: theme.palette.error.main 
+      };
     case 'Generated':
-      return { color: '#1976d2', bgcolor: '#e3f2fd' };
+      return { 
+        color: '#ffffff',
+        bgcolor: theme.palette.primary.main 
+      };
     case 'Validated':
-      return { color: '#4caf50', bgcolor: '#e8f5e9' };
+      return { 
+        color: '#ffffff',
+        bgcolor: theme.palette.success.main 
+      };
     case 'Missing Prelim Document':
-      return { color: '#ff9800', bgcolor: '#fff9c4' };
     case 'Unsearchable PDF':
-      return { color: '#ff9800', bgcolor: '#fff9c4' };
+      return { 
+        color: '#ffffff',
+        bgcolor: theme.palette.warning.main 
+      };
     default:
-      return { color: '#757575', bgcolor: '#f5f5f5' };
+      return { 
+        color: theme.palette.text.secondary, 
+        bgcolor: theme.palette.mode === 'dark' ? theme.palette.grey[800] : theme.palette.grey[100] 
+      };
   }
 };
 
@@ -163,24 +178,24 @@ function MultiSelect({ label, options, value, onChange }) {
                 deleteIcon={
                   <CloseIcon
                     sx={{
-                      color: '#1976d2 !important', // MUI primary main - matching chip text color
+                      color: 'primary.main !important',
                       fontSize: '18px !important',
                       '&:hover': {
-                        color: '#115293 !important', // MUI primary dark on hover
+                        color: 'primary.dark !important',
                       },
                     }}
                     onMouseDown={(e) => e.stopPropagation()} // Additional prevention
                   />
                 }
                 sx={{
-                  bgcolor: '#e3f2fd', // MUI primary light
-                  color: '#1976d2', // MUI primary main
+                  bgcolor: 'primary.light',
+                  color: 'primary.main',
                   fontWeight: 500,
                   '& .MuiChip-deleteIcon': {
-                    color: '#1976d2',
+                    color: 'primary.main',
                     fontSize: '18px',
                     '&:hover': {
-                      color: '#115293',
+                      color: 'primary.dark',
                     },
                   },
                 }}
@@ -196,16 +211,16 @@ function MultiSelect({ label, options, value, onChange }) {
             value={option}
             sx={{
               '&.Mui-selected': {
-                bgcolor: '#1976d2', // MUI primary main
+                bgcolor: 'primary.main',
                 color: 'white',
               },
               '&.Mui-selected:hover': {
-                bgcolor: '#115293', // MUI primary dark
+                bgcolor: 'primary.dark',
                 color: 'white',
               },
               '&:hover': {
-                bgcolor: '#e3f2fd', // MUI primary light
-                color: '#1976d2',
+                bgcolor: 'primary.light',
+                color: 'primary.main',
               },
             }}
           >
@@ -220,6 +235,7 @@ function MultiSelect({ label, options, value, onChange }) {
 function Dashboard() {
   const navigate = useNavigate();
   const { loading: userLoading, isAuthenticated } = useUser();
+  const theme = useTheme();
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -397,20 +413,20 @@ function Dashboard() {
           onChange={handleSearchChange}
           sx={{
             width: 300,
-            bgcolor: 'white',
+            bgcolor: 'background.paper',
             '& .MuiOutlinedInput-root': {
               '& fieldset': {
-                borderColor: '#e0e0e0',
+                borderColor: 'divider',
               },
               '&:hover fieldset': {
-                borderColor: '#bdbdbd',
+                borderColor: 'text.secondary',
               },
             },
           }}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <SearchIcon sx={{ color: '#757575' }} />
+                <SearchIcon sx={{ color: 'text.secondary' }} />
               </InputAdornment>
             ),
           }}
@@ -419,7 +435,7 @@ function Dashboard() {
           variant="outlined"
           startIcon={<FilterListIcon />}
           onClick={handleOpenFilterDialog}
-          sx={{ borderColor: '#e0e0e0', color: '#757575' }}
+          sx={{ borderColor: 'divider', color: 'text.secondary' }}
         >
           Filter
         </Button>
@@ -501,15 +517,15 @@ function Dashboard() {
                     {row.createdOn}
                   </TableCell>
                   <TableCell>
-                    <Chip
-                      label={row.status}
-                      size="small"
-                      sx={{
-                        color: getStatusColor(row.status).color,
-                        bgcolor: getStatusColor(row.status).bgcolor,
-                        fontWeight: 500,
-                      }}
-                    />
+                                      <Chip
+                    label={row.status}
+                    size="small"
+                    sx={{
+                      color: getStatusColor(row.status, theme).color,
+                      bgcolor: getStatusColor(row.status, theme).bgcolor,
+                      fontWeight: 500,
+                    }}
+                  />
                   </TableCell>
                   <TableCell align="center">
                     {row.status !== 'Failed' && (

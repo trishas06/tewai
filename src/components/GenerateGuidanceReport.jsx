@@ -88,7 +88,7 @@ function GenerateGuidanceReport({
         fullWidth
       >
         <Box sx={{ p: 2, pb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
-          <CheckCircleIcon sx={{ color: '#4CAF50' }} />
+          <CheckCircleIcon sx={{ color: 'success.main' }} />
           <Typography variant="h6" component="div" sx={{ flex: 1 }}>
             Success
           </Typography>
@@ -124,7 +124,7 @@ function GenerateGuidanceReport({
         fullWidth
       >
         <Box sx={{ p: 2, pb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
-          <WarningIcon sx={{ color: '#FFA500' }} />
+          <WarningIcon sx={{ color: 'warning.main' }} />
           <Typography variant="h6" component="div" sx={{ flex: 1 }}>
             No Changes Detected
           </Typography>

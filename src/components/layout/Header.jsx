@@ -140,6 +140,7 @@ function Header({ isExpanded, notifications, loading }) {
                 width: 32,
                 height: 32,
                 bgcolor: 'secondary.main',
+                color: 'white'
               }}
             >
               {user ? getInitials(user.first_name, user.last_name) : ''}
