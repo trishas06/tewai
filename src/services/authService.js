@@ -13,9 +13,9 @@ export const authService = {
         {}, // Empty body for POST request
         {
           headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
         }
       );
       return response.data;
@@ -28,19 +28,21 @@ export const authService = {
   login: async (username, password) => {
     try {
       const response = await authAxios.post('/login', { username, password });
-      
+
       if (response.data.token) {
         // Store token first
         localStorage.setItem('token', response.data.token);
-        
+
         // Fetch user information using the token
         try {
-          const userInfoResponse = await authService.getUserInfo(response.data.token);
+          const userInfoResponse = await authService.getUserInfo(
+            response.data.token
+          );
           if (userInfoResponse.status === 'success' && userInfoResponse.user) {
             // Store complete user information
             const userData = {
               ...userInfoResponse.user,
-              token: response.data.token
+              token: response.data.token,
             };
             localStorage.setItem('user', JSON.stringify(userData));
             return userData;
@@ -48,12 +50,15 @@ export const authService = {
             throw new Error('Invalid user data received');
           }
         } catch (userInfoError) {
-          console.error('Failed to fetch user info after login:', userInfoError);
+          console.error(
+            'Failed to fetch user info after login:',
+            userInfoError
+          );
           // Fallback to basic user info if get_user fails
           const fallbackUser = {
             username: username,
             role: response.data.role || 'User',
-            token: response.data.token
+            token: response.data.token,
           };
           localStorage.setItem('user', JSON.stringify(fallbackUser));
           return fallbackUser;
@@ -68,20 +73,49 @@ export const authService = {
       throw error.response?.data || new Error('Failed to login');
     }
   },
-  
+
   logout: () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
   },
-  
+
   getCurrentUser: () => {
     const userStr = localStorage.getItem('user');
     return userStr ? JSON.parse(userStr) : null;
   },
-  
+
   isAuthenticated: () => {
     return !!localStorage.getItem('token');
-  }
+  },
+
+  forgotPassword: async (usernameOrEmail) => {
+    try {
+      const response = await authAxios.post('/forgot-password', {
+        email: usernameOrEmail,
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Forgot password error:', error);
+      throw (
+        error.response?.data ||
+        new Error('Failed to process forgot password request')
+      );
+    }
+  },
+
+  resetPassword: async (token, newPassword, email) => {
+    try {
+      const response = await authAxios.post('/reset-password', {
+        token,
+        new_password: newPassword,
+        email,
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Reset password error:', error);
+      throw error.response?.data || new Error('Failed to reset password');
+    }
+  },
 };
 
-export default authService; 
+export default authService;

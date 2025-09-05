@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Box,
   Button,
@@ -41,7 +42,7 @@ function LoginForm({ onSubmit, error }) {
         required
         fullWidth
         id="username"
-        label="Username"
+        label="Username/Email"
         name="username"
         autoComplete="username"
         autoFocus
@@ -83,6 +84,18 @@ function LoginForm({ onSubmit, error }) {
       >
         {loading ? 'Logging in...' : 'Login'}
       </Button>
+      
+      <Box sx={{ textAlign: 'center' }}>
+        <Button
+          component={Link}
+          to="/forgot-password"
+          variant="text"
+          color="primary"
+          sx={{ textTransform: 'none', textDecoration: 'underline' }}
+        >
+          Forgot Password?
+        </Button>
+      </Box>
     </Box>
   );
 }

@@ -1,6 +1,8 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { createContext, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import Login from './pages/Login';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import Dashboard from './pages/Dashboard';
 import AuthLayout from './components/layout/AuthLayout';
 import LossReport from './pages/LossReport';
@@ -10,8 +12,7 @@ import UserForm from './pages/user-management/UserForm';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { UserProvider } from './contexts/UserContext';
-
-export const ColorModeContext = createContext({ toggleColorMode: () => {} });
+import { ColorModeContext } from './contexts/ColorModeContext';
 
 function App() {
   const [mode, setMode] = useState('light');
@@ -106,6 +107,8 @@ function App() {
           <Router>
           <Routes>
             <Route path="/login" element={<Login />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             
             {/* Authenticated Routes */}
