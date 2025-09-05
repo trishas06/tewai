@@ -22,6 +22,7 @@ import {
 import userService from '../../services/userService';
 import { useUser } from '../../contexts/UserContext';
 import { authService } from '../../services/authService';
+import { validateEmail } from '../../utils/validation';
 
 function getToken() {
   // Replace with your actual token retrieval logic
@@ -39,13 +40,29 @@ function UserForm() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [role, setRole] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [emailError, setEmailError] = useState('');
 
   const handleClickShowPassword = () => setShowPassword(!showPassword);
   const handleMouseDownPassword = (event) => event.preventDefault();
+
+  const handleEmailChange = (e) => {
+    const value = e.target.value;
+    setEmail(value);
+    setEmailError('');
+
+    // Real-time email validation
+    if (value) {
+      const validation = validateEmail(value);
+      if (!validation.isValid) {
+        setEmailError(validation.error);
+      }
+    }
+  };
 
   useEffect(() => {
     if (isEditMode) {
@@ -54,6 +71,7 @@ function UserForm() {
         setFirstName(user.first_name || '');
         setLastName(user.last_name || '');
         setUsername(user.username || '');
+        setEmail(user.email || '');
         setRole(user.role || '');
       }
     }
@@ -65,6 +83,14 @@ function UserForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validate email before submission
+    const emailValidation = validateEmail(email);
+    if (!emailValidation.isValid) {
+      setEmailError(emailValidation.error);
+      return;
+    }
+    
     setLoading(true);
     try {
       if (isEditMode) {
@@ -73,6 +99,7 @@ function UserForm() {
           first_name: firstName,
           last_name: lastName,
           username,
+          email,
           role,
         };
         
@@ -106,6 +133,7 @@ function UserForm() {
             first_name: firstName,
             last_name: lastName,
             username,
+            email,
             role,
             password,
           },
@@ -158,6 +186,18 @@ function UserForm() {
                 fullWidth
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
+                required
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Email"
+                type="email"
+                fullWidth
+                value={email}
+                onChange={handleEmailChange}
+                error={!!emailError}
+                helperText={emailError}
                 required
               />
             </Grid>

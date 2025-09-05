@@ -39,6 +39,7 @@ function getToken() {
 const headCells = [
   { id: 'name', label: 'Name', align: 'left' },
   { id: 'username', label: 'Username', align: 'left' },
+  { id: 'email', label: 'Email', align: 'left' },
   { id: 'role', label: 'Role', align: 'center' },
   { id: 'actions', label: 'Actions', align: 'center' },
 ];
@@ -342,6 +343,12 @@ function UserManagement() {
                         sx={{ verticalAlign: 'middle', py: 1.5 }}
                       >
                         {row.username}
+                      </TableCell>
+                      <TableCell
+                        align="left"
+                        sx={{ verticalAlign: 'middle', py: 1.5 }}
+                      >
+                        {row.email}
                       </TableCell>
                       <TableCell
                         align="center"
