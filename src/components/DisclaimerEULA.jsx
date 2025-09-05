@@ -42,12 +42,13 @@ function DisclaimerEULA({ onAccept, isAccepted }) {
       sx={{
         p: 3,
         mb: 3,
-        border: `2px solid ${acknowledged ? theme.palette.success.main : theme.palette.error.main}`,
+        border: `2px solid ${
+          acknowledged ? theme.palette.success.main : theme.palette.error.main
+        }`,
         borderColor: acknowledged ? 'success.main' : 'error.main',
       }}
     >
       <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-        <Warning sx={{ color: 'error.main', mr: 1 }} />
         <Typography variant="h6" fontWeight="bold">
           IMPORTANT - TERMS OF USE & CONFIDENTIALITY AGREEMENT
         </Typography>
