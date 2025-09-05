@@ -67,7 +67,7 @@ function LossReport() {
         }
 
         const response = await fetch(
-          `${import.meta.env.VITE_API_BASE_URL}/get_pdf_new`,
+          `${import.meta.env.VITE_API_BASE_URL}/get_pdf`,
           {
             method: 'POST',
             headers: {

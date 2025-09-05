@@ -68,16 +68,20 @@ function UserForm() {
     setLoading(true);
     try {
       if (isEditMode) {
-        await userService.updateUser(
-          {
-            user_id: id,
-            first_name: firstName,
-            last_name: lastName,
-            username,
-            role,
-          },
-          token
-        );
+        const updateData = {
+          user_id: id,
+          first_name: firstName,
+          last_name: lastName,
+          username,
+          role,
+        };
+        
+        // Include password if it's provided
+        if (password.trim()) {
+          updateData.password = password;
+        }
+        
+        await userService.updateUser(updateData, token);
 
         // If the user edited their own profile, refresh user info in global state
         if (currentUser && currentUser.user_id === id) {
@@ -172,7 +176,8 @@ function UserForm() {
                 </Select>
               </FormControl>
             </Grid>
-            {!isEditMode && (
+            {(!isEditMode || 
+              (isEditMode && (currentUser?.role === 'Admin' || currentUser?.user_id === id))) && (
               <Grid item xs={12} sm={6}>
                 <TextField
                   label="Password"
@@ -180,7 +185,7 @@ function UserForm() {
                   fullWidth
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  required
+                  required={!isEditMode}
                   InputProps={{
                     endAdornment: (
                       <InputAdornment position="end">
