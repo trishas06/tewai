@@ -178,24 +178,24 @@ function MultiSelect({ label, options, value, onChange }) {
                 deleteIcon={
                   <CloseIcon
                     sx={{
-                      color: 'primary.main !important',
+                      color: '#ffffff !important',
                       fontSize: '18px !important',
                       '&:hover': {
-                        color: 'primary.dark !important',
+                        color: 'rgba(255, 255, 255, 0.8) !important',
                       },
                     }}
                     onMouseDown={(e) => e.stopPropagation()} // Additional prevention
                   />
                 }
                 sx={{
-                  bgcolor: 'primary.light',
-                  color: 'primary.main',
+                  bgcolor: 'primary.main',
+                  color: '#ffffff',
                   fontWeight: 500,
                   '& .MuiChip-deleteIcon': {
-                    color: 'primary.main',
+                    color: '#ffffff',
                     fontSize: '18px',
                     '&:hover': {
-                      color: 'primary.dark',
+                      color: 'rgba(255, 255, 255, 0.8)',
                     },
                   },
                 }}

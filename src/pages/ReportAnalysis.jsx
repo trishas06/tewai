@@ -38,6 +38,7 @@ import axiosInstance from '../utils/axiosInstance';
 import GenerateGuidanceReport from '../components/GenerateGuidanceReport';
 import SuccessPopup from '../components/SuccessPopup';
 import { UserRoleContext } from '../components/layout/AuthLayout';
+import { useTheme } from '@mui/material/styles';
 
 // Flag enum
 const FlagType = {
@@ -47,12 +48,34 @@ const FlagType = {
   NO_FLAG: 'No flag',
 };
 
-// Flag color mapping
-const flagColors = {
-  [FlagType.MATCH]: 'success',
-  [FlagType.NO_MATCH]: 'error',
-  [FlagType.RAISE]: 'warning',
-  [FlagType.NO_FLAG]: 'default',
+// Flag color mapping - custom colors with white text for better contrast
+const getFlagColor = (flag, theme) => {
+  switch (flag) {
+    case FlagType.MATCH:
+      return {
+        color: '#ffffff',
+        bgcolor: theme.palette.success.main,
+      };
+    case FlagType.NO_MATCH:
+      return {
+        color: '#ffffff',
+        bgcolor: theme.palette.error.main,
+      };
+    case FlagType.RAISE:
+      return {
+        color: '#ffffff',
+        bgcolor: theme.palette.warning.main,
+      };
+    case FlagType.NO_FLAG:
+    default:
+      return {
+        color: theme.palette.text.secondary,
+        bgcolor:
+          theme.palette.mode === 'dark'
+            ? theme.palette.grey[800]
+            : theme.palette.grey[100],
+      };
+  }
 };
 
 function ReportAnalysis({ reportId, prelim_folder }) {
@@ -65,6 +88,7 @@ function ReportAnalysis({ reportId, prelim_folder }) {
   const [hasChanges, setHasChanges] = useState(false);
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const userRole = useContext(UserRoleContext);
+  const theme = useTheme();
 
   useEffect(() => {
     const fetchAnalysisData = async () => {
@@ -413,8 +437,12 @@ function ReportAnalysis({ reportId, prelim_folder }) {
                             <Chip
                               label={item.flag}
                               size="small"
-                              color={flagColors[item.flag]}
-                              sx={{ ml: 1 }}
+                              sx={{
+                                ml: 1,
+                                color: getFlagColor(item.flag, theme).color,
+                                bgcolor: getFlagColor(item.flag, theme).bgcolor,
+                                fontWeight: 500,
+                              }}
                             />
                           )}
                       </Box>
