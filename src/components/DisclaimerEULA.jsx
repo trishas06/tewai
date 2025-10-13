@@ -6,9 +6,6 @@ import {
   Checkbox,
   FormControlLabel,
   Button,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
   Alert,
   Divider,
 } from '@mui/material';
@@ -60,145 +57,134 @@ function DisclaimerEULA({ onAccept, isAccepted }) {
         </Typography>
       </Alert>
 
-      <Accordion sx={{ mb: 2 }}>
-        <AccordionSummary expandIcon={<ExpandMore />}>
-          <Typography variant="subtitle1" fontWeight="bold">
-            📋 Terms of Use & Confidentiality (Click to expand)
+      <Typography variant="subtitle1" fontWeight="bold">
+        📋 Terms of Use & Confidentiality
+      </Typography>
+
+      <Box sx={{ textAlign: 'left' }}>
+        <Typography variant="h6" gutterBottom color="primary" fontWeight="bold">
+          CONFIDENTIALITY AND PROPRIETARY RIGHTS NOTICE
+        </Typography>
+
+        <Typography variant="body2" paragraph>
+          By accessing this system, you acknowledge and agree to the following
+          terms:
+        </Typography>
+
+        <Typography
+          variant="subtitle2"
+          fontWeight="bold"
+          gutterBottom
+          sx={{ mt: 2 }}
+        >
+          🚫 STRICTLY PROHIBITED ACTIVITIES:
+        </Typography>
+        <Box component="ul" sx={{ pl: 2, mb: 2 }}>
+          <Typography component="li" variant="body2">
+            <strong>Photography:</strong> Taking pictures, screenshots, or any
+            form of visual capture of this application
           </Typography>
-        </AccordionSummary>
-        <AccordionDetails>
-          <Box sx={{ textAlign: 'left' }}>
-            <Typography
-              variant="h6"
-              gutterBottom
-              color="primary"
-              fontWeight="bold"
-            >
-              CONFIDENTIALITY AND PROPRIETARY RIGHTS NOTICE
-            </Typography>
+          <Typography component="li" variant="body2">
+            <strong>Recording:</strong> Audio or video recording of any part of
+            this system
+          </Typography>
+          <Typography component="li" variant="body2">
+            <strong>Copying:</strong> Reproducing, duplicating, or copying any
+            content, code, or functionality
+          </Typography>
+          <Typography component="li" variant="body2">
+            <strong>Sharing:</strong> Distributing, sharing, or transmitting any
+            information from this system
+          </Typography>
+          <Typography component="li" variant="body2">
+            <strong>Reverse Engineering:</strong> Attempting to reverse
+            engineer, decompile, or analyze system architecture
+          </Typography>
+          <Typography component="li" variant="body2">
+            <strong>Unauthorized Access:</strong> Sharing login credentials or
+            allowing unauthorized access
+          </Typography>
+        </Box>
 
-            <Typography variant="body2" paragraph>
-              By accessing this system, you acknowledge and agree to the
-              following terms:
-            </Typography>
+        <Typography
+          variant="subtitle2"
+          fontWeight="bold"
+          gutterBottom
+          sx={{ mt: 2 }}
+        >
+          🔒 CONFIDENTIALITY OBLIGATIONS:
+        </Typography>
+        <Box component="ul" sx={{ pl: 2, mb: 2 }}>
+          <Typography component="li" variant="body2">
+            All information accessed through this system is confidential and
+            proprietary
+          </Typography>
+          <Typography component="li" variant="body2">
+            You must maintain strict confidentiality of all data, reports, and
+            system functionality
+          </Typography>
+          <Typography component="li" variant="body2">
+            Information may not be disclosed to any third party without explicit
+            written authorization
+          </Typography>
+          <Typography component="li" variant="body2">
+            This confidentiality obligation survives termination of your access
+          </Typography>
+        </Box>
 
-            <Typography
-              variant="subtitle2"
-              fontWeight="bold"
-              gutterBottom
-              sx={{ mt: 2 }}
-            >
-              🚫 STRICTLY PROHIBITED ACTIVITIES:
-            </Typography>
-            <Box component="ul" sx={{ pl: 2, mb: 2 }}>
-              <Typography component="li" variant="body2">
-                <strong>Photography:</strong> Taking pictures, screenshots, or
-                any form of visual capture of this application
-              </Typography>
-              <Typography component="li" variant="body2">
-                <strong>Recording:</strong> Audio or video recording of any part
-                of this system
-              </Typography>
-              <Typography component="li" variant="body2">
-                <strong>Copying:</strong> Reproducing, duplicating, or copying
-                any content, code, or functionality
-              </Typography>
-              <Typography component="li" variant="body2">
-                <strong>Sharing:</strong> Distributing, sharing, or transmitting
-                any information from this system
-              </Typography>
-              <Typography component="li" variant="body2">
-                <strong>Reverse Engineering:</strong> Attempting to reverse
-                engineer, decompile, or analyze system architecture
-              </Typography>
-              <Typography component="li" variant="body2">
-                <strong>Unauthorized Access:</strong> Sharing login credentials
-                or allowing unauthorized access
-              </Typography>
-            </Box>
+        <Typography
+          variant="subtitle2"
+          fontWeight="bold"
+          gutterBottom
+          sx={{ mt: 2 }}
+        >
+          ⚖️ LEGAL CONSEQUENCES:
+        </Typography>
+        <Box component="ul" sx={{ pl: 2, mb: 2 }}>
+          <Typography component="li" variant="body2">
+            Violation of these terms may result in immediate termination of
+            access
+          </Typography>
+          <Typography component="li" variant="body2">
+            Legal action may be pursued for unauthorized use or disclosure
+          </Typography>
+          <Typography component="li" variant="body2">
+            You may be held liable for damages resulting from breaches
+          </Typography>
+        </Box>
 
-            <Typography
-              variant="subtitle2"
-              fontWeight="bold"
-              gutterBottom
-              sx={{ mt: 2 }}
-            >
-              🔒 CONFIDENTIALITY OBLIGATIONS:
-            </Typography>
-            <Box component="ul" sx={{ pl: 2, mb: 2 }}>
-              <Typography component="li" variant="body2">
-                All information accessed through this system is confidential and
-                proprietary
-              </Typography>
-              <Typography component="li" variant="body2">
-                You must maintain strict confidentiality of all data, reports,
-                and system functionality
-              </Typography>
-              <Typography component="li" variant="body2">
-                Information may not be disclosed to any third party without
-                explicit written authorization
-              </Typography>
-              <Typography component="li" variant="body2">
-                This confidentiality obligation survives termination of your
-                access
-              </Typography>
-            </Box>
+        <Typography
+          variant="subtitle2"
+          fontWeight="bold"
+          gutterBottom
+          sx={{ mt: 2 }}
+        >
+          📱 MONITORING AND COMPLIANCE:
+        </Typography>
+        <Box component="ul" sx={{ pl: 2, mb: 2 }}>
+          <Typography component="li" variant="body2">
+            All system access and activities are monitored and logged
+          </Typography>
+          <Typography component="li" variant="body2">
+            Access logs may be reviewed for compliance and security purposes
+          </Typography>
+          <Typography component="li" variant="body2">
+            Suspicious activities will be investigated and may result in access
+            suspension
+          </Typography>
+        </Box>
 
-            <Typography
-              variant="subtitle2"
-              fontWeight="bold"
-              gutterBottom
-              sx={{ mt: 2 }}
-            >
-              ⚖️ LEGAL CONSEQUENCES:
-            </Typography>
-            <Box component="ul" sx={{ pl: 2, mb: 2 }}>
-              <Typography component="li" variant="body2">
-                Violation of these terms may result in immediate termination of
-                access
-              </Typography>
-              <Typography component="li" variant="body2">
-                Legal action may be pursued for unauthorized use or disclosure
-              </Typography>
-              <Typography component="li" variant="body2">
-                You may be held liable for damages resulting from breaches
-              </Typography>
-            </Box>
+        <Divider sx={{ my: 2 }} />
 
-            <Typography
-              variant="subtitle2"
-              fontWeight="bold"
-              gutterBottom
-              sx={{ mt: 2 }}
-            >
-              📱 MONITORING AND COMPLIANCE:
-            </Typography>
-            <Box component="ul" sx={{ pl: 2, mb: 2 }}>
-              <Typography component="li" variant="body2">
-                All system access and activities are monitored and logged
-              </Typography>
-              <Typography component="li" variant="body2">
-                Access logs may be reviewed for compliance and security purposes
-              </Typography>
-              <Typography component="li" variant="body2">
-                Suspicious activities will be investigated and may result in
-                access suspension
-              </Typography>
-            </Box>
-
-            <Divider sx={{ my: 2 }} />
-
-            <Typography
-              variant="body2"
-              sx={{ fontStyle: 'italic', color: 'text.secondary' }}
-            >
-              This system contains proprietary and confidential information. By
-              proceeding, you agree to be bound by these terms and acknowledge
-              that you understand the serious nature of these obligations.
-            </Typography>
-          </Box>
-        </AccordionDetails>
-      </Accordion>
+        <Typography
+          variant="body2"
+          sx={{ fontStyle: 'italic', color: 'text.secondary' }}
+        >
+          This system contains proprietary and confidential information. By
+          proceeding, you agree to be bound by these terms and acknowledge that
+          you understand the serious nature of these obligations.
+        </Typography>
+      </Box>
 
       {showError && (
         <Alert severity="error" sx={{ mb: 2 }}>
