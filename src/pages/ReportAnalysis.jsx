@@ -78,7 +78,20 @@ const getFlagColor = (flag, theme) => {
   }
 };
 
-function ReportAnalysis({ reportId, prelim_folder }) {
+const parsePageNumbers = (pageNumberStr) => {
+  if (!pageNumberStr || pageNumberStr === 'Page No: NA') return [];
+
+  const match = pageNumberStr.match(/Page No:\s*(.+)/i);
+  if (!match) return [];
+
+  return match[1]
+    .split(',')
+    .map((p) => p.trim())
+    .filter((p) => p && !Number.isNaN(Number(p)))
+    .map((p) => Number(p));
+};
+
+function ReportAnalysis({ reportId, prelim_folder, pdfUrl }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
@@ -89,6 +102,12 @@ function ReportAnalysis({ reportId, prelim_folder }) {
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const userRole = useContext(UserRoleContext);
   const theme = useTheme();
+
+  const handlePageClick = (page) => {
+    if (!pdfUrl) return;
+    const urlWithPage = `${pdfUrl}#page=${page}`;
+    window.open(urlWithPage, '_blank', 'noopener,noreferrer');
+  };
 
   useEffect(() => {
     const fetchAnalysisData = async () => {
@@ -393,94 +412,130 @@ function ReportAnalysis({ reportId, prelim_folder }) {
                 </Box>
               </AccordionSummary>
               <AccordionDetails>
-                {section.items.map((item, itemIndex) => (
-                  <Box
-                    key={itemIndex}
-                    sx={{
-                      mb: itemIndex !== section.items.length - 1 ? 3 : 0,
-                      p: 2,
-                      bgcolor: 'background.default',
-                      borderRadius: 1,
-                    }}
-                  >
+                {section.items.map((item, itemIndex) => {
+                  const pages = parsePageNumbers(item.pageNumber);
+
+                  return (
                     <Box
+                      key={itemIndex}
                       sx={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'flex-start',
-                        mb: 1,
-                        width: '100%',
+                        mb: itemIndex !== section.items.length - 1 ? 3 : 0,
+                        p: 2,
+                        bgcolor: 'background.default',
+                        borderRadius: 1,
                       }}
                     >
-                      <Typography
-                        variant="subtitle2"
-                        color="primary"
-                        sx={{ fontWeight: 'bold' }}
-                      >
-                        {item.question}
-                      </Typography>
                       <Box
-                        sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+                        sx={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'flex-start',
+                          mb: 1,
+                          width: '100%',
+                        }}
                       >
-                        {item.flag === FlagType.RAISE && (
-                          <FlagIcon
-                            sx={{
-                              color: 'success.main',
-                              fontSize: '1.2rem',
-                            }}
-                          />
-                        )}
-                        {item.flag !== FlagType.NO_FLAG &&
-                          item.flag !== FlagType.RAISE &&
-                          item?.flag !== 'False' &&
-                          item?.flag !== 'True' && (
-                            <Chip
-                              label={item.flag}
-                              size="small"
+                        <Typography
+                          variant="subtitle2"
+                          color="primary"
+                          sx={{ fontWeight: 'bold' }}
+                        >
+                          {item.question}
+                        </Typography>
+                        <Box
+                          sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+                        >
+                          {item.flag === FlagType.RAISE && (
+                            <FlagIcon
                               sx={{
-                                ml: 1,
-                                color: getFlagColor(item.flag, theme).color,
-                                bgcolor: getFlagColor(item.flag, theme).bgcolor,
-                                fontWeight: 500,
+                                color: 'success.main',
+                                fontSize: '1.2rem',
                               }}
                             />
                           )}
+                          {item.flag !== FlagType.NO_FLAG &&
+                            item.flag !== FlagType.RAISE &&
+                            item?.flag !== 'False' &&
+                            item?.flag !== 'True' && (
+                              <Chip
+                                label={item.flag}
+                                size="small"
+                                sx={{
+                                  ml: 1,
+                                  color: getFlagColor(item.flag, theme).color,
+                                  bgcolor: getFlagColor(item.flag, theme).bgcolor,
+                                  fontWeight: 500,
+                                }}
+                              />
+                            )}
+                        </Box>
                       </Box>
+                      {isEditing ? (
+                        <>
+                          <TextField
+                            fullWidth
+                            multiline
+                            minRows={3}
+                            value={item.descriptionKey}
+                            onChange={(e) =>
+                              handleInputChange(
+                                section.category,
+                                item.question,
+                                'descriptionKey',
+                                e.target.value
+                              )
+                            }
+                            disabled={saving}
+                            sx={{ mb: 2 }}
+                          />
+                        </>
+                      ) : (
+                        <>
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              whiteSpace: 'pre-wrap',
+                              mb: pages.length ? 0.5 : 1,
+                            }}
+                          >
+                            {item.descriptionKey}
+                          </Typography>
+                          {pages.length > 0 && (
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                            sx={{ display: 'block', mt: 1.25, mb: 1 }}
+                            >
+                              Page No:{' '}
+                              {pages.map((page, idx) => (
+                                <span key={page}>
+                                  <Typography
+                                    variant="caption"
+                                    component="span"
+                                    onClick={
+                                      pdfUrl ? () => handlePageClick(page) : undefined
+                                    }
+                                    sx={{
+                                      cursor: pdfUrl ? 'pointer' : 'default',
+                                      color: 'primary.main',
+                                      ml: idx > 0 ? 0.5 : 0,
+                                      textDecoration: 'none',
+                                      '&:hover': pdfUrl
+                                        ? { textDecoration: 'underline' }
+                                        : {},
+                                    }}
+                                  >
+                                    {page}
+                                  </Typography>
+                                  {idx < pages.length - 1 && ', '}
+                                </span>
+                              ))}
+                            </Typography>
+                          )}
+                        </>
+                      )}
                     </Box>
-                    {isEditing ? (
-                      <>
-                        <TextField
-                          fullWidth
-                          multiline
-                          minRows={3}
-                          value={item.descriptionKey}
-                          onChange={(e) =>
-                            handleInputChange(
-                              section.category,
-                              item.question,
-                              'descriptionKey',
-                              e.target.value
-                            )
-                          }
-                          disabled={saving}
-                          sx={{ mb: 2 }}
-                        />
-                      </>
-                    ) : (
-                      <>
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            whiteSpace: 'pre-wrap',
-                            mb: 1,
-                          }}
-                        >
-                          {item.descriptionKey}
-                        </Typography>
-                      </>
-                    )}
-                  </Box>
-                ))}
+                  );
+                })}
               </AccordionDetails>
             </Accordion>
           );

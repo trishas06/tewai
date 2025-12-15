@@ -13,6 +13,7 @@ const SuccessPopup = ({ open, onClose, message = 'Changes saved successfully!' }
         severity="success"
         variant="filled"
         sx={{
+          color: '#ffffff',
           fontSize: '1rem',
           '& .MuiAlert-message': {
             display: 'flex',
