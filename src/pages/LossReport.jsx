@@ -227,6 +227,7 @@ function LossReport() {
           <ReportAnalysis
             reportId={data?.report_id}
             prelim_folder={data?.prelim_folder}
+            pdfUrl={data?.pdfUrl}
           />
         </TabPanel>
 
