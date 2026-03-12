@@ -97,9 +97,9 @@ export const dashboardService = {
         data = data.filter((item) => new Date(item.createdOn) <= end);
       }
 
-      if (filterAllowedStatuses) {
-        data = data.filter((item) => ALLOWED_STATUSES.includes(item.status));
-      }
+      // if (filterAllowedStatuses) {
+      //   data = data.filter((item) => ALLOWED_STATUSES.includes(item.status));
+      // }
 
       // Calculate pagination values
       const totalCount = data.length;
@@ -147,7 +147,7 @@ export const dashboardService = {
       );
 
       // Only include statuses that are in ALLOWED_STATUSES
-      statuses = statuses.filter((status) => ALLOWED_STATUSES.includes(status));
+      //statuses = statuses.filter((status) => ALLOWED_STATUSES.includes(status));
 
       // Helper to bring 'NA' to the top if present
       const bringNAToTop = (arr) => {
