@@ -15,22 +15,15 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Alert,
   Tooltip,
-  Divider,
+  useMediaQuery,
 } from '@mui/material';
 import {
   ExpandMore as ExpandMoreIcon,
   Edit as EditIcon,
   Save as SaveIcon,
-  Cancel as CancelIcon,
   Close as CloseIcon,
   Info as InfoIcon,
-  Add as AddIcon,
-  KeyboardArrowUp as PromptUpIcon,
-  KeyboardArrowDown as PromptDownIcon,
-  Delete as DeleteIcon,
-  QuestionAnswer as QuestionAnswerIcon,
   Flag as FlagIcon,
   Warning as WarningIcon,
 } from '@mui/icons-material';
@@ -40,7 +33,6 @@ import SuccessPopup from '../components/SuccessPopup';
 import { UserRoleContext } from '../components/layout/AuthLayout';
 import { useTheme } from '@mui/material/styles';
 
-// Flag enum
 const FlagType = {
   MATCH: 'Match',
   NO_MATCH: 'No match',
@@ -48,24 +40,14 @@ const FlagType = {
   NO_FLAG: 'No flag',
 };
 
-// Flag color mapping - custom colors with white text for better contrast
 const getFlagColor = (flag, theme) => {
   switch (flag) {
     case FlagType.MATCH:
-      return {
-        color: '#ffffff',
-        bgcolor: theme.palette.success.main,
-      };
+      return { color: '#ffffff', bgcolor: theme.palette.success.main };
     case FlagType.NO_MATCH:
-      return {
-        color: '#ffffff',
-        bgcolor: theme.palette.error.main,
-      };
+      return { color: '#ffffff', bgcolor: theme.palette.error.main };
     case FlagType.RAISE:
-      return {
-        color: '#ffffff',
-        bgcolor: theme.palette.warning.main,
-      };
+      return { color: '#ffffff', bgcolor: theme.palette.warning.main };
     case FlagType.NO_FLAG:
     default:
       return {
@@ -80,10 +62,8 @@ const getFlagColor = (flag, theme) => {
 
 const parsePageNumbers = (pageNumberStr) => {
   if (!pageNumberStr || pageNumberStr === 'Page No: NA') return [];
-
   const match = pageNumberStr.match(/Page No:\s*(.+)/i);
   if (!match) return [];
-
   return match[1]
     .split(',')
     .map((p) => p.trim())
@@ -92,6 +72,7 @@ const parsePageNumbers = (pageNumberStr) => {
 };
 
 function ReportAnalysis({ reportId, prelim_folder, pdfUrl }) {
+  console.log('ReportAnalysis props:', { reportId, prelim_folder, pdfUrl });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
@@ -103,10 +84,12 @@ function ReportAnalysis({ reportId, prelim_folder, pdfUrl }) {
   const userRole = useContext(UserRoleContext);
   const theme = useTheme();
 
+  // Treat the split-screen panel (~50vw) as narrow — md breakpoint catches it
+  const isNarrow = useMediaQuery(theme.breakpoints.down('md'));
+
   const handlePageClick = (page) => {
     if (!pdfUrl) return;
-    const urlWithPage = `${pdfUrl}#page=${page}`;
-    window.open(urlWithPage, '_blank', 'noopener,noreferrer');
+    window.open(`${pdfUrl}#page=${page}`, '_blank', 'noopener,noreferrer');
   };
 
   useEffect(() => {
@@ -115,14 +98,12 @@ function ReportAnalysis({ reportId, prelim_folder, pdfUrl }) {
         setLoading(true);
         setError(null);
 
-        if (!reportId) {
-          throw new Error('Report ID is required');
-        }
+        if (!reportId) throw new Error('Report ID is required');
 
         const response = await axiosInstance.get('/get_question_answer', {
           params: {
             report_id: reportId,
-            ...(prelim_folder ? { prelim_folder: prelim_folder } : {}),
+            ...(prelim_folder ? { prelim_folder } : {}),
           },
         });
 
@@ -130,13 +111,10 @@ function ReportAnalysis({ reportId, prelim_folder, pdfUrl }) {
           response.data.status === 'success' &&
           response.data.question_answer
         ) {
-          // Group questions by headerKey
           const groupedData = response.data.question_answer.reduce(
             (acc, item) => {
               const headerKey = item.headerKey || 'Other';
-              if (!acc[headerKey]) {
-                acc[headerKey] = [];
-              }
+              if (!acc[headerKey]) acc[headerKey] = [];
               acc[headerKey].push({
                 ...item,
                 originalDescriptionKey: item.descriptionKey,
@@ -149,15 +127,12 @@ function ReportAnalysis({ reportId, prelim_folder, pdfUrl }) {
             {}
           );
 
-          // Convert to array format
-          const formattedData = Object.entries(groupedData).map(
-            ([header, items]) => ({
+          setAnalysisData(
+            Object.entries(groupedData).map(([header, items]) => ({
               category: header,
               items,
-            })
+            }))
           );
-
-          setAnalysisData(formattedData);
         } else {
           throw new Error('Invalid response format');
         }
@@ -178,10 +153,9 @@ function ReportAnalysis({ reportId, prelim_folder, pdfUrl }) {
       setSaving(true);
       setError(null);
 
-      // Prepare the update payload with all modified items
       const updatedItems = analysisData.flatMap((section) =>
         section.items.map((item) => {
-          let data = {
+          const data = {
             headerKey: section.category,
             descriptionKey: item.descriptionKey,
             question: item.question,
@@ -194,10 +168,7 @@ function ReportAnalysis({ reportId, prelim_folder, pdfUrl }) {
             item.descriptionKey !== item.originalDescriptionKey ||
             item.flag !== item.originalFlag
           ) {
-            return {
-              ...data,
-              record_updated: true,
-            };
+            return { ...data, record_updated: true };
           }
           return data;
         })
@@ -213,7 +184,6 @@ function ReportAnalysis({ reportId, prelim_folder, pdfUrl }) {
         updated_question_answer: updatedItems,
       });
 
-      // Update original values in analysisData
       setAnalysisData((prevData) =>
         prevData.map((section) => ({
           ...section,
@@ -238,7 +208,6 @@ function ReportAnalysis({ reportId, prelim_folder, pdfUrl }) {
   };
 
   const handleCancel = () => {
-    // Revert all changes to original values
     setAnalysisData((prevData) =>
       prevData.map((section) => ({
         ...section,
@@ -256,33 +225,18 @@ function ReportAnalysis({ reportId, prelim_folder, pdfUrl }) {
   const handleInputChange = (category, question, field, value) => {
     setAnalysisData((prevData) =>
       prevData.map((section) => {
-        if (section.category === category) {
-          return {
-            ...section,
-            items: section.items.map((item) => {
-              if (item.question === question) {
-                return {
-                  ...item,
-                  [field]: value,
-                };
-              }
-              return item;
-            }),
-          };
-        }
-        return section;
+        if (section.category !== category) return section;
+        return {
+          ...section,
+          items: section.items.map((item) =>
+            item.question === question ? { ...item, [field]: value } : item
+          ),
+        };
       })
     );
   };
 
-  const handleEditClick = () => {
-    setIsEditing(true);
-  };
-
-  const handleDialogClose = () => {
-    setOpenDialog(false);
-  };
-
+  const handleDialogClose = () => setOpenDialog(false);
   const handleConfirmEdit = () => {
     setOpenDialog(false);
     setIsEditing(true);
@@ -309,168 +263,195 @@ function ReportAnalysis({ reportId, prelim_folder, pdfUrl }) {
   }
 
   return (
-    <Box>
-      <Paper sx={{ p: 2, mb: 2 }}>
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <Paper
+        sx={{
+          p: { xs: 1.5, sm: 2 },
+          mb: 2,
+          display: 'flex',
+          flexDirection: 'column',
+          flex: 1,
+          minHeight: 0,
+          overflow: 'hidden',
+        }}
+      >
+        {/* ── Header ── */}
         <Box
           sx={{
             display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
+            flexDirection: 'column',   // always column so buttons never overflow
+            gap: 1.5,
             mb: 2,
+            flexShrink: 0,
           }}
         >
+          {/* Title row */}
           <Box>
-            <Typography variant="h6" gutterBottom>
-              Report Analysis
-            </Typography>
             <Typography variant="body2" color="text.secondary">
               Detailed analysis of the loss report based on key questions and
               findings
             </Typography>
           </Box>
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            {isEditing && userRole !== 'Adjuster' && (
-              <Button
-                variant="outlined"
-                color="error"
-                onClick={handleCancel}
-                disabled={saving}
-              >
-                Cancel
-              </Button>
-            )}
-            {userRole !== 'Adjuster' && (
+
+          {/* Action buttons — wrap so they never overflow the panel */}
+          {userRole !== 'Adjuster' && (
+            <Box
+              sx={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: 1,
+                alignItems: 'center',
+              }}
+            >
+              {isEditing && (
+                <Button
+                  variant="outlined"
+                  color="error"
+                  size={isNarrow ? 'small' : 'medium'}
+                  onClick={handleCancel}
+                  disabled={saving}
+                >
+                  Cancel
+                </Button>
+              )}
+
               <Button
                 variant="contained"
+                size={isNarrow ? 'small' : 'medium'}
                 startIcon={isEditing ? <SaveIcon /> : <EditIcon />}
-                onClick={isEditing ? handleSave : handleEditClick}
+                onClick={isEditing ? handleSave : () => setIsEditing(true)}
                 disabled={saving}
               >
                 {isEditing ? (saving ? 'Saving...' : 'Save') : 'Edit'}
               </Button>
-            )}
-            <GenerateGuidanceReport
-              reportId={reportId}
-              hasAnalysisChanges={hasChanges}
-              onError={setError}
-            />
-          </Box>
+
+              <GenerateGuidanceReport
+                reportId={reportId}
+                hasAnalysisChanges={hasChanges}
+                onError={setError}
+              />
+            </Box>
+          )}
         </Box>
 
-        {analysisData.map((section, index) => {
-          // Check if any item in the section has NO_MATCH or RAISE flag
-          const hasNoMatch = section.items.some(
-            (item) => item.flag === FlagType.NO_MATCH
-          );
-          const hasRaiseFlag = section.items.some(
-            (item) => item.flag === FlagType.RAISE
-          );
+        {/* ── Scrollable accordion list ── */}
+        <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+          {analysisData.map((section, index) => {
+            const hasNoMatch = section.items.some(
+              (item) => item.flag === FlagType.NO_MATCH
+            );
+            const hasRaiseFlag = section.items.some(
+              (item) => item.flag === FlagType.RAISE
+            );
 
-          return (
-            <Accordion
-              key={index}
-              sx={{
-                mb: 1,
-              }}
-            >
-              <AccordionSummary
-                expandIcon={<ExpandMoreIcon />}
-                aria-controls={`panel${index}-content`}
-                id={`panel${index}-header`}
-              >
-                <Box
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    width: '100%',
-                  }}
+            return (
+              <Accordion key={index} sx={{ mb: 1, '&:before': { display: 'block !important', opacity: '1 !important' } }}>
+                <AccordionSummary
+                  expandIcon={<ExpandMoreIcon />}
+                  aria-controls={`panel${index}-content`}
+                  id={`panel${index}-header`}
                 >
-                  <Typography fontWeight="medium">
-                    {section.category}
-                  </Typography>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    {hasNoMatch && (
-                      <WarningIcon
-                        sx={{
-                          color: 'warning.main',
-                          ml: 1,
-                          fontSize: '1.2rem',
-                        }}
-                      />
-                    )}
-                    {hasRaiseFlag && (
-                      <FlagIcon
-                        sx={{
-                          color: 'success.main',
-                          ml: 1,
-                          fontSize: '1.2rem',
-                        }}
-                      />
-                    )}
-                  </Box>
-                </Box>
-              </AccordionSummary>
-              <AccordionDetails>
-                {section.items.map((item, itemIndex) => {
-                  const pages = parsePageNumbers(item.pageNumber);
-
-                  return (
-                    <Box
-                      key={itemIndex}
-                      sx={{
-                        mb: itemIndex !== section.items.length - 1 ? 3 : 0,
-                        p: 2,
-                        bgcolor: 'background.default',
-                        borderRadius: 1,
-                      }}
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      width: '100%',
+                      pr: 1,
+                    }}
+                  >
+                    <Typography
+                      fontWeight="medium"
+                      sx={{ fontSize: { xs: '0.8125rem', sm: '0.875rem', md: '1rem' } }}
                     >
+                      {section.category}
+                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      {hasNoMatch && (
+                        <WarningIcon
+                          sx={{ color: 'warning.main', fontSize: '1.2rem' }}
+                        />
+                      )}
+                      {hasRaiseFlag && (
+                        <FlagIcon
+                          sx={{ color: 'success.main', fontSize: '1.2rem' }}
+                        />
+                      )}
+                    </Box>
+                  </Box>
+                </AccordionSummary>
+
+                <AccordionDetails sx={{ px: { xs: 1, sm: 2 } }}>
+                  {section.items.map((item, itemIndex) => {
+                    const pages = parsePageNumbers(item.pageNumber);
+
+                    return (
                       <Box
+                        key={itemIndex}
                         sx={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'flex-start',
-                          mb: 1,
-                          width: '100%',
+                          mb: itemIndex !== section.items.length - 1 ? 3 : 0,
+                          p: { xs: 1, sm: 2 },
+                          bgcolor: 'background.default',
+                          borderRadius: 1,
                         }}
                       >
-                        <Typography
-                          variant="subtitle2"
-                          color="primary"
-                          sx={{ fontWeight: 'bold' }}
-                        >
-                          {item.question}
-                        </Typography>
+                        {/* Question + flag chip */}
                         <Box
-                          sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+                          sx={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'flex-start',
+                            gap: 1,
+                            mb: 1,
+                            flexWrap: 'wrap', // chip wraps on narrow panels
+                          }}
                         >
-                          {item.flag === FlagType.RAISE && (
-                            <FlagIcon
-                              sx={{
-                                color: 'success.main',
-                                fontSize: '1.2rem',
-                              }}
-                            />
-                          )}
-                          {item.flag !== FlagType.NO_FLAG &&
-                            item.flag !== FlagType.RAISE &&
-                            item?.flag !== 'False' &&
-                            item?.flag !== 'True' && (
-                              <Chip
-                                label={item.flag}
-                                size="small"
-                                sx={{
-                                  ml: 1,
-                                  color: getFlagColor(item.flag, theme).color,
-                                  bgcolor: getFlagColor(item.flag, theme).bgcolor,
-                                  fontWeight: 500,
-                                }}
+                          <Typography
+                            variant="subtitle2"
+                            color="primary"
+                            sx={{
+                              fontWeight: 'bold',
+                              flex: 1,
+                              fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                            }}
+                          >
+                            {item.question}
+                          </Typography>
+
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 0.5,
+                              flexShrink: 0,
+                            }}
+                          >
+                            {item.flag === FlagType.RAISE && (
+                              <FlagIcon
+                                sx={{ color: 'success.main', fontSize: '1.2rem' }}
                               />
                             )}
+                            {item.flag !== FlagType.NO_FLAG &&
+                              item.flag !== FlagType.RAISE &&
+                              item?.flag !== 'False' &&
+                              item?.flag !== 'True' && (
+                                <Chip
+                                  label={item.flag}
+                                  size="small"
+                                  sx={{
+                                    color: getFlagColor(item.flag, theme).color,
+                                    bgcolor: getFlagColor(item.flag, theme).bgcolor,
+                                    fontWeight: 500,
+                                    fontSize: { xs: '0.65rem', sm: '0.75rem' },
+                                    height: { xs: 20, sm: 24 },
+                                  }}
+                                />
+                              )}
+                          </Box>
                         </Box>
-                      </Box>
-                      {isEditing ? (
-                        <>
+
+                        {/* Answer / edit field */}
+                        {isEditing ? (
                           <TextField
                             fullWidth
                             multiline
@@ -485,63 +466,72 @@ function ReportAnalysis({ reportId, prelim_folder, pdfUrl }) {
                               )
                             }
                             disabled={saving}
-                            sx={{ mb: 2 }}
-                          />
-                        </>
-                      ) : (
-                        <>
-                          <Typography
-                            variant="body2"
                             sx={{
-                              whiteSpace: 'pre-wrap',
-                              mb: pages.length ? 0.5 : 1,
+                              mb: 2,
+                              '& .MuiInputBase-root': {
+                                fontSize: { xs: '0.8125rem', sm: '0.875rem' },
+                              },
                             }}
-                          >
-                            {item.descriptionKey}
-                          </Typography>
-                          {pages.length > 0 && (
+                          />
+                        ) : (
+                          <>
                             <Typography
-                              variant="caption"
-                              color="text.secondary"
-                            sx={{ display: 'block', mt: 1.25, mb: 1 }}
+                              variant="body2"
+                              sx={{
+                                whiteSpace: 'pre-wrap',
+                                mb: pages.length ? 0.5 : 1,
+                                fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                              }}
                             >
-                              Page No:{' '}
-                              {pages.map((page, idx) => (
-                                <span key={page}>
-                                  <Typography
-                                    variant="caption"
-                                    component="span"
-                                    onClick={
-                                      pdfUrl ? () => handlePageClick(page) : undefined
-                                    }
-                                    sx={{
-                                      cursor: pdfUrl ? 'pointer' : 'default',
-                                      color: 'primary.main',
-                                      ml: idx > 0 ? 0.5 : 0,
-                                      textDecoration: 'none',
-                                      '&:hover': pdfUrl
-                                        ? { textDecoration: 'underline' }
-                                        : {},
-                                    }}
-                                  >
-                                    {page}
-                                  </Typography>
-                                  {idx < pages.length - 1 && ', '}
-                                </span>
-                              ))}
+                              {item.descriptionKey}
                             </Typography>
-                          )}
-                        </>
-                      )}
-                    </Box>
-                  );
-                })}
-              </AccordionDetails>
-            </Accordion>
-          );
-        })}
+
+                            {pages.length > 0 && (
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                                sx={{ display: 'block', mt: 1.25, mb: 1 }}
+                              >
+                                Page No:{' '}
+                                {pages.map((page, idx) => (
+                                  <span key={page}>
+                                    <Typography
+                                      variant="caption"
+                                      component="span"
+                                      onClick={
+                                        pdfUrl
+                                          ? () => handlePageClick(page)
+                                          : undefined
+                                      }
+                                      sx={{
+                                        cursor: pdfUrl ? 'pointer' : 'default',
+                                        color: 'primary.main',
+                                        ml: idx > 0 ? 0.5 : 0,
+                                        '&:hover': pdfUrl
+                                          ? { textDecoration: 'underline' }
+                                          : {},
+                                      }}
+                                    >
+                                      {page}
+                                    </Typography>
+                                    {idx < pages.length - 1 && ', '}
+                                  </span>
+                                ))}
+                              </Typography>
+                            )}
+                          </>
+                        )}
+                      </Box>
+                    );
+                  })}
+                </AccordionDetails>
+              </Accordion>
+            );
+          })}
+        </Box>
       </Paper>
 
+      {/* Edit confirmation dialog */}
       <Dialog
         open={openDialog}
         onClose={handleDialogClose}
@@ -549,23 +539,14 @@ function ReportAnalysis({ reportId, prelim_folder, pdfUrl }) {
         fullWidth
       >
         <DialogTitle
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 1,
-            pb: 1,
-          }}
+          sx={{ display: 'flex', alignItems: 'center', gap: 1, pb: 1 }}
         >
           <InfoIcon sx={{ color: 'warning.main' }} />
           <Typography variant="h6">Edit Information</Typography>
           <IconButton
             aria-label="close"
             onClick={handleDialogClose}
-            sx={{
-              position: 'absolute',
-              right: 8,
-              top: 8,
-            }}
+            sx={{ position: 'absolute', right: 8, top: 8 }}
           >
             <CloseIcon />
           </IconButton>
@@ -591,6 +572,7 @@ function ReportAnalysis({ reportId, prelim_folder, pdfUrl }) {
           </DialogActions>
         )}
       </Dialog>
+
       <SuccessPopup
         open={showSuccessPopup}
         onClose={() => setShowSuccessPopup(false)}

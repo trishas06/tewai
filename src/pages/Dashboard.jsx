@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Box,
   Button,
@@ -27,7 +27,7 @@ import {
   OutlinedInput,
   CircularProgress,
   Tooltip,
-} from '@mui/material';
+} from "@mui/material";
 import {
   Search as SearchIcon,
   FilterList as FilterListIcon,
@@ -37,58 +37,61 @@ import {
   KeyboardArrowRight,
   Description as DescriptionIcon,
   Close as CloseIcon,
-} from '@mui/icons-material';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
+} from "@mui/icons-material";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
+import { LocalizationProvider, DatePicker } from "@mui/x-date-pickers";
 
-import { useUser } from '../contexts/UserContext';
-import dashboardService from '../services/dashboardService';
-import { ALLOWED_STATUSES } from '../utils/allowedStatuses';
-import { UserRoleContext } from '../components/layout/AuthLayout';
-import { useTheme } from '@mui/material/styles';
+import { useUser } from "../contexts/UserContext";
+import dashboardService from "../services/dashboardService";
+import { ALLOWED_STATUSES } from "../utils/allowedStatuses";
+import { UserRoleContext } from "../components/layout/AuthLayout";
+import { useTheme } from "@mui/material/styles";
 
 // Table header cells
 const headCells = [
-  { id: 'reportType', label: 'Report Type' },
-  { id: 'fileName', label: 'Report Name' },
-  { id: 'claimNo', label: 'Claim No.' },
-  { id: 'carrier', label: 'Carrier' },
-  { id: 'policyNo', label: 'Policy No.' },
-  { id: 'policyForm', label: 'Policy Form' },
-  { id: 'adjusterName', label: 'Adjuster Name' },
-  { id: 'createdOn', label: 'Created On' },
-  { id: 'status', label: 'Status' },
-  { id: 'actions', label: 'Action' },
+  { id: "reportType", label: "Report Type" },
+  { id: "fileName", label: "Report Name" },
+  { id: "claimNo", label: "Claim No." },
+  { id: "carrier", label: "Carrier" },
+  { id: "policyNo", label: "Policy No." },
+  { id: "policyForm", label: "Policy Form" },
+  { id: "adjusterName", label: "Adjuster Name" },
+  { id: "createdOn", label: "Created On" },
+  { id: "status", label: "Status" },
+  // { id: "actions", label: "Action" },
 ];
 
 // Status chip colors - consistent solid backgrounds with white text for all modes
 const getStatusColor = (status, theme) => {
   switch (status) {
-    case 'Failed':
-      return { 
-        color: '#ffffff',
-        bgcolor: theme.palette.error.main 
+    case "Failed":
+      return {
+        color: "#ffffff",
+        bgcolor: theme.palette.error.main,
       };
-    case 'Generated':
-      return { 
-        color: '#ffffff',
-        bgcolor: theme.palette.primary.main 
+    case "Generated":
+      return {
+        color: "#ffffff",
+        bgcolor: theme.palette.primary.main,
       };
-    case 'Validated':
-      return { 
-        color: '#ffffff',
-        bgcolor: theme.palette.success.main 
+    case "Validated":
+      return {
+        color: "#ffffff",
+        bgcolor: theme.palette.success.main,
       };
-    case 'Missing Prelim Document':
-    case 'Unsearchable PDF':
-      return { 
-        color: '#ffffff',
-        bgcolor: theme.palette.warning.main 
+    case "Missing Prelim Document":
+    case "Unsearchable PDF":
+      return {
+        color: "#ffffff",
+        bgcolor: theme.palette.warning.main,
       };
     default:
-      return { 
-        color: theme.palette.text.secondary, 
-        bgcolor: theme.palette.mode === 'dark' ? theme.palette.grey[800] : theme.palette.grey[100] 
+      return {
+        color: theme.palette.text.secondary,
+        bgcolor:
+          theme.palette.mode === "dark"
+            ? theme.palette.grey[800]
+            : theme.palette.grey[100],
       };
   }
 };
@@ -166,8 +169,8 @@ function MultiSelect({ label, options, value, onChange }) {
         onChange={onChange}
         input={<OutlinedInput label={label} />}
         renderValue={(selected) => (
-          <Box 
-            sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}
+          <Box
+            sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}
             onClick={(e) => e.stopPropagation()} // Prevent clicks on the container from opening select
           >
             {selected.map((value) => (
@@ -178,24 +181,24 @@ function MultiSelect({ label, options, value, onChange }) {
                 deleteIcon={
                   <CloseIcon
                     sx={{
-                      color: '#ffffff !important',
-                      fontSize: '18px !important',
-                      '&:hover': {
-                        color: 'rgba(255, 255, 255, 0.8) !important',
+                      color: "#ffffff !important",
+                      fontSize: "18px !important",
+                      "&:hover": {
+                        color: "rgba(255, 255, 255, 0.8) !important",
                       },
                     }}
                     onMouseDown={(e) => e.stopPropagation()} // Additional prevention
                   />
                 }
                 sx={{
-                  bgcolor: 'primary.main',
-                  color: '#ffffff',
+                  bgcolor: "primary.main",
+                  color: "#ffffff",
                   fontWeight: 500,
-                  '& .MuiChip-deleteIcon': {
-                    color: '#ffffff',
-                    fontSize: '18px',
-                    '&:hover': {
-                      color: 'rgba(255, 255, 255, 0.8)',
+                  "& .MuiChip-deleteIcon": {
+                    color: "#ffffff",
+                    fontSize: "18px",
+                    "&:hover": {
+                      color: "rgba(255, 255, 255, 0.8)",
                     },
                   },
                 }}
@@ -210,17 +213,17 @@ function MultiSelect({ label, options, value, onChange }) {
             key={option}
             value={option}
             sx={{
-              '&.Mui-selected': {
-                bgcolor: 'primary.main',
-                color: 'white',
+              "&.Mui-selected": {
+                bgcolor: "primary.main",
+                color: "white",
               },
-              '&.Mui-selected:hover': {
-                bgcolor: 'primary.dark',
-                color: 'white',
+              "&.Mui-selected:hover": {
+                bgcolor: "primary.dark",
+                color: "white",
               },
-              '&:hover': {
-                bgcolor: 'primary.light',
-                color: 'primary.main',
+              "&:hover": {
+                bgcolor: "primary.light",
+                color: "primary.main",
               },
             }}
           >
@@ -229,6 +232,40 @@ function MultiSelect({ label, options, value, onChange }) {
         ))}
       </Select>
     </FormControl>
+  );
+}
+function StatusChip({ status, onClick, theme }) {
+  const { color, bgcolor } = getStatusColor(status, theme);
+  const isClickable = status === "Generated";
+  const isMultiWord = status?.includes(" ");
+
+  return (
+    <Tooltip title={isMultiWord ? status : ""} arrow>
+      <Chip
+        label={status}
+        size="small"
+        onClick={isClickable ? onClick : undefined}
+        sx={{
+          color,
+          bgcolor,
+          fontWeight: 500,
+          maxWidth: 110,
+          // Ellipse overflowing text
+          "& .MuiChip-label": {
+            display: "block",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          },
+          // Only show pointer cursor for Generated
+          cursor: isClickable ? "pointer" : "default",
+          // Disable hover effect for non-clickable statuses
+          ...(!isClickable && {
+            "&:hover": { bgcolor },
+          }),
+        }}
+      />
+    </Tooltip>
   );
 }
 
@@ -241,7 +278,7 @@ function Dashboard() {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [totalCount, setTotalCount] = useState(0);
   const [rows, setRows] = useState([]);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [filters, setFilters] = useState({
     carriers: [],
     policyForms: [],
@@ -259,10 +296,9 @@ function Dashboard() {
     policyForms: [],
     adjusters: [],
     statuses: [],
-    reportTypes: ['Prelim', 'Final'],
+    reportTypes: ["Prelim", "Final"],
   });
   const [tempFilters, setTempFilters] = useState({ ...filters });
-
 
   // Check authentication first - handled by UserContext
   useEffect(() => {
@@ -271,7 +307,7 @@ function Dashboard() {
     }
 
     if (!isAuthenticated) {
-      navigate('/login');
+      navigate("/login");
       return;
     }
   }, [userLoading, isAuthenticated, navigate]);
@@ -286,10 +322,10 @@ function Dashboard() {
       try {
         // Fetch filter options
         const options = await dashboardService.getFilterOptions();
-        setFilterOptions(prevOptions => ({ ...prevOptions, ...options }));
+        setFilterOptions((prevOptions) => ({ ...prevOptions, ...options }));
         setLoading(false);
       } catch (error) {
-        console.error('Error fetching initial data:', error);
+        console.error("Error fetching initial data:", error);
         setLoading(false);
       }
     };
@@ -310,13 +346,13 @@ function Dashboard() {
           page,
           rowsPerPage,
           filters,
-          searchTerm
+          searchTerm,
         );
         setRows(result.data);
         setTotalCount(result.totalCount);
         setLoading(false);
       } catch (error) {
-        console.error('Error fetching data:', error);
+        console.error("Error fetching data:", error);
         setLoading(false);
       }
     };
@@ -406,27 +442,27 @@ function Dashboard() {
         Loss Reports
       </Typography>
 
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
+      <Box sx={{ display: "flex", justifyContent: "space-between", mb: 3 }}>
         <TextField
           placeholder="Search..."
           value={searchTerm}
           onChange={handleSearchChange}
           sx={{
             width: 300,
-            bgcolor: 'background.paper',
-            '& .MuiOutlinedInput-root': {
-              '& fieldset': {
-                borderColor: 'divider',
+            bgcolor: "background.paper",
+            "& .MuiOutlinedInput-root": {
+              "& fieldset": {
+                borderColor: "divider",
               },
-              '&:hover fieldset': {
-                borderColor: 'text.secondary',
+              "&:hover fieldset": {
+                borderColor: "text.secondary",
               },
             },
           }}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <SearchIcon sx={{ color: 'text.secondary' }} />
+                <SearchIcon sx={{ color: "text.secondary" }} />
               </InputAdornment>
             ),
           }}
@@ -435,7 +471,7 @@ function Dashboard() {
           variant="outlined"
           startIcon={<FilterListIcon />}
           onClick={handleOpenFilterDialog}
-          sx={{ borderColor: 'divider', color: 'text.secondary' }}
+          sx={{ borderColor: "divider", color: "text.secondary" }}
         >
           Filter
         </Button>
@@ -443,7 +479,7 @@ function Dashboard() {
 
       <TableContainer
         component={Paper}
-        sx={{ boxShadow: '0px 2px 4px rgba(0,0,0,0.1)' }}
+        sx={{ boxShadow: "0px 2px 4px rgba(0,0,0,0.1)" }}
       >
         <Table>
           <TableHead>
@@ -471,64 +507,76 @@ function Dashboard() {
                 <TableRow key={generateUniqueKey(row)} hover>
                   <TableCell
                     sx={{
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
                       width: 110,
                     }}
                   >
-                    {row.prelim_folder ? 'Prelim' : 'Final'} Report
+                    {row.prelim_folder ? "Prelim" : "Final"} Report
                   </TableCell>
                   <TableCell>
                     <Tooltip
-                      title={row.originalData.loss_report_name || ''}
+                      title={row.originalData.loss_report_name || ""}
                       arrow
                     >
                       <span
                         style={{
-                          display: 'inline-block',
+                          display: "inline-block",
                           maxWidth: 250,
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          verticalAlign: 'middle',
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          verticalAlign: "middle",
                         }}
                       >
                         {row.originalData.loss_report_name &&
                         row.originalData.loss_report_name.length > 15
                           ? row.originalData.loss_report_name.slice(0, 12) +
-                            '...'
-                          : row.originalData.loss_report_name || ''}
+                            "..."
+                          : row.originalData.loss_report_name || ""}
                       </span>
                     </Tooltip>
                   </TableCell>
                   <TableCell>{row.claimNo}</TableCell>
-                  <TableCell>{row.carrier}</TableCell>
+                  <TableCell>
+                    {(() => {
+                      const words = (row.carrier || "").split(" ");
+                      const truncated =
+                        words.length > 2
+                          ? words.slice(0, 2).join(" ") + "..."
+                          : row.carrier || "";
+                      return (
+                        <Tooltip
+                          title={words.length > 2 ? row.carrier : ""}
+                          arrow
+                        >
+                          <span>{truncated}</span>
+                        </Tooltip>
+                      );
+                    })()}
+                  </TableCell>
                   <TableCell>{row.policyNo}</TableCell>
                   <TableCell>{row.policyForm}</TableCell>
                   <TableCell>{row.adjusterName}</TableCell>
                   <TableCell
                     sx={{
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
                     }}
                   >
                     {row.createdOn}
                   </TableCell>
                   <TableCell>
-                                      <Chip
-                    label={row.status}
-                    size="small"
-                    sx={{
-                      color: getStatusColor(row.status, theme).color,
-                      bgcolor: getStatusColor(row.status, theme).bgcolor,
-                      fontWeight: 500,
-                    }}
-                  />
+                    <StatusChip
+                      status={row.status}
+                      onClick={() => handleNavigateToLossReport(row)}
+                      theme={theme}
+                    />
                   </TableCell>
-                  <TableCell align="center">
-                    {row.status !== 'Failed' && (
+                  {/* <TableCell align="center">
+                    {row.status !== "Failed" && (
                       <IconButton
                         size="small"
                         title="View Loss Report"
@@ -538,7 +586,7 @@ function Dashboard() {
                         <DescriptionIcon sx={{ fontSize: 20 }} />
                       </IconButton>
                     )}
-                  </TableCell>
+                  </TableCell> */}
                 </TableRow>
               ))
             )}
@@ -569,44 +617,44 @@ function Dashboard() {
             label="Report Type"
             options={filterOptions.reportTypes}
             value={tempFilters.reportTypes}
-            onChange={handleMultiSelectChange('reportTypes')}
+            onChange={handleMultiSelectChange("reportTypes")}
           />
           <MultiSelect
             label="Carrier"
             options={filterOptions.carriers}
             value={tempFilters.carriers}
-            onChange={handleMultiSelectChange('carriers')}
+            onChange={handleMultiSelectChange("carriers")}
           />
           <MultiSelect
             label="Policy Form"
             options={filterOptions.policyForms}
             value={tempFilters.policyForms}
-            onChange={handleMultiSelectChange('policyForms')}
+            onChange={handleMultiSelectChange("policyForms")}
           />
           <MultiSelect
             label="Adjuster"
             options={filterOptions.adjusters}
             value={tempFilters.adjusters}
-            onChange={handleMultiSelectChange('adjusters')}
+            onChange={handleMultiSelectChange("adjusters")}
           />
           <MultiSelect
             label="Status"
             options={filterOptions.statuses}
             value={tempFilters.statuses}
-            onChange={handleMultiSelectChange('statuses')}
+            onChange={handleMultiSelectChange("statuses")}
           />
           <LocalizationProvider dateAdapter={AdapterDateFns}>
-            <Box sx={{ mt: 2, display: 'flex', gap: 2 }}>
+            <Box sx={{ mt: 2, display: "flex", gap: 2 }}>
               <DatePicker
                 label="Start Date"
                 value={tempFilters.startDate}
-                onChange={handleDateChange('startDate')}
+                onChange={handleDateChange("startDate")}
                 renderInput={(params) => <TextField {...params} fullWidth />}
               />
               <DatePicker
                 label="End Date"
                 value={tempFilters.endDate}
-                onChange={handleDateChange('endDate')}
+                onChange={handleDateChange("endDate")}
                 renderInput={(params) => <TextField {...params} fullWidth />}
               />
             </Box>

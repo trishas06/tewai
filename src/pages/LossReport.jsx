@@ -1,5 +1,5 @@
-import { useState, useEffect, lazy, Suspense } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useState, useEffect, lazy, Suspense, useRef } from "react";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import {
   Box,
   Typography,
@@ -9,21 +9,25 @@ import {
   Tabs,
   Tab,
   Divider,
-} from '@mui/material';
-import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
-import ReportSummary from './ReportSummary';
-import ReportAnalysis from './ReportAnalysis';
-import ChatBot from '../components/ChatBot';
+  Tooltip,
+  IconButton,
+} from "@mui/material";
+import {
+  ArrowBack as ArrowBackIcon,
+  OpenInNew as OpenInNewIcon,
+} from "@mui/icons-material";
+import ReportSummary from "./ReportSummary";
+import ReportAnalysis from "./ReportAnalysis";
+import ChatBot from "../components/ChatBot";
 
 function getToken() {
-  // Replace with your actual token retrieval logic
-  return localStorage.getItem('token');
+  return localStorage.getItem("token");
 }
 
-// Lazy load just the PDF viewer content
-const PDFViewerContent = lazy(() => import('./PDFViewerContent'));
+const pdfBlobCache = new Map();
 
-// Tab Panel component
+const PDFViewerContent = lazy(() => import("./PDFViewerContent"));
+
 function TabPanel({ children, value, index }) {
   return (
     <Box
@@ -51,7 +55,7 @@ function LossReport() {
   });
   const [activeTab, setActiveTab] = useState(0);
   const [error, setError] = useState(null);
-
+  const createdBlobUrl = useRef(null);
   const token = getToken();
 
   useEffect(() => {
@@ -61,16 +65,24 @@ function LossReport() {
         setError(null);
 
         if (!rowData.report_id || !rowData.loss_report_name) {
-          throw new Error('Missing required report parameters');
+          throw new Error("Missing required report parameters");
+        }
+
+        const cacheKey = rowData.report_id;
+
+        if (pdfBlobCache.has(cacheKey)) {
+          setData((prev) => ({ ...prev, pdfUrl: pdfBlobCache.get(cacheKey) }));
+          setLoading(false);
+          return;
         }
 
         const response = await fetch(
           `${import.meta.env.VITE_API_BASE_URL}/get_pdf`,
           {
-            method: 'POST',
+            method: "POST",
             headers: {
-              'Content-Type': 'application/json',
-              Accept: 'application/pdf',
+              "Content-Type": "application/json",
+              Accept: "application/pdf",
               Authorization: `Bearer ${token}`,
             },
             body: JSON.stringify({
@@ -80,15 +92,17 @@ function LossReport() {
                 ? { prelim_folder: rowData.prelim_folder }
                 : {}),
             }),
-          }
+          },
         );
 
         if (!response.ok) {
-          throw new Error('Failed to fetch PDF');
+          throw new Error("Failed to fetch PDF");
         }
 
-        // Create a blob URL directly from the response
         const pdfUrl = URL.createObjectURL(await response.blob());
+
+        pdfBlobCache.set(cacheKey, pdfUrl);
+        createdBlobUrl.current = pdfUrl;
 
         setData((prevData) => ({
           ...prevData,
@@ -96,11 +110,11 @@ function LossReport() {
         }));
         setLoading(false);
       } catch (error) {
-        console.error('Error fetching report data:', error);
-        if (error.message === 'Missing required report parameters') {
-          setError('Missing required report parameters.');
+        console.error("Error fetching report data:", error);
+        if (error.message === "Missing required report parameters") {
+          setError("Missing required report parameters.");
         } else {
-          setError('Failed to load the PDF file. Please try again later.');
+          setError("Failed to load the PDF file. Please try again later.");
         }
         setLoading(false);
       }
@@ -108,7 +122,6 @@ function LossReport() {
 
     fetchReportData();
 
-    // Cleanup function to revoke blob URL
     return () => {
       if (data?.pdfUrl) {
         URL.revokeObjectURL(data.pdfUrl);
@@ -116,12 +129,29 @@ function LossReport() {
     };
   }, [rowData.loss_report_name, rowData.report_id]);
 
-  const handleBack = () => {
-    navigate(-1);
+  const handleBack = () => navigate(-1);
+  const handleTabChange = (_, newValue) => setActiveTab(newValue);
+
+  // ── Open PDF blob URL directly in a new browser tab
+  const handleOpenPdfNewTab = () => {
+    if (data?.pdfUrl) {
+      window.open(data.pdfUrl, "_blank", "noopener,noreferrer");
+    }
   };
 
-  const handleTabChange = (event, newValue) => {
-    setActiveTab(newValue);
+  // ── Open Report Analysis in a new tab.
+  //    Persist params to sessionStorage so the standalone page can read them.
+  const handleOpenAnalysisNewTab = () => {
+    const params = new URLSearchParams();
+    params.set("report_id", data?.report_id);
+    if (data?.prelim_folder) {
+      params.set("prelim_folder", data.prelim_folder);
+    }
+    window.open(
+      `/report-analysis?${params.toString()}`,
+      "_blank",
+      "noopener,noreferrer",
+    );
   };
 
   const renderPDFViewer = () => {
@@ -146,10 +176,10 @@ function LossReport() {
         fallback={
           <Box
             sx={{
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              height: '50vh',
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              height: "50vh",
             }}
           >
             <CircularProgress />
@@ -165,10 +195,10 @@ function LossReport() {
     <Box sx={{ p: 3 }}>
       <Box
         sx={{
-          display: 'flex',
-          alignItems: 'center',
+          display: "flex",
+          alignItems: "center",
           mb: 3,
-          justifyContent: 'space-between',
+          justifyContent: "space-between",
         }}
       >
         <Typography variant="h5" component="h1">
@@ -181,57 +211,160 @@ function LossReport() {
 
       <Paper sx={{ p: 3 }}>
         <Box sx={{ mb: 3 }}>
-          <Typography variant="h6" gutterBottom>
-            Report Name:{' '}
-            <span>{data?.reportName || `Loss Report - ${claimNo}`}</span>
-          </Typography>
-
-          <Typography sx={{ mt: 2 }} gutterBottom>
-            <Button onClick={handleBack}>Loss Report Extracted / </Button>
-            <span>
-              Claim No. <span>{claimNo}</span>
-            </span>
+          <Typography variant="h8" gutterBottom>
+            Report Name:{" "}
+            <span>{data?.reportName || `Loss Report - ${claimNo}`}</span> /{" "}
+            <Box component="span" sx={{ color: "#5B9B98" }}>
+              Claim No: {claimNo}
+            </Box>
           </Typography>
         </Box>
 
         <Divider sx={{ my: 2 }} />
 
-        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+        <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
           <Tabs
             value={activeTab}
             onChange={handleTabChange}
             aria-label="loss report tabs"
           >
-            <Tab label="Loss Report" />
+            <Tab label="Loss Report Analysis" />
             <Tab label="Report Summary" />
-            <Tab label="Report Analysis" />
             <Tab label="ChatBot" />
           </Tabs>
         </Box>
 
+        {/* ── Tab 0: Split screen — PDF left, Analysis right ── */}
         <TabPanel value={activeTab} index={0}>
-          {loading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-              <CircularProgress />
+          <Box
+            sx={{
+              display: "flex",
+              gap: 2,
+              height: "80vh",
+              overflow: "hidden",
+            }}
+          >
+            {/* ── Left panel: PDF Viewer ── */}
+            <Box
+              sx={{
+                flex: 1,
+                display: "flex",
+                flexDirection: "column",
+                overflow: "hidden",
+                border: "1px solid",
+                borderColor: "divider",
+                borderRadius: 1,
+                p: 1,
+              }}
+            >
+              {/* Panel header row */}
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  mb: 1,
+                  flexShrink: 0,
+                }}
+              >
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                  Loss Report
+                </Typography>
+                <Tooltip title="Open in new tab">
+                  {/* span wrapper keeps Tooltip working when button is disabled */}
+                  <span>
+                    <IconButton
+                      size="small"
+                      onClick={handleOpenPdfNewTab}
+                      disabled={!data?.pdfUrl || loading}
+                      sx={{ color: "text.secondary" }}
+                    >
+                      <OpenInNewIcon fontSize="small" />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+              </Box>
+
+              <Divider sx={{ mb: 1, flexShrink: 0 }} />
+
+              {/* Scrollable PDF content */}
+              <Box sx={{ flex: 1, overflow: "auto" }}>
+                {loading ? (
+                  <Box
+                    sx={{ display: "flex", justifyContent: "center", mt: 4 }}
+                  >
+                    <CircularProgress />
+                  </Box>
+                ) : (
+                  renderPDFViewer()
+                )}
+              </Box>
             </Box>
-          ) : (
-            renderPDFViewer()
-          )}
+
+            {/* Vertical divider */}
+            <Divider orientation="vertical" flexItem />
+
+            {/* ── Right panel: Report Analysis ── */}
+            <Box
+              sx={{
+                flex: 1,
+                display: "flex",
+                flexDirection: "column",
+                overflow: "hidden",
+                border: "1px solid",
+                borderColor: "divider",
+                borderRadius: 1,
+                p: 1,
+              }}
+            >
+              {/* Panel header row */}
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  mb: 1,
+                  flexShrink: 0,
+                }}
+              >
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                  Report Analysis
+                </Typography>
+                <Tooltip title="Open in new tab">
+                  <span>
+                    <IconButton
+                      size="small"
+                      onClick={handleOpenAnalysisNewTab}
+                      disabled={!data?.report_id}
+                      sx={{ color: "text.secondary" }}
+                    >
+                      <OpenInNewIcon fontSize="small" />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+              </Box>
+
+              <Divider sx={{ mb: 1, flexShrink: 0 }} />
+
+              {/* Scrollable analysis content */}
+              <Box sx={{ flex: 1, overflow: "auto" }}>
+                <ReportAnalysis
+                  reportId={data?.report_id}
+                  prelim_folder={data?.prelim_folder}
+                  pdfUrl={data?.pdfUrl}
+                />
+              </Box>
+            </Box>
+          </Box>
         </TabPanel>
 
+        {/* ── Tab 1: Report Summary ── */}
         <TabPanel value={activeTab} index={1}>
           <ReportSummary reportId={data?.report_id} />
         </TabPanel>
 
+        {/* ── Tab 2: ChatBot ── */}
         <TabPanel value={activeTab} index={2}>
-          <ReportAnalysis
-            reportId={data?.report_id}
-            prelim_folder={data?.prelim_folder}
-            pdfUrl={data?.pdfUrl}
-          />
-        </TabPanel>
-
-        <TabPanel value={activeTab} index={3}>
           <ChatBot reportId={data?.report_id} userId />
         </TabPanel>
       </Paper>
