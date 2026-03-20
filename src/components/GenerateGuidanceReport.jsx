@@ -40,13 +40,13 @@ function GenerateGuidanceReport({
       setGeneratingReport(true);
 
       const userData = JSON.parse(localStorage.getItem('user'));
-      if (!userData || !userData.name) {
+      if (!userData || !userData.user_id) {
         throw new Error('User data not found');
       }
 
       await axiosInstance.post('/generate_guidance_report', {
         report_id: reportId,
-        user_id: userData.name
+        user_id: userData.user_id
       });
 
       setOpenSuccessDialog(true);
