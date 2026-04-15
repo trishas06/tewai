@@ -17,13 +17,10 @@ const drawerWidth = 240;
 const collapsedWidth = 64;
 
 const menuItems = [
-  { text: 'Dashboard', icon: <DescriptionIcon />, path: '/dashboard' },
+  { text: 'Dashboard',      icon: <DescriptionIcon />,        path: '/dashboard' },
   { text: 'Admin Settings', icon: <AdminPanelSettingsIcon />, path: '/admin-settings' },
-  { text: 'User Management', icon: <PeopleAltIcon />, path: '/user-management' },
-  // { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
-  // { text: 'Loss Reports', icon: <DescriptionIcon />, path: '/loss-reports' },
-  // { text: 'Analytics', icon: <AssessmentIcon />, path: '/analytics' },
-  // { text: 'Settings', icon: <SettingsIcon />, path: '/settings' },
+  { text: 'Analytics',      icon: <AssessmentIcon />,         path: '/analytics' },
+  { text: 'User Management', icon: <PeopleAltIcon />,         path: '/user-management' },
 ];
 
 function Sidebar({ isExpanded, onToggle }) {
@@ -31,10 +28,12 @@ function Sidebar({ isExpanded, onToggle }) {
   const location = useLocation();
   const userRole = useContext(UserRoleContext);
 
-  // Only Admin and Developer can see Admin Settings
+  // Admin Settings, User Management, and Analytics are visible to Admin and Developer only
   const filteredMenuItems = menuItems.filter(
     (item) =>
-      (item.text !== 'Admin Settings' && item.text !== 'User Management') ||
+      (item.text !== 'Admin Settings' &&
+       item.text !== 'User Management' &&
+       item.text !== 'Analytics') ||
       (userRole && userRole !== 'Adjuster')
   );
 

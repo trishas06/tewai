@@ -21,6 +21,7 @@ import { ColorModeContext } from "./contexts/ColorModeContext";
 import { useSecurity } from "./hooks/useSecurity";
 import SecurityStyles from "./components/SecurityStyles";
 import ReportAnalysisPage from "./pages/ReportAnalysisPage";
+import Analytics from "./pages/Analytics";
 
 function AppContent() {
   const [mode, setMode] = useState("light");
@@ -228,14 +229,16 @@ function AppContent() {
               }
             />
 
+            <Route
+              path="/analytics"
+              element={
+                <AuthLayout>
+                  <Analytics />
+                </AuthLayout>
+              }
+            />
+
             {/* Add other authenticated routes here */}
-            {/* Example:
-            <Route path="/reports" element={
-              <AuthLayout>
-                <Reports />
-              </AuthLayout>
-            } /> 
-            */}
           </Routes>
         </Router>
       </ThemeProvider>
