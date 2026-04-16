@@ -12,7 +12,7 @@ import { useUser } from '../../contexts/UserContext';
 export const UserRoleContext = createContext('');
 
 function AuthLayout({ children }) {
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(true);
   const [showSessionTimeout, setShowSessionTimeout] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [notificationsLoading, setNotificationsLoading] = useState(true);
