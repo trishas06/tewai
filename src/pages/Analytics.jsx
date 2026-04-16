@@ -416,9 +416,8 @@ export default function Analytics() {
     if (opLoading) return (
       <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>
     );
-    if (opError) return <Alert severity="error" sx={{ mt: 2 }}>{opError}</Alert>;
-    if (!opStats) return null;
 
+    // Render full layout with safe defaults even when endpoint not yet deployed
     const {
       claims_submitted = 0, claims_validated = 0, unprocessed_count = 0,
       unprocessable_rate = 0, avg_warnings = 0, quality_score = 0,
@@ -427,39 +426,42 @@ export default function Analytics() {
       adjuster_performance = [], status_breakdown = [],
       weekly_volume = [], top_failed_categories = [],
       prev_month: prev = null,
-    } = opStats;
+    } = opStats || {};
 
     const periodLabel = filterMonth === 'all' ? 'all time' : fmtMonth(filterMonth);
+    const hasData = !!opStats;
 
     // KPI row 1
     const kpiRow1 = [
       {
         label: 'Claims Submitted',
-        value: claims_submitted.toLocaleString(),
-        sub: `Total files uploaded to system · ${periodLabel}`,
+        value: hasData ? claims_submitted.toLocaleString() : '—',
+        sub: hasData ? `Total files uploaded to system · ${periodLabel}` : 'Pending backend deployment',
         trend: prev ? pctTrend(claims_submitted, prev.claims_submitted, false) : null,
-        info: 'Total number of claim files submitted to the system in the selected period, regardless of processing outcome.',
+        info: 'Total number of claim files submitted to the system in the selected month, regardless of processing outcome.',
       },
       {
         label: 'Claims Validated',
-        value: claims_validated.toLocaleString(),
-        sub: claims_submitted > 0 ? `${Math.round(claims_validated / claims_submitted * 100)}% of intake successfully processed` : 'Reports with completed AI validation',
+        value: hasData ? claims_validated.toLocaleString() : '—',
+        sub: hasData
+          ? (claims_submitted > 0 ? `${Math.round(claims_validated / claims_submitted * 100)}% of intake successfully processed` : 'Reports with completed AI validation')
+          : 'Pending backend deployment',
         trend: prev ? pctTrend(claims_validated, prev.claims_validated, false) : null,
         info: 'Number of claim reports where the AI model completed all validation checks and produced a guidance report. Excludes files with missing documents or RAP status.',
       },
       {
         label: 'Unprocessable Rate',
-        value: `${unprocessable_rate}%`,
-        sub: `${unprocessed_count} of ${claims_submitted} files — missing docs or RAP status`,
+        value: hasData ? `${unprocessable_rate}%` : '—',
+        sub: hasData ? `${unprocessed_count} of ${claims_submitted} files — missing docs or RAP status` : 'Pending backend deployment',
         trend: prev ? ppTrend(unprocessable_rate, prev.unprocessable_rate, true) : null,
         info: 'Percentage of submitted files that could not be processed — due to missing documents or "Request for Additional Payment" (RAP) status. Lower is better.',
       },
       {
         label: 'Avg Warnings / Report',
-        value: avg_warnings.toFixed(1),
-        sub: '"No match" + "Raise" flags per generated report',
+        value: hasData ? avg_warnings.toFixed(1) : '—',
+        sub: hasData ? '"No match" + "Raise" flags per generated report' : 'Pending backend deployment',
         trend: prev ? pctTrend(avg_warnings, prev.avg_warnings, true) : null,
-        info: 'Average number of validation warnings per generated report. Lower means cleaner adjuster submissions.',
+        info: 'Average number of validation warnings per generated report. Lower means cleaner adjuster submissions. Computed from real Q&A flag data.',
       },
     ];
 
@@ -467,34 +469,36 @@ export default function Analytics() {
     const kpiRow2 = [
       {
         label: 'Active Adjusters',
-        value: active_adjusters.toString(),
-        sub: 'Unique named adjusters with processed submissions',
+        value: hasData ? active_adjusters.toString() : '—',
+        sub: hasData ? 'Unique named adjusters with processed submissions' : 'Pending backend deployment',
         trend: prev ? pctTrend(active_adjusters, prev.active_adjusters, false) : null,
-        info: 'Number of distinct named adjusters with at least one successfully validated claim in the selected period.',
+        info: 'Number of distinct named adjusters with at least one successfully validated claim in the selected month. Reflects active field workforce utilization.',
       },
       {
         label: 'Claim Quality Score',
-        value: `${quality_score}%`,
-        sub: `Avg match% across ${claims_validated} reports (per-report equal weight)`,
+        value: hasData ? `${quality_score}%` : '—',
+        sub: hasData ? `Avg match% across ${claims_validated} reports (per-report equal weight)` : 'Pending backend deployment',
         trend: prev ? ppTrend(quality_score, prev.quality_score, false) : null,
-        info: 'Average "Match" percentage per individual report. Each report is weighted equally. Higher = better adjuster submission quality.',
+        info: 'Average "Match" percentage per individual report. Each report is weighted equally regardless of the number of questions. Higher = better adjuster submission quality.',
       },
       {
         label: 'Carrier Coverage',
-        value: carrier_coverage.toString(),
-        sub: 'Distinct insurance carriers in portfolio',
+        value: hasData ? carrier_coverage.toString() : '—',
+        sub: hasData ? 'Distinct insurance carriers in portfolio' : 'Pending backend deployment',
         trend: prev ? pctTrend(carrier_coverage, prev.carrier_coverage, false) : null,
-        info: 'Number of distinct insurance carriers with claims in the selected period. Reflects business breadth.',
+        info: 'Number of distinct insurance carriers (normalized) with claims in the selected period. Reflects business breadth and portfolio diversity.',
       },
       {
         label: 'Avg AI Processing Time',
-        value: fmtTime(avg_processing_time_seconds),
-        sub: avg_processing_time_seconds != null
-          ? `${processing_n} of ${claims_validated} reports instrumented · model runtime only`
-          : 'Timestamps not yet backfilled for this period',
+        value: hasData ? fmtTime(avg_processing_time_seconds) : '—',
+        sub: hasData
+          ? (avg_processing_time_seconds != null
+              ? `${processing_n} of ${claims_validated} reports instrumented · model runtime only`
+              : 'Timestamps added Apr 8 — not backfilled for this month')
+          : 'Pending backend deployment',
         trend: null,
-        note: avg_processing_time_seconds == null ? 'Backfill pending' : null,
-        info: 'Average time from model processing start to guidance report completion. Does not include upload or S3 transfer time.',
+        note: hasData && avg_processing_time_seconds == null ? 'Backfill pending' : null,
+        info: 'Average time from model processing start to guidance report completion, computed from processing_started_at and processing_completed_at timestamps. Does not include upload or S3 transfer time.',
       },
     ];
 
@@ -582,6 +586,12 @@ export default function Analytics() {
 
     return (
       <Box>
+        {opError && (
+          <Alert severity="info" sx={{ mb: 1.5 }}>
+            Operational stats endpoint not yet deployed to this server — metrics will populate once the backend is updated.
+          </Alert>
+        )}
+
         {/* KPI Row 1 */}
         <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 1.5, mb: 1.5 }}>
           {kpiRow1.map((k, i) => <OpKpiCard key={i} {...k} />)}
@@ -890,7 +900,7 @@ export default function Analytics() {
                 ? `${Math.round(opStats.claims_validated / opStats.claims_submitted * 100)}% of ${opStats.claims_submitted.toLocaleString()} submissions`
                 : undefined;
             })()}
-            info="Number of claim reports where the AI model completed all validation checks and produced a guidance report." />
+            info="Number of claim reports where the AI model completed all validation checks and produced a guidance report. Excludes files with missing documents or RAP status." />
           <ExecKpi label="Claim Quality Score"
             value={opStats?.quality_score != null ? `${opStats.quality_score}%` : '—'}
             sub={(() => {
@@ -898,7 +908,7 @@ export default function Analytics() {
               const c = +(opStats.quality_score - prev.quality_score).toFixed(1);
               return `${c > 0 ? '+' : ''}${c}pp vs prev month`;
             })()}
-            info="Average 'Match' percentage per individual report. Each report weighted equally. Higher = better submission quality." />
+            info="Average 'Match' percentage per individual report. Each report weighted equally regardless of number of questions. Higher = better adjuster submission quality." />
           <ExecKpi label="Unprocessable Rate"
             value={opStats?.unprocessable_rate != null ? `${opStats.unprocessable_rate}%` : '—'}
             sub={(() => {
@@ -906,11 +916,11 @@ export default function Analytics() {
               const c = +(opStats.unprocessable_rate - prev.unprocessable_rate).toFixed(1);
               return `${c > 0 ? '+' : ''}${c}pp vs prev month`;
             })()}
-            info="Percentage of submitted files that could not be processed. Lower is better." />
+            info="Percentage of submitted files that could not be processed — due to missing documents or 'Request for Additional Payment' (RAP) status. Lower is better." />
           <ExecKpi label="Active Adjusters"
             value={opStats?.active_adjusters ?? '—'}
             sub={`Unique named adjusters${filterMonth !== 'all' ? ` · ${fmtMonth(filterMonth)}` : ''}`}
-            info="Number of distinct named adjusters with at least one validated claim in the selected period." />
+            info="Number of distinct named adjusters with at least one successfully processed claim in the selected month. Reflects active field workforce utilization." />
         </Box>
       </Box>
     );
