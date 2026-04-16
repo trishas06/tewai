@@ -101,12 +101,12 @@ function ppTrend(cur, prev, higherIsBad) {
 }
 
 // ── SrcPill ───────────────────────────────────────────────────────────────────
+// Colors match mockup exactly: both=blue, xml=green, pdf=orange
 function SrcPill({ type }) {
-  const theme = useTheme();
   const configs = {
-    both: { label: 'XML + PDF', bg: theme.palette.success.light,  color: theme.palette.success.dark },
-    xml:  { label: 'XML only', bg: theme.palette.primary.light,  color: theme.palette.primary.dark },
-    pdf:  { label: 'PDF partial', bg: theme.palette.warning.light, color: theme.palette.warning.dark },
+    both: { label: 'XML + PDF',   bg: '#e3f2fd', color: '#1565c0' },
+    xml:  { label: 'XML only',    bg: '#e8f5e9', color: '#2e7d32' },
+    pdf:  { label: 'PDF partial', bg: '#fff3e0', color: '#e65100' },
   };
   const cfg = configs[type] || configs.both;
   return (
@@ -214,93 +214,131 @@ function PanelMetric({ label, value, valueColor, sub, action, clickable, onClick
 // ── Loss Reduction Info Modal ─────────────────────────────────────────────────
 function LossReductionInfoModal({ open, onClose }) {
   const theme = useTheme();
+  // Category header rows: teal background, teal text, uppercase — matches .lr-cat-row in mockup
   const catRowSx = {
-    bgcolor: theme.palette.primary.light,
-    '& td': { color: theme.palette.primary.dark, fontWeight: 700, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.6px', py: 0.75 },
+    '& td': {
+      bgcolor: 'rgba(91,155,152,0.10)',
+      color: 'rgb(70,135,132)',
+      fontWeight: 700, fontSize: '10px', textTransform: 'uppercase',
+      letterSpacing: '0.6px', py: 0.75, px: 1,
+    },
   };
+  // Section header — matches .lr-info-section h3 in mockup
+  const SectionHead = ({ children }) => (
+    <Typography sx={{
+      fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px',
+      color: 'primary.main', mb: 1.25, pb: 0.625,
+      borderBottom: 1, borderColor: 'rgba(91,155,152,0.15)',
+    }}>{children}</Typography>
+  );
+
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth scroll="paper">
-      <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', pb: 1, borderBottom: 1, borderColor: 'divider' }}>
+      <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', pb: 1.75, borderBottom: 1, borderColor: 'divider' }}>
         <Box>
-          <Typography variant="h6" fontWeight={600}>Loss Reduction — Calculation Logic</Typography>
-          <Typography variant="body2" color="text.secondary">How this number is computed and what it covers</Typography>
+          <Typography sx={{ fontSize: 16, fontWeight: 700 }}>Loss Reduction — Calculation Logic</Typography>
+          <Typography sx={{ fontSize: 12, color: 'text.secondary', mt: 0.25 }}>How this number is computed and what it covers</Typography>
         </Box>
-        <IconButton onClick={onClose} size="small" sx={{ mt: -0.5 }}><CloseIcon /></IconButton>
+        <IconButton onClick={onClose} size="small" sx={{ mt: -0.5 }}><CloseIcon fontSize="small" /></IconButton>
       </DialogTitle>
-      <DialogContent dividers sx={{ px: 3, py: 2.5 }}>
-        <Typography variant="subtitle1" fontWeight={600} gutterBottom>How It Is Calculated</Typography>
-        <Typography variant="body2" color="text.secondary" paragraph>
-          For each processed claim, the AI model produces a <strong>guidance report</strong>. Each guidance report contains a list of validation checks flagged as <em>Match</em>, <em>No Match</em>, or <em>Raise</em>.
-        </Typography>
-        <Typography variant="body2" color="text.secondary" paragraph>
-          Loss reduction is computed from the <strong>No Match</strong> flags only. For each No Match flag, the system locates the corresponding dollar amount in the claim's estimate data (XML or PDF). The sum of those amounts is the loss reduction for that claim.
-        </Typography>
-        <Box sx={{ bgcolor: theme.palette.primary.light, borderRadius: 1, px: 1.5, py: 1, mb: 2 }}>
-          <Typography variant="caption" color="primary.dark">
-            <strong>Formula:</strong> Σ (dollar amount per No Match flag) across all financially quantifiable flags in the claim
+      <DialogContent sx={{ px: 3, py: 2.5 }}>
+
+        {/* ── How It Is Calculated ── */}
+        <Box sx={{ mb: 2.75 }}>
+          <SectionHead>How It Is Calculated</SectionHead>
+          <Typography sx={{ fontSize: 13, color: 'text.primary', mb: 1, lineHeight: 1.6 }}>
+            For each processed claim, the AI model produces a <strong>guidance report</strong> stored in S3 and indexed in MongoDB. Each guidance report contains a list of validation checks — each flagged as <em>Match</em>, <em>No Match</em>, or <em>Raise</em>.
+          </Typography>
+          <Typography sx={{ fontSize: 13, color: 'text.primary', mb: 1, lineHeight: 1.6 }}>
+            Loss reduction is computed from the <strong>No Match</strong> flags only. For each No Match flag, the system locates the corresponding dollar amount in the claim's estimate data (XML or PDF). The sum of those amounts is the loss reduction for that claim.
+          </Typography>
+          <Box sx={{ bgcolor: 'rgba(91,155,152,0.08)', borderRadius: 1, px: 1.5, py: 1.25 }}>
+            <Typography sx={{ fontSize: 12, color: 'rgb(70,135,132)' }}>
+              <strong>Formula:</strong> Σ (dollar amount per No Match flag) across all financially quantifiable flags in the claim
+            </Typography>
+          </Box>
+        </Box>
+
+        {/* ── Data Sources ── */}
+        <Box sx={{ mb: 2.75 }}>
+          <SectionHead>Data Sources</SectionHead>
+          <Typography sx={{ fontSize: 13, color: 'text.primary', mb: 1, lineHeight: 1.6 }}>
+            <SrcPill type="xml" />&nbsp;&nbsp;<strong>Generic Rough Draft XML</strong> — pulled from S3 bucket (~2 hrs after upload). Provides full line-item detail: individual cost amounts per room/section, overhead &amp; profit breakdown, depreciation schedules, and estimate totals. Enables item-level checks.
+          </Typography>
+          <Typography sx={{ fontSize: 13, color: 'text.primary', lineHeight: 1.6 }}>
+            <SrcPill type="pdf" />&nbsp;&nbsp;<strong>Final Report PDF</strong> — used when XML is not yet available. Financial summary figures are extracted (total depreciation, O&amp;P, advance payments, deductible, sales tax). Item-level checks (waterline, door/window counts, etc.) return $0 under this path.
           </Typography>
         </Box>
-        <Typography variant="subtitle1" fontWeight={600} gutterBottom>Data Sources</Typography>
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mb: 2.5 }}>
-          <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
-            <SrcPill type="both" />
-            <Typography variant="body2" color="text.secondary" sx={{ flex: 1 }}>
-              <strong>Generic Rough Draft XML</strong> — pulled from S3 (~2 hrs after upload). Provides full line-item detail. Enables item-level checks.
-            </Typography>
-          </Box>
-          <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
-            <SrcPill type="pdf" />
-            <Typography variant="body2" color="text.secondary" sx={{ flex: 1 }}>
-              <strong>Final Report PDF</strong> — used when XML is not yet available. Summary figures only. Item-level checks return $0 under this path.
-            </Typography>
-          </Box>
+
+        {/* ── Checks Performed ── */}
+        <Box sx={{ mb: 2.75 }}>
+          <SectionHead>Checks Performed &amp; Dollar Mapping</SectionHead>
+          <TableContainer component={Paper} variant="outlined">
+            <Table size="small">
+              <TableHead>
+                <TableRow sx={{ bgcolor: 'action.hover' }}>
+                  <TableCell sx={{ fontWeight: 600, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'text.secondary', width: '28%' }}>Check</TableCell>
+                  <TableCell sx={{ fontWeight: 600, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'text.secondary', width: '44%' }}>What Is Verified</TableCell>
+                  <TableCell sx={{ fontWeight: 600, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'text.secondary', width: '16%' }}>Amount Source</TableCell>
+                  <TableCell sx={{ fontWeight: 600, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'text.secondary', width: '12%' }}>Data Path</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {/* Category 1 */}
+                <TableRow sx={catRowSx}><TableCell colSpan={4}>Category 1 — Depreciation</TableCell></TableRow>
+                <TableRow><TableCell><strong>Recoverable Depreciation</strong></TableCell><TableCell sx={{ fontSize: 12, lineHeight: 1.45 }}>Does the policy qualify for RCV payout? If not, withheld depreciation represents an overpayment that should be excluded.</TableCell><TableCell sx={{ fontSize: 12 }}>Recoverable depreciation held amount from estimate totals</TableCell><TableCell><SrcPill type="both" /></TableCell></TableRow>
+                <TableRow><TableCell><strong>RCBAP — Non-Recoverable Depreciation</strong></TableCell><TableCell sx={{ fontSize: 12, lineHeight: 1.45 }}>For RCBAP claims: verifies "less depreciation (non-recoverable)" is selected in the estimate. If missing, the recoverable depreciation amount was improperly applied.</TableCell><TableCell sx={{ fontSize: 12 }}>Recoverable depreciation held amount from estimate totals</TableCell><TableCell><SrcPill type="both" /></TableCell></TableRow>
+                <TableRow><TableCell><strong>Non-Recoverable Items</strong></TableCell><TableCell sx={{ fontSize: 12, lineHeight: 1.45 }}>Items such as carpet and certain appliances must be paid at ACV only, not RCV. If applied at RCV, non-recoverable depreciation is missing from the estimate.</TableCell><TableCell sx={{ fontSize: 12 }}>Non-recoverable depreciation amount from estimate totals</TableCell><TableCell><SrcPill type="both" /></TableCell></TableRow>
+                <TableRow><TableCell><strong>Personal Property Depreciation</strong></TableCell><TableCell sx={{ fontSize: 12, lineHeight: 1.45 }}>Personal property line items marked "recoverable" when they should be non-recoverable. Sum of depreciation on those items.</TableCell><TableCell sx={{ fontSize: 12 }}>Depreciation total on personal property line items marked as recoverable</TableCell><TableCell><SrcPill type="xml" /></TableCell></TableRow>
+
+                {/* Category 2 */}
+                <TableRow sx={catRowSx}><TableCell colSpan={4}>Category 2 — Overhead &amp; Profit</TableCell></TableRow>
+                <TableRow><TableCell><strong>Overhead &amp; Profit</strong></TableCell><TableCell sx={{ fontSize: 12, lineHeight: 1.45 }}>Does the policy type qualify for O&amp;P? Also checks whether Profit was applied before Tax — if the Profit step was skipped, the net claim is understated.</TableCell><TableCell sx={{ fontSize: 12 }}>Overhead amount plus Profit amount from estimate totals</TableCell><TableCell><SrcPill type="both" /></TableCell></TableRow>
+
+                {/* Category 3 */}
+                <TableRow sx={catRowSx}><TableCell colSpan={4}>Category 3 — Estimate Parameters: Water Line &amp; Line-Item Thresholds</TableCell></TableRow>
+                <TableRow><TableCell><strong>Waterline / Door &amp; Electronics</strong></TableCell><TableCell sx={{ fontSize: 12, lineHeight: 1.45 }}>Water line under 38": door locks, TVs, and computers in the estimate are not justified at that flood level.</TableCell><TableCell sx={{ fontSize: 12 }}>Sum of door lock, TV, computer line items</TableCell><TableCell><SrcPill type="xml" /></TableCell></TableRow>
+                <TableRow><TableCell><strong>Waterline / Electrical Outlets</strong></TableCell><TableCell sx={{ fontSize: 12, lineHeight: 1.45 }}>Water line under 16": electrical outlet replacement is not justified at that flood level.</TableCell><TableCell sx={{ fontSize: 12 }}>Sum of electrical outlet / receptacle line items</TableCell><TableCell><SrcPill type="xml" /></TableCell></TableRow>
+                <TableRow><TableCell><strong>Bathroom Electrical Outlets</strong></TableCell><TableCell sx={{ fontSize: 12, lineHeight: 1.45 }}>Water line under 32": bathroom electrical outlet replacement is not justified at that flood level.</TableCell><TableCell sx={{ fontSize: 12 }}>Sum of bathroom outlet line items</TableCell><TableCell><SrcPill type="xml" /></TableCell></TableRow>
+                <TableRow><TableCell><strong>Upper Cabinets</strong></TableCell><TableCell sx={{ fontSize: 12, lineHeight: 1.45 }}>Water line under 48": upper or wall cabinet replacement is not justified at that flood level.</TableCell><TableCell sx={{ fontSize: 12 }}>Sum of upper / wall cabinet line items</TableCell><TableCell><SrcPill type="xml" /></TableCell></TableRow>
+                <TableRow><TableCell><strong>Appliances — Low Water (≤ 6")</strong></TableCell><TableCell sx={{ fontSize: 12, lineHeight: 1.45 }}>Water at or under 6": kitchen and laundry appliance replacement is not justified at that flood level.</TableCell><TableCell sx={{ fontSize: 12 }}>Sum of appliance line items (refrigerator, dishwasher, stove, washer, dryer, etc.)</TableCell><TableCell><SrcPill type="xml" /></TableCell></TableRow>
+                <TableRow><TableCell><strong>Appliances — Higher Water (≥ 7")</strong></TableCell><TableCell sx={{ fontSize: 12, lineHeight: 1.45 }}>At 7"+ water level: validates whether the specific appliance types in the estimate are justified given the flood depth.</TableCell><TableCell sx={{ fontSize: 12 }}>Sum of appliance line items</TableCell><TableCell><SrcPill type="xml" /></TableCell></TableRow>
+                <TableRow><TableCell><strong>Appliance Pricing</strong></TableCell><TableCell sx={{ fontSize: 12, lineHeight: 1.45 }}>Appliance price in the estimate exceeds market price by more than 15% — excess over the market price threshold is flagged.</TableCell><TableCell sx={{ fontSize: 12 }}>Sum of over-priced appliance line items</TableCell><TableCell><SrcPill type="xml" /></TableCell></TableRow>
+                <TableRow><TableCell><strong>AC Tonnage</strong></TableCell><TableCell sx={{ fontSize: 12, lineHeight: 1.45 }}>AC tonnage in the estimate description does not match the unit model number — flags potential incorrect unit size and pricing.</TableCell><TableCell sx={{ fontSize: 12 }}>Sum of flagged HVAC / AC unit line items</TableCell><TableCell><SrcPill type="xml" /></TableCell></TableRow>
+                <TableRow><TableCell><strong>Door Count</strong></TableCell><TableCell sx={{ fontSize: 12, lineHeight: 1.45 }}>Door replacements per section exceed the number of door openings documented in the inspection report.</TableCell><TableCell sx={{ fontSize: 12 }}>Sum of over-counted door line items</TableCell><TableCell><SrcPill type="xml" /></TableCell></TableRow>
+                <TableRow><TableCell><strong>Window Count</strong></TableCell><TableCell sx={{ fontSize: 12, lineHeight: 1.45 }}>Window replacements per section exceed the number of window openings documented in the inspection report.</TableCell><TableCell sx={{ fontSize: 12 }}>Sum of over-counted window line items</TableCell><TableCell><SrcPill type="xml" /></TableCell></TableRow>
+                <TableRow><TableCell><strong>Square Footage</strong></TableCell><TableCell sx={{ fontSize: 12, lineHeight: 1.45 }}>Square footage in the estimate compared against the Valuation Report. If the estimate overstates the area, all line-item costs are proportionally inflated.</TableCell><TableCell sx={{ fontSize: 12 }}>(Estimate sqft − Valuation sqft) ÷ Estimate sqft × RCV total</TableCell><TableCell><SrcPill type="xml" /></TableCell></TableRow>
+
+                {/* Category 4 */}
+                <TableRow sx={catRowSx}><TableCell colSpan={4}>Category 4 — Policy &amp; Proof of Loss Financials</TableCell></TableRow>
+                <TableRow><TableCell><strong>Special Limits</strong></TableCell><TableCell sx={{ fontSize: 12, lineHeight: 1.45 }}>Special limits section (Contents / Personal Property) exceeds the $2,500 RCV policy cap. Aggregate amount above the cap is flagged.</TableCell><TableCell sx={{ fontSize: 12 }}>Aggregate special limits amount from estimate</TableCell><TableCell><SrcPill type="both" /></TableCell></TableRow>
+                <TableRow><TableCell><strong>Advance Payment</strong></TableCell><TableCell sx={{ fontSize: 12, lineHeight: 1.45 }}>Estimate total may exceed advances already paid for Coverage A or B — flags potential double-payment exposure.</TableCell><TableCell sx={{ fontSize: 12 }}>Net claim total from estimate summary</TableCell><TableCell><SrcPill type="both" /></TableCell></TableRow>
+                <TableRow><TableCell><strong>Deductible</strong></TableCell><TableCell sx={{ fontSize: 12, lineHeight: 1.45 }}>Correct flood deductible applied in the Proof of Loss? Missing or incorrect deductible means the claim was overpaid by that amount.</TableCell><TableCell sx={{ fontSize: 12 }}>Deductible amount from Proof of Loss / estimate</TableCell><TableCell><SrcPill type="both" /></TableCell></TableRow>
+                <TableRow><TableCell><strong>Price List Date</strong></TableCell><TableCell sx={{ fontSize: 12, lineHeight: 1.45 }}>Price list date in the estimate does not match the date of loss. Wrong price list means the entire estimate may be mispriced — full RCV is flagged as the upper-bound exposure.</TableCell><TableCell sx={{ fontSize: 12 }}>Full replacement cost value (RCV) from estimate totals</TableCell><TableCell><SrcPill type="both" /></TableCell></TableRow>
+                <TableRow><TableCell><strong>Window Replacement Justification</strong></TableCell><TableCell sx={{ fontSize: 12, lineHeight: 1.45 }}>Window replacement in the estimate requires supporting justification from adjuster notes, or is flagged for over-counting against documented openings.</TableCell><TableCell sx={{ fontSize: 12 }}>Sum of window line items flagged</TableCell><TableCell><SrcPill type="xml" /></TableCell></TableRow>
+
+                {/* Category 5 */}
+                <TableRow sx={catRowSx}><TableCell colSpan={4}>Category 5 — Sales Tax</TableCell></TableRow>
+                <TableRow><TableCell><strong>Sales Tax</strong></TableCell><TableCell sx={{ fontSize: 12, lineHeight: 1.45 }}>Sales tax applied in the estimate for a potentially tax-exempt property — full sales tax amount may be recoverable.</TableCell><TableCell sx={{ fontSize: 12 }}>Total sales tax amount from estimate</TableCell><TableCell><SrcPill type="both" /></TableCell></TableRow>
+              </TableBody>
+            </Table>
+          </TableContainer>
         </Box>
-        <Typography variant="subtitle1" fontWeight={600} gutterBottom>Checks Performed &amp; Dollar Mapping</Typography>
-        <TableContainer component={Paper} variant="outlined" sx={{ mb: 2.5 }}>
-          <Table size="small">
-            <TableHead>
-              <TableRow sx={{ bgcolor: 'action.hover' }}>
-                <TableCell sx={{ fontWeight: 600, width: '28%' }}>Check</TableCell>
-                <TableCell sx={{ fontWeight: 600, width: '44%' }}>What Is Verified</TableCell>
-                <TableCell sx={{ fontWeight: 600, width: '16%' }}>Amount Source</TableCell>
-                <TableCell sx={{ fontWeight: 600, width: '12%' }}>Data Path</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              <TableRow sx={catRowSx}><TableCell colSpan={4}>Category 1 — Depreciation</TableCell></TableRow>
-              <TableRow><TableCell><strong>Recoverable Depreciation</strong></TableCell><TableCell>Does the policy qualify for RCV payout?</TableCell><TableCell>Recoverable depreciation held amount</TableCell><TableCell><SrcPill type="both" /></TableCell></TableRow>
-              <TableRow><TableCell><strong>RCBAP — Non-Recoverable Depreciation</strong></TableCell><TableCell>For RCBAP claims: verifies "less depreciation (non-recoverable)" is selected.</TableCell><TableCell>Recoverable depreciation held amount</TableCell><TableCell><SrcPill type="both" /></TableCell></TableRow>
-              <TableRow><TableCell><strong>Non-Recoverable Items</strong></TableCell><TableCell>Items such as carpet must be paid at ACV only.</TableCell><TableCell>Non-recoverable depreciation amount</TableCell><TableCell><SrcPill type="both" /></TableCell></TableRow>
-              <TableRow><TableCell><strong>Personal Property Depreciation</strong></TableCell><TableCell>Personal property marked recoverable when it should be non-recoverable.</TableCell><TableCell>Depreciation on personal property marked recoverable</TableCell><TableCell><SrcPill type="xml" /></TableCell></TableRow>
-              <TableRow sx={catRowSx}><TableCell colSpan={4}>Category 2 — Overhead &amp; Profit</TableCell></TableRow>
-              <TableRow><TableCell><strong>Overhead &amp; Profit</strong></TableCell><TableCell>Does the policy type qualify for O&amp;P? Profit step before Tax?</TableCell><TableCell>Overhead + Profit from estimate totals</TableCell><TableCell><SrcPill type="both" /></TableCell></TableRow>
-              <TableRow sx={catRowSx}><TableCell colSpan={4}>Category 3 — Estimate Parameters</TableCell></TableRow>
-              <TableRow><TableCell><strong>Waterline / Door &amp; Electronics</strong></TableCell><TableCell>Water line under 38": door locks, TVs, computers not justified.</TableCell><TableCell>Sum of door lock, TV, computer line items</TableCell><TableCell><SrcPill type="xml" /></TableCell></TableRow>
-              <TableRow><TableCell><strong>Waterline / Electrical Outlets</strong></TableCell><TableCell>Water line under 16": outlet replacement not justified.</TableCell><TableCell>Sum of electrical outlet line items</TableCell><TableCell><SrcPill type="xml" /></TableCell></TableRow>
-              <TableRow><TableCell><strong>Bathroom Electrical Outlets</strong></TableCell><TableCell>Water line under 32": bathroom outlet replacement not justified.</TableCell><TableCell>Sum of bathroom outlet line items</TableCell><TableCell><SrcPill type="xml" /></TableCell></TableRow>
-              <TableRow><TableCell><strong>Upper Cabinets</strong></TableCell><TableCell>Water line under 48": upper cabinet replacement not justified.</TableCell><TableCell>Sum of upper/wall cabinet line items</TableCell><TableCell><SrcPill type="xml" /></TableCell></TableRow>
-              <TableRow><TableCell><strong>Appliances — Low Water (≤ 6")</strong></TableCell><TableCell>Water at or under 6": appliance replacement not justified.</TableCell><TableCell>Sum of appliance line items</TableCell><TableCell><SrcPill type="xml" /></TableCell></TableRow>
-              <TableRow><TableCell><strong>Appliances — Higher Water (≥ 7")</strong></TableCell><TableCell>At 7"+ water level: validates specific appliance types justified.</TableCell><TableCell>Sum of appliance line items</TableCell><TableCell><SrcPill type="xml" /></TableCell></TableRow>
-              <TableRow><TableCell><strong>Appliance Pricing</strong></TableCell><TableCell>Price exceeds market price by more than 15%.</TableCell><TableCell>Sum of over-priced appliance line items</TableCell><TableCell><SrcPill type="xml" /></TableCell></TableRow>
-              <TableRow><TableCell><strong>AC Tonnage</strong></TableCell><TableCell>AC tonnage doesn't match unit model number.</TableCell><TableCell>Sum of flagged HVAC line items</TableCell><TableCell><SrcPill type="xml" /></TableCell></TableRow>
-              <TableRow><TableCell><strong>Door Count</strong></TableCell><TableCell>Door replacements exceed documented door openings.</TableCell><TableCell>Sum of over-counted door line items</TableCell><TableCell><SrcPill type="xml" /></TableCell></TableRow>
-              <TableRow><TableCell><strong>Window Count</strong></TableCell><TableCell>Window replacements exceed documented window openings.</TableCell><TableCell>Sum of over-counted window line items</TableCell><TableCell><SrcPill type="xml" /></TableCell></TableRow>
-              <TableRow><TableCell><strong>Square Footage</strong></TableCell><TableCell>Estimate overstates area vs Valuation Report.</TableCell><TableCell>(Estimate sqft − Valuation sqft) ÷ Estimate sqft × RCV</TableCell><TableCell><SrcPill type="xml" /></TableCell></TableRow>
-              <TableRow sx={catRowSx}><TableCell colSpan={4}>Category 4 — Policy &amp; Proof of Loss Financials</TableCell></TableRow>
-              <TableRow><TableCell><strong>Special Limits</strong></TableCell><TableCell>Special limits exceed the $2,500 RCV policy cap.</TableCell><TableCell>Aggregate special limits amount</TableCell><TableCell><SrcPill type="both" /></TableCell></TableRow>
-              <TableRow><TableCell><strong>Advance Payment</strong></TableCell><TableCell>Estimate may exceed advances already paid.</TableCell><TableCell>Net claim total from estimate</TableCell><TableCell><SrcPill type="both" /></TableCell></TableRow>
-              <TableRow><TableCell><strong>Deductible</strong></TableCell><TableCell>Correct flood deductible applied in Proof of Loss?</TableCell><TableCell>Deductible amount from POL / estimate</TableCell><TableCell><SrcPill type="both" /></TableCell></TableRow>
-              <TableRow><TableCell><strong>Price List Date</strong></TableCell><TableCell>Price list date doesn't match date of loss.</TableCell><TableCell>Full RCV from estimate totals</TableCell><TableCell><SrcPill type="both" /></TableCell></TableRow>
-              <TableRow><TableCell><strong>Window Replacement Justification</strong></TableCell><TableCell>Window replacement requires supporting justification.</TableCell><TableCell>Sum of flagged window line items</TableCell><TableCell><SrcPill type="xml" /></TableCell></TableRow>
-              <TableRow sx={catRowSx}><TableCell colSpan={4}>Category 5 — Sales Tax</TableCell></TableRow>
-              <TableRow><TableCell><strong>Sales Tax</strong></TableCell><TableCell>Sales tax applied for a potentially tax-exempt property.</TableCell><TableCell>Total sales tax from estimate</TableCell><TableCell><SrcPill type="both" /></TableCell></TableRow>
-            </TableBody>
-          </Table>
-        </TableContainer>
-        <Typography variant="subtitle1" fontWeight={600} gutterBottom>What Is Not Included</Typography>
-        <Typography variant="body2" color="text.secondary">
-          Non-financial No Match flags — narrative date mismatches, carrier name inconsistencies, missing documents — contribute to the <em>No Match flag count</em> but carry <strong>no dollar amount</strong> and are excluded from the loss reduction total.
-        </Typography>
+
+        {/* ── What Is Not Included ── */}
+        <Box>
+          <SectionHead>What Is Not Included</SectionHead>
+          <Typography sx={{ fontSize: 13, color: 'text.primary', mb: 1, lineHeight: 1.6 }}>
+            Non-financial No Match flags — such as narrative date mismatches, carrier name inconsistencies, missing documents, or incorrect policy coverage fields — contribute to the <em>No Match flag count</em> but carry <strong>no dollar amount</strong> and are excluded from the loss reduction total.
+          </Typography>
+          <Typography sx={{ fontSize: 13, color: 'text.primary', mb: 1, lineHeight: 1.6 }}>
+            Item-level checks (waterline thresholds, door/window counts, appliances, upper cabinets, square footage) return <strong>$0</strong> when the claim is on the PDF fallback path — line-item cost data is only available from the Generic Rough Draft XML.
+          </Typography>
+          <Typography sx={{ fontSize: 13, color: 'text.primary', lineHeight: 1.6 }}>
+            <strong>6 additional checks</strong> are live in the model and counted in No Match totals but currently return <strong>$0</strong> in the loss reduction figure, pending data alignment: window replacement justification (note-field cross-reference), skirting in mobile homes (zone lookup), dumpster charge without EDN number, Method 1 drying unit price (FEMA rate table), serial number extraction, and sales tax exemption status (per-jurisdiction lookup).
+          </Typography>
+        </Box>
+
       </DialogContent>
     </Dialog>
   );
@@ -327,9 +365,11 @@ export default function Analytics() {
   const [lrError,   setLrError]   = useState(null);
 
   // Operational data
-  const [opStats,   setOpStats]   = useState(null);
-  const [opLoading, setOpLoading] = useState(true);
-  const [opError,   setOpError]   = useState(null);
+  const [opStats,       setOpStats]       = useState(null);
+  const [opLoading,     setOpLoading]     = useState(true);
+  const [opError,       setOpError]       = useState(null);
+  // Global (all-time) processing time — used by efficiency journey regardless of selected month
+  const [globalProcSecs, setGlobalProcSecs] = useState(null);
 
   // ── Load Loss Reduction data once on mount ─────────────────────────────────
   useEffect(() => {
@@ -352,6 +392,13 @@ export default function Analytics() {
         setLrLoading(false);
       })
       .catch(err => { setLrError(err.message || 'Failed to load analytics data'); setLrLoading(false); });
+  }, []);
+
+  // ── Load global (all-time) processing time once on mount for efficiency journey ──
+  useEffect(() => {
+    getOperationalStats(null)
+      .then(d => { if (d?.avg_processing_time_seconds != null) setGlobalProcSecs(d.avg_processing_time_seconds); })
+      .catch(() => {});
   }, []);
 
   // ── Load Operational data on mount + when month changes ───────────────────
@@ -763,11 +810,14 @@ export default function Analytics() {
   // ── EXECUTIVE TAB ──────────────────────────────────────────────────────────
   const renderExecutive = () => {
     const prev = opStats?.prev_month ?? null;
-    const procSecs = opStats?.avg_processing_time_seconds ?? null;
-    const reductionPct = procSecs != null
-      ? ((240 * 60 - procSecs) / (240 * 60) * 100).toFixed(1)
+    // Efficiency journey always uses the global all-time processing time (same regardless of month filter)
+    const journeyProcSecs = globalProcSecs ?? opStats?.avg_processing_time_seconds ?? null;
+    const reductionPct = journeyProcSecs != null
+      ? ((240 * 60 - journeyProcSecs) / (240 * 60) * 100).toFixed(1)
       : '98.3';
-    const currentTime = procSecs != null ? fmtTime(procSecs) : '~4 min';
+    const currentTime = journeyProcSecs != null ? fmtTime(journeyProcSecs) : '~4 min';
+    // Monthly processing time (for business impact formula note)
+    const procSecs = opStats?.avg_processing_time_seconds ?? journeyProcSecs;
 
     return (
       <Box>
