@@ -9,6 +9,7 @@ import {
   InfoOutlined as InfoIcon,
   ArrowBack as ArrowBackIcon,
   Close as CloseIcon,
+  PictureAsPdf as PdfIcon,
 } from '@mui/icons-material';
 import { useTheme } from '@mui/material/styles';
 import {
@@ -413,9 +414,17 @@ export default function Analytics() {
 
   // ── Derived LR values ──────────────────────────────────────────────────────
   const availableMonths = useMemo(() => {
-    const months = [...new Set(claims.map(c => c.processed_at?.slice(0, 7)).filter(Boolean))];
-    return months.sort().reverse();
-  }, [claims]);
+    // Always show Jan 2026 → current month, so all months appear regardless of computed_at coverage.
+    const now = new Date();
+    const all = [];
+    let y = 2026, m = 1;
+    while (y < now.getFullYear() || (y === now.getFullYear() && m <= now.getMonth() + 1)) {
+      all.push(`${y}-${String(m).padStart(2, '0')}`);
+      m++;
+      if (m > 12) { m = 1; y++; }
+    }
+    return all.reverse(); // newest first
+  }, []);
 
   const filteredClaims = useMemo(() => {
     if (filterMonth === 'all') return claims;
@@ -442,9 +451,13 @@ export default function Analytics() {
     const hoursSaved = Math.round(n * saveMin / 60);
     const fteMonths  = (hoursSaved / 160).toFixed(1);
     const costSaved  = hoursSaved * 35;
-    const annualProj = filterMonth === 'all' ? costSaved : costSaved * 12;
-    return { hoursSaved, fteMonths, costSaved, annualProj, saveMin: saveMin.toFixed(1), procSecs };
-  }, [displayAgg, filterMonth, opStats]);
+    const monthCount = Math.max(1, availableMonths.length);
+    // Projected Annual: for a specific month → that month × 12; for all-time → avg monthly × 12
+    const annualProj = filterMonth === 'all'
+      ? Math.round(costSaved / monthCount * 12)
+      : costSaved * 12;
+    return { hoursSaved, fteMonths, costSaved, annualProj, saveMin: saveMin.toFixed(1), procSecs, monthCount };
+  }, [displayAgg, filterMonth, opStats, availableMonths]);
 
   // ── Period selector ────────────────────────────────────────────────────────
   const periodSelector = (
@@ -826,19 +839,20 @@ export default function Analytics() {
           <Typography sx={{ fontSize: 14, fontWeight: 600, mb: 2 }}>
             The Efficiency Journey — Claims Processing Time per Claim
           </Typography>
-          <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', position: 'relative', px: 2 }}>
-            <Box sx={{ position: 'absolute', top: 28, left: 60, right: 60, height: 2, bgcolor: 'divider' }} />
-            <Box sx={{ position: 'absolute', top: 28, left: 60, width: '66%', height: 2, bgcolor: 'primary.main' }} />
+          <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', position: 'relative', px: 0, pt: '8px' }}>
+            {/* Gray base line, then teal fill on top — both full width, matching mockup */}
+            <Box sx={{ position: 'absolute', top: 28, left: 28, right: 28, height: 2, bgcolor: 'divider' }} />
+            <Box sx={{ position: 'absolute', top: 28, left: 28, right: 28, height: 2, bgcolor: 'primary.main' }} />
             {[
-              { n: '1', time: '4 hrs',  label: 'Before tool\nManual QA — baseline',  badge: 'Baseline',           badgeSx: { bgcolor: 'action.hover', color: 'text.secondary' }, dotSx: { bgcolor: 'action.hover', border: '2px solid', borderColor: 'divider', color: 'text.secondary' } },
-              { n: '2', time: '40 min', label: 'Early adoption\nPhase 1 deployment', badge: '−83% from baseline', badgeSx: { bgcolor: 'success.light', color: 'success.dark' },   dotSx: { bgcolor: 'action.hover', border: '2px solid', borderColor: 'divider', color: 'text.secondary' } },
-              { n: '3', time: currentTime, label: 'Today\nCurrent production',       badge: `−${reductionPct}% from baseline`, badgeSx: { bgcolor: 'success.light', color: 'success.dark' }, dotSx: { bgcolor: 'primary.main', color: '#fff', boxShadow: `0 0 0 4px ${theme.palette.primary.light}` } },
+              { n: '1', time: '4 hrs',     label: 'Before tool\nManual QA — baseline',  badge: 'Baseline',                        badgeSx: { bgcolor: 'rgba(0,0,0,0.06)', color: 'text.secondary' }, dotSx: { bgcolor: 'background.default', border: '2px solid', borderColor: 'divider', color: 'text.secondary' } },
+              { n: '2', time: '40 min',    label: 'Early adoption\nPhase 1 deployment', badge: '−83% from baseline',               badgeSx: { bgcolor: 'success.light', color: 'success.dark' },       dotSx: { bgcolor: 'background.default', border: '2px solid', borderColor: 'divider', color: 'text.secondary' } },
+              { n: '3', time: currentTime, label: 'Today\nCurrent production',          badge: `−${reductionPct}% from baseline`,  badgeSx: { bgcolor: 'success.light', color: 'success.dark' },       dotSx: { bgcolor: 'primary.main', color: '#fff', boxShadow: '0 0 0 4px rgba(91,155,152,0.15)' } },
             ].map((s, i) => (
-              <Box key={i} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.75, zIndex: 1, flex: 1 }}>
+              <Box key={i} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.75, position: 'relative', zIndex: 1, flex: 1 }}>
                 <Box sx={{ width: 56, height: 56, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 700, ...s.dotSx }}>
                   {s.n}
                 </Box>
-                <Typography sx={{ fontSize: 22, fontWeight: 700, color: i === 2 ? 'primary.main' : 'text.secondary' }}>
+                <Typography sx={{ fontSize: 22, fontWeight: 700, color: i === 2 ? 'primary.main' : 'text.secondary', textDecoration: 'none' }}>
                   {s.time}
                 </Typography>
                 <Typography sx={{ fontSize: 12, color: 'text.secondary', textAlign: 'center', lineHeight: 1.4, whiteSpace: 'pre-line' }}>
@@ -920,9 +934,11 @@ export default function Analytics() {
                 sub: 'At $35/hr (Admin configurable)',
               },
               {
-                label: filterMonth === 'all' ? 'Total Savings (All Time)' : 'Projected Annual Savings',
+                label: 'Projected Annual Savings',
                 value: fmt$(bizImpact.annualProj),
-                sub: filterMonth === 'all' ? 'Cumulative since deployment' : 'Based on current month run rate × 12',
+                sub: filterMonth === 'all'
+                  ? `Based on ${bizImpact.monthCount}-month avg run rate × 12`
+                  : 'Based on current month run rate × 12',
               },
             ].map((m, i, arr) => (
               <Box key={i} sx={{ flex: 1, borderRight: i < arr.length - 1 ? 1 : 0, borderColor: 'divider' }}>
@@ -1144,12 +1160,14 @@ export default function Analytics() {
   return (
     <Box sx={{ p: 3, maxWidth: 1300, mx: 'auto' }}>
       {/* Page header */}
-      <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 2 }}>
-        <Box>
-          <Typography variant="h5" fontWeight={600}>Analytics &amp; Operations</Typography>
-          <Typography variant="body2" color="text.secondary">Loss reduction metrics and operational performance</Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+        <Typography variant="h5" fontWeight={600}>Analytics Dashboard</Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Button variant="outlined" size="small" startIcon={<PdfIcon />} onClick={() => window.print()}>
+            Export as PDF
+          </Button>
+          {periodSelector}
         </Box>
-        {periodSelector}
       </Box>
 
       {/* Tabs — Operational first, Executive second (matches mockup) */}
