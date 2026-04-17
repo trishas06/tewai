@@ -10,6 +10,8 @@ import {
   Tab,
   Divider,
   Tooltip,
+  Select,
+  MenuItem,
   IconButton,
 } from "@mui/material";
 import {
@@ -48,6 +50,8 @@ function LossReport() {
   const [loading, setLoading] = useState(true);
   const location = useLocation();
   const rowData = location.state || {};
+  const source = rowData.source || "dashboard";
+  const isPropertyFiles = source === "propertyFiles";
   const [data, setData] = useState({
     reportName: rowData.loss_report_name || `Loss Report - ${claimNo}`,
     report_id: rowData.report_id,
@@ -57,6 +61,19 @@ function LossReport() {
   const [error, setError] = useState(null);
   const createdBlobUrl = useRef(null);
   const token = getToken();
+
+  const extractedFiles = isPropertyFiles
+    ? rowData.all_extracted_file_name || []
+    : [];
+
+  const hasFileOptions = extractedFiles.length > 0;
+
+  // ── Dropdown anchor & selected file state ──
+
+  const [selectedFile, setSelectedFile] = useState(null);
+
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const [pdfKey, setPdfKey] = useState(0);
 
   useEffect(() => {
     const fetchReportData = async () => {
@@ -75,25 +92,26 @@ function LossReport() {
           setLoading(false);
           return;
         }
-
-        const response = await fetch(
-          `${import.meta.env.VITE_API_BASE_URL}/get_pdf`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Accept: "application/pdf",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-              report_id: rowData.report_id,
-              report_name: rowData.loss_report_name,
-              ...(rowData.prelim_folder
-                ? { prelim_folder: rowData.prelim_folder }
-                : {}),
-            }),
+        const endpoint = isPropertyFiles
+          ? `${import.meta.env.VITE_API_BASE_URL}/get_property_document_pdf`
+          : `${import.meta.env.VITE_API_BASE_URL}/get_pdf`;
+        const response = await fetch(endpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/pdf",
+            Authorization: `Bearer ${token}`,
           },
-        );
+          body: JSON.stringify({
+            report_id: rowData.report_id,
+            report_name: isPropertyFiles
+              ? rowData.loss_report_combined
+              : rowData.loss_report_name,
+            ...(rowData.prelim_folder
+              ? { prelim_folder: rowData.prelim_folder }
+              : {}),
+          }),
+        });
 
         if (!response.ok) {
           throw new Error("Failed to fetch PDF");
@@ -154,6 +172,60 @@ function LossReport() {
     );
   };
 
+  const handleFileSelect = async (fileName) => {
+    if (fileName === selectedFile) return;
+
+    const cacheKey = `${rowData.report_id}_${fileName}`;
+
+    try {
+      setPdfLoading(true);
+      setError(null);
+      setSelectedFile(fileName);
+
+      // Use cache if available
+      if (pdfBlobCache.has(cacheKey)) {
+        setData((prev) => ({ ...prev, pdfUrl: pdfBlobCache.get(cacheKey) }));
+        setPdfKey((k) => k + 1);
+        setPdfLoading(false);
+        return;
+      }
+
+      const response = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL}/get_property_document_pdf`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/pdf",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            report_id: rowData.report_id,
+            report_name: fileName,
+            ...(rowData.prelim_folder
+              ? { prelim_folder: rowData.prelim_folder }
+              : {}),
+          }),
+        },
+      );
+
+      if (!response.ok) throw new Error("Failed to fetch PDF");
+
+      const pdfUrl = URL.createObjectURL(await response.blob());
+
+      pdfBlobCache.set(cacheKey, pdfUrl);
+
+      setData((prev) => ({ ...prev, pdfUrl }));
+      setPdfKey((k) => k + 1);
+    } catch (err) {
+      console.error("Error fetching selected PDF:", err);
+
+      setError("Failed to load the selected PDF. Please try again.");
+    } finally {
+      setPdfLoading(false);
+    }
+  };
+
   const renderPDFViewer = () => {
     if (error) {
       return (
@@ -186,7 +258,7 @@ function LossReport() {
           </Box>
         }
       >
-        <PDFViewerContent data={data} />
+        <PDFViewerContent key={pdfKey} data={data} />
       </Suspense>
     );
   };
@@ -230,7 +302,7 @@ function LossReport() {
           >
             <Tab label="Loss Report Analysis" />
             <Tab label="Report Summary" />
-            <Tab label="ChatBot" />
+            {!isPropertyFiles && <Tab label="ChatBot" />}
           </Tabs>
         </Box>
 
@@ -270,26 +342,52 @@ function LossReport() {
                 <Typography variant="h6" sx={{ fontWeight: 600 }}>
                   Loss Report
                 </Typography>
-                <Tooltip title="Open in new tab">
-                  {/* span wrapper keeps Tooltip working when button is disabled */}
-                  <span>
-                    <IconButton
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                  {isPropertyFiles && hasFileOptions && (
+                    <Select
                       size="small"
-                      onClick={handleOpenPdfNewTab}
-                      disabled={!data?.pdfUrl || loading}
-                      sx={{ color: "text.secondary" }}
+                      displayEmpty
+                      value={selectedFile || ""}
+                      onChange={(e) => handleFileSelect(e.target.value)}
+                      sx={{
+                        minWidth: 160,
+
+                        fontSize: "0.875rem",
+
+                        "& .MuiOutlinedInput-notchedOutline": {
+                          borderColor: "divider",
+                        },
+                      }}
+                      renderValue={(val) => val || "Select File"}
                     >
-                      <OpenInNewIcon fontSize="small" />
-                    </IconButton>
-                  </span>
-                </Tooltip>
+                      {extractedFiles.map((fileName) => (
+                        <MenuItem key={fileName} value={fileName}>
+                          {fileName}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  )}
+                  <Tooltip title="Open in new tab">
+                    {/* span wrapper keeps Tooltip working when button is disabled */}
+                    <span>
+                      <IconButton
+                        size="small"
+                        onClick={handleOpenPdfNewTab}                
+                        disabled={!data?.pdfUrl || loading || pdfLoading}
+                        sx={{ color: "text.secondary" }}
+                      >
+                        <OpenInNewIcon fontSize="small" />
+                      </IconButton>
+                    </span>
+                  </Tooltip>
+                </Box>
               </Box>
 
               <Divider sx={{ mb: 1, flexShrink: 0 }} />
 
               {/* Scrollable PDF content */}
               <Box sx={{ flex: 1, overflow: "auto" }}>
-                {loading ? (
+                {loading || pdfLoading ? (
                   <Box
                     sx={{ display: "flex", justifyContent: "center", mt: 4 }}
                   >
@@ -364,9 +462,11 @@ function LossReport() {
         </TabPanel>
 
         {/* ── Tab 2: ChatBot ── */}
-        <TabPanel value={activeTab} index={2}>
-          <ChatBot reportId={data?.report_id} userId />
-        </TabPanel>
+        {!isPropertyFiles && (
+          <TabPanel value={activeTab} index={2}>
+            <ChatBot reportId={data?.report_id} userId />
+          </TabPanel>
+        )}
       </Paper>
     </Box>
   );

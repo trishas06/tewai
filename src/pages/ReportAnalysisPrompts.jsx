@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect, useContext } from "react";
 import {
   Box,
   Paper,
@@ -22,7 +22,7 @@ import {
   Fab,
   Alert,
   Tooltip,
-} from '@mui/material';
+} from "@mui/material";
 import {
   ExpandMore as ExpandMoreIcon,
   North as MoveUpIcon,
@@ -36,12 +36,13 @@ import {
   Info as InfoIcon,
   Close as CloseIcon,
   QuestionAnswer as QuestionAnswerIcon,
-} from '@mui/icons-material';
-import axiosInstance from '../utils/axiosInstance';
-import SuccessPopup from '../components/SuccessPopup';
-import { UserRoleContext } from '../components/layout/AuthLayout';
+} from "@mui/icons-material";
+import axiosInstance from "../utils/axiosInstance";
+import SuccessPopup from "../components/SuccessPopup";
+import { UserRoleContext } from "../components/layout/AuthLayout";
 
-function ReportAnalysisPrompts() {
+function ReportAnalysisPrompts(source) {
+  const isProperty = source?.source === "property";
   const [data, setData] = useState([]);
   const [backupData, setBackupData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -51,11 +52,11 @@ function ReportAnalysisPrompts() {
   const [openPromptDialog, setOpenPromptDialog] = useState(false);
   const [openCategoryDialog, setOpenCategoryDialog] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(null);
-  const [newPrompt, setNewPrompt] = useState('');
-  const [newPromptOrder, setNewPromptOrder] = useState('');
-  const [newCategory, setNewCategory] = useState('');
-  const [newCategoryOrder, setNewCategoryOrder] = useState('');
-  const [validationError, setValidationError] = useState('');
+  const [newPrompt, setNewPrompt] = useState("");
+  const [newPromptOrder, setNewPromptOrder] = useState("");
+  const [newCategory, setNewCategory] = useState("");
+  const [newCategoryOrder, setNewCategoryOrder] = useState("");
+  const [validationError, setValidationError] = useState("");
   const [newlyAddedCategories, setNewlyAddedCategories] = useState(new Set());
   const [openInfoDialog, setOpenInfoDialog] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
@@ -72,7 +73,8 @@ function ReportAnalysisPrompts() {
   useEffect(() => {
     const fetchPrompts = async () => {
       try {
-        const response = await axiosInstance.get('/get_prompts');
+        const endpoint = isProperty ? "/get_prompts_property" : "/get_prompts";
+        const response = await axiosInstance.get(endpoint);
         // Map the response data to match our component's structure
         const formattedData = response.data.question_answer.map((item) => ({
           id: generateUniqueId(), // Generate unique id instead of using order
@@ -91,7 +93,7 @@ function ReportAnalysisPrompts() {
         setData(formattedData);
         setLoading(false);
       } catch {
-        setError('Failed to load prompts. Please try again later.');
+        setError("Failed to load prompts. Please try again later.");
         setLoading(false);
       }
     };
@@ -102,7 +104,7 @@ function ReportAnalysisPrompts() {
   // Calculate if all items are enabled
   const isAllEnabled = data.every(
     (category) =>
-      category.enabled && category.prompts.every((prompt) => prompt.enabled)
+      category.enabled && category.prompts.every((prompt) => prompt.enabled),
   );
 
   const handleToggleAll = () => {
@@ -123,7 +125,7 @@ function ReportAnalysisPrompts() {
 
   const handleMoveCategory = (categoryIndex, direction) => {
     const newData = [...data];
-    if (direction === 'up' && categoryIndex > 0) {
+    if (direction === "up" && categoryIndex > 0) {
       // Swap categories
       [newData[categoryIndex], newData[categoryIndex - 1]] = [
         newData[categoryIndex - 1],
@@ -132,7 +134,7 @@ function ReportAnalysisPrompts() {
       // Update orders
       newData[categoryIndex].order = categoryIndex + 1;
       newData[categoryIndex - 1].order = categoryIndex;
-    } else if (direction === 'down' && categoryIndex < newData.length - 1) {
+    } else if (direction === "down" && categoryIndex < newData.length - 1) {
       // Swap categories
       [newData[categoryIndex], newData[categoryIndex + 1]] = [
         newData[categoryIndex + 1],
@@ -163,7 +165,7 @@ function ReportAnalysisPrompts() {
     const category = newData[categoryIndex];
     const prompts = [...category.prompts];
 
-    if (direction === 'up' && promptIndex > 0) {
+    if (direction === "up" && promptIndex > 0) {
       // Swap prompts
       [prompts[promptIndex], prompts[promptIndex - 1]] = [
         prompts[promptIndex - 1],
@@ -172,7 +174,7 @@ function ReportAnalysisPrompts() {
       // Update orders
       prompts[promptIndex].order = promptIndex + 1;
       prompts[promptIndex - 1].order = promptIndex;
-    } else if (direction === 'down' && promptIndex < prompts.length - 1) {
+    } else if (direction === "down" && promptIndex < prompts.length - 1) {
       // Swap prompts
       [prompts[promptIndex], prompts[promptIndex + 1]] = [
         prompts[promptIndex + 1],
@@ -214,7 +216,7 @@ function ReportAnalysisPrompts() {
     // Create a deep copy of current data as backup
     setBackupData(JSON.parse(JSON.stringify(data)));
     setIsEditing(true);
-    setValidationError('');
+    setValidationError("");
     setNewlyAddedCategories(new Set());
   };
 
@@ -228,8 +230,8 @@ function ReportAnalysisPrompts() {
     if (categoriesWithNoPrompts.length > 0) {
       setValidationError(
         `Please add at least one prompt to the following categories: ${categoriesWithNoPrompts.join(
-          ', '
-        )}`
+          ", ",
+        )}`,
       );
       return;
     }
@@ -245,23 +247,23 @@ function ReportAnalysisPrompts() {
             order: prompt.order,
             question: prompt.question,
             execution_mode: prompt.execution_mode,
-            type: prompt.type || 'text', // Use existing type or default to 'text'
+            type: prompt.type || "text", // Use existing type or default to 'text'
           })),
         })),
       };
-
+      const endpoint = isProperty ? "/update_default_prompts_property" : "/update_default_prompts";
       // Make API call to update prompts
-      await axiosInstance.post('/update_default_prompts', formattedData);
+      await axiosInstance.post(endpoint, formattedData);
 
       // Clear backup as we're committing the changes
       setBackupData(null);
       setIsEditing(false);
-      setValidationError('');
+      setValidationError("");
       setNewlyAddedCategories(new Set());
       setShowSuccessPopup(true);
     } catch (err) {
-      setValidationError('Failed to save changes. Please try again.');
-      console.error('Error saving prompts:', err);
+      setValidationError("Failed to save changes. Please try again.");
+      console.error("Error saving prompts:", err);
     }
   };
 
@@ -272,7 +274,7 @@ function ReportAnalysisPrompts() {
       setBackupData(null);
     }
     setIsEditing(false);
-    setValidationError('');
+    setValidationError("");
     setNewlyAddedCategories(new Set());
     setExpandedCategory(null); // Close any open accordions
   };
@@ -284,8 +286,8 @@ function ReportAnalysisPrompts() {
 
   const handlePromptDialogClose = () => {
     setOpenPromptDialog(false);
-    setNewPrompt('');
-    setNewPromptOrder('');
+    setNewPrompt("");
+    setNewPromptOrder("");
     setSelectedCategory(null);
     setEditingPrompt(null);
   };
@@ -296,8 +298,8 @@ function ReportAnalysisPrompts() {
 
   const handleCategoryDialogClose = () => {
     setOpenCategoryDialog(false);
-    setNewCategory('');
-    setNewCategoryOrder('');
+    setNewCategory("");
+    setNewCategoryOrder("");
     setEditingCategory(null);
   };
 
@@ -417,8 +419,8 @@ function ReportAnalysisPrompts() {
               question: newPrompt.trim(),
               enabled: true,
               order: parseInt(newPromptOrder) || prompts.length + 1,
-              type: 'text',
-              execution_mode: 'sequential',
+              type: "text",
+              execution_mode: "sequential",
             };
 
             // Insert at specific position or append
@@ -489,7 +491,7 @@ function ReportAnalysisPrompts() {
   // Add loading and error states to the UI
   if (loading) {
     return (
-      <Box sx={{ p: 3, textAlign: 'center' }}>
+      <Box sx={{ p: 3, textAlign: "center" }}>
         <Typography>Loading prompts...</Typography>
       </Box>
     );
@@ -508,21 +510,32 @@ function ReportAnalysisPrompts() {
       <Paper sx={{ p: 2, mb: 2 }}>
         <Box
           sx={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
             mb: 2,
           }}
         >
           <Box>
+            {isProperty && (
+              <>
+                {" "}
+                <Typography
+                  variant="subtitle1"
+                  sx={{ fontWeight: "bold" }}
+                >
+                  Property Loss Report Analysis Prompts
+                </Typography>
+              </>
+            )}
             <Typography variant="body2" color="text.secondary">
               Manage categories and prompts for the final loss report analysis
             </Typography>
           </Box>
-          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-            {isEditing && userRole !== 'Adjuster' && (
+          <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+            {isEditing && userRole !== "Adjuster" && (
               <>
-                <Box sx={{ display: 'flex', alignItems: 'center', mr: 2 }}>
+                <Box sx={{ display: "flex", alignItems: "center", mr: 2 }}>
                   <Switch
                     checked={isAllEnabled}
                     onChange={handleToggleAll}
@@ -541,16 +554,16 @@ function ReportAnalysisPrompts() {
                 </Button>
               </>
             )}
-            {userRole !== 'Adjuster' && (
+            {userRole !== "Adjuster" && (
               <Button
                 variant="contained"
                 startIcon={isEditing ? <SaveIcon /> : <EditIcon />}
                 onClick={isEditing ? handleSave : handleEditClick}
               >
-                {isEditing ? 'Save' : 'Edit'}
+                {isEditing ? "Save" : "Edit"}
               </Button>
             )}
-            {isEditing && userRole !== 'Adjuster' && (
+            {isEditing && userRole !== "Adjuster" && (
               <Button
                 variant="contained"
                 startIcon={<AddIcon />}
@@ -577,12 +590,12 @@ function ReportAnalysisPrompts() {
             sx={{
               mb: 1,
               opacity: section.enabled ? 1 : 0.6,
-              transition: 'opacity 0.2s ease-in-out',
+              transition: "opacity 0.2s ease-in-out",
               ...(newlyAddedCategories.has(section.id) &&
                 section.prompts.length === 0 && {
-                  borderColor: 'error.main',
+                  borderColor: "error.main",
                   borderWidth: 1,
-                  borderStyle: 'solid',
+                  borderStyle: "solid",
                 }),
             }}
           >
@@ -591,58 +604,58 @@ function ReportAnalysisPrompts() {
               aria-controls={`${section.category}-content`}
               id={`${section.category}-header`}
               sx={{
-                '& .MuiAccordionSummary-content': {
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
+                "& .MuiAccordionSummary-content": {
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
                   mr: 2,
                 },
               }}
             >
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                 {isEditing && (
                   <Box
                     sx={{
-                      display: 'flex',
+                      display: "flex",
                       gap: 1,
-                      alignItems: 'center',
+                      alignItems: "center",
                     }}
                   >
-                    <Tooltip title={categoryIndex === 0 ? '' : 'Move Up'}>
+                    <Tooltip title={categoryIndex === 0 ? "" : "Move Up"}>
                       <span>
                         <IconButton
                           size="small"
                           disabled={categoryIndex === 0}
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleMoveCategory(categoryIndex, 'up');
+                            handleMoveCategory(categoryIndex, "up");
                           }}
                           sx={{
                             bgcolor:
                               categoryIndex === 0
-                                ? 'action.disabledBackground'
-                                : 'primary.main',
+                                ? "action.disabledBackground"
+                                : "primary.main",
                             width: 24,
                             height: 24,
-                            '&:hover': {
+                            "&:hover": {
                               bgcolor:
                                 categoryIndex === 0
-                                  ? 'action.disabledBackground'
-                                  : 'primary.dark',
+                                  ? "action.disabledBackground"
+                                  : "primary.dark",
                             },
-                            '&.Mui-disabled': {
-                              bgcolor: 'action.disabledBackground',
+                            "&.Mui-disabled": {
+                              bgcolor: "action.disabledBackground",
                             },
                           }}
                         >
-                          <PromptUpIcon sx={{ fontSize: 16, color: 'white' }} />
+                          <PromptUpIcon sx={{ fontSize: 16, color: "white" }} />
                         </IconButton>
                       </span>
                     </Tooltip>
 
                     <Tooltip
                       title={
-                        categoryIndex === data.length - 1 ? '' : 'Move Down'
+                        categoryIndex === data.length - 1 ? "" : "Move Down"
                       }
                     >
                       <span>
@@ -651,28 +664,28 @@ function ReportAnalysisPrompts() {
                           disabled={categoryIndex === data.length - 1}
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleMoveCategory(categoryIndex, 'down');
+                            handleMoveCategory(categoryIndex, "down");
                           }}
                           sx={{
                             bgcolor:
                               categoryIndex === data.length - 1
-                                ? 'action.disabledBackground'
-                                : 'primary.main',
+                                ? "action.disabledBackground"
+                                : "primary.main",
                             width: 24,
                             height: 24,
-                            '&:hover': {
+                            "&:hover": {
                               bgcolor:
                                 categoryIndex === data.length - 1
-                                  ? 'action.disabledBackground'
-                                  : 'primary.dark',
+                                  ? "action.disabledBackground"
+                                  : "primary.dark",
                             },
-                            '&.Mui-disabled': {
-                              bgcolor: 'action.disabledBackground',
+                            "&.Mui-disabled": {
+                              bgcolor: "action.disabledBackground",
                             },
                           }}
                         >
                           <PromptDownIcon
-                            sx={{ fontSize: 16, color: 'white' }}
+                            sx={{ fontSize: 16, color: "white" }}
                           />
                         </IconButton>
                       </span>
@@ -682,14 +695,14 @@ function ReportAnalysisPrompts() {
                 <Typography
                   fontWeight="medium"
                   sx={{
-                    color: !section.enabled ? 'text.disabled' : 'text.primary',
+                    color: !section.enabled ? "text.disabled" : "text.primary",
                   }}
                 >
                   {section.category}
                 </Typography>
               </Box>
               {isEditing && (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                   <Tooltip title="Edit Category">
                     <IconButton
                       size="small"
@@ -698,9 +711,9 @@ function ReportAnalysisPrompts() {
                         handleEditCategory(section);
                       }}
                       sx={{
-                        color: 'primary.main',
-                        '&:hover': {
-                          bgcolor: 'primary.lighter',
+                        color: "primary.main",
+                        "&:hover": {
+                          bgcolor: "primary.lighter",
                         },
                       }}
                     >
@@ -718,9 +731,9 @@ function ReportAnalysisPrompts() {
                       size="small"
                       onClick={(e) => handleDeleteCategory(categoryIndex, e)}
                       sx={{
-                        color: 'error.main',
-                        '&:hover': {
-                          bgcolor: 'error.lighter',
+                        color: "error.main",
+                        "&:hover": {
+                          bgcolor: "error.lighter",
                         },
                       }}
                     >
@@ -737,24 +750,24 @@ function ReportAnalysisPrompts() {
                     key={prompt.id}
                     sx={{
                       mb: 1,
-                      bgcolor: 'background.default',
+                      bgcolor: "background.default",
                       borderRadius: 1,
                       opacity: prompt.enabled ? 1 : 0.6,
-                      '&:hover': {
-                        bgcolor: 'action.hover',
+                      "&:hover": {
+                        bgcolor: "action.hover",
                       },
                     }}
                   >
                     {isEditing && (
                       <Box
                         sx={{
-                          display: 'flex',
+                          display: "flex",
                           gap: 1,
-                          alignItems: 'center',
+                          alignItems: "center",
                           mr: 2,
                         }}
                       >
-                        <Tooltip title={promptIndex === 0 ? '' : 'Move Up'}>
+                        <Tooltip title={promptIndex === 0 ? "" : "Move Up"}>
                           <span>
                             <IconButton
                               size="small"
@@ -763,29 +776,29 @@ function ReportAnalysisPrompts() {
                                 handleMovePrompt(
                                   categoryIndex,
                                   promptIndex,
-                                  'up'
+                                  "up",
                                 )
                               }
                               sx={{
                                 bgcolor:
                                   promptIndex === 0
-                                    ? 'action.disabledBackground'
-                                    : 'primary.main',
+                                    ? "action.disabledBackground"
+                                    : "primary.main",
                                 width: 24,
                                 height: 24,
-                                '&:hover': {
+                                "&:hover": {
                                   bgcolor:
                                     promptIndex === 0
-                                      ? 'action.disabledBackground'
-                                      : 'primary.dark',
+                                      ? "action.disabledBackground"
+                                      : "primary.dark",
                                 },
-                                '&.Mui-disabled': {
-                                  bgcolor: 'action.disabledBackground',
+                                "&.Mui-disabled": {
+                                  bgcolor: "action.disabledBackground",
                                 },
                               }}
                             >
                               <PromptUpIcon
-                                sx={{ fontSize: 16, color: 'white' }}
+                                sx={{ fontSize: 16, color: "white" }}
                               />
                             </IconButton>
                           </span>
@@ -794,8 +807,8 @@ function ReportAnalysisPrompts() {
                         <Tooltip
                           title={
                             promptIndex === section.prompts.length - 1
-                              ? ''
-                              : 'Move Down'
+                              ? ""
+                              : "Move Down"
                           }
                         >
                           <span>
@@ -808,48 +821,48 @@ function ReportAnalysisPrompts() {
                                 handleMovePrompt(
                                   categoryIndex,
                                   promptIndex,
-                                  'down'
+                                  "down",
                                 )
                               }
                               sx={{
                                 bgcolor:
                                   promptIndex === section.prompts.length - 1
-                                    ? 'action.disabledBackground'
-                                    : 'primary.main',
+                                    ? "action.disabledBackground"
+                                    : "primary.main",
                                 width: 24,
                                 height: 24,
-                                '&:hover': {
+                                "&:hover": {
                                   bgcolor:
                                     promptIndex === section.prompts.length - 1
-                                      ? 'action.disabledBackground'
-                                      : 'primary.dark',
+                                      ? "action.disabledBackground"
+                                      : "primary.dark",
                                 },
-                                '&.Mui-disabled': {
-                                  bgcolor: 'action.disabledBackground',
+                                "&.Mui-disabled": {
+                                  bgcolor: "action.disabledBackground",
                                 },
                               }}
                             >
                               <PromptDownIcon
-                                sx={{ fontSize: 16, color: 'white' }}
+                                sx={{ fontSize: 16, color: "white" }}
                               />
                             </IconButton>
                           </span>
                         </Tooltip>
                       </Box>
                     )}
-                    <QuestionAnswerIcon sx={{ mr: 2, color: 'primary.main' }} />
+                    <QuestionAnswerIcon sx={{ mr: 2, color: "primary.main" }} />
                     <ListItemText
                       primary={prompt.question}
                       primaryTypographyProps={{
-                        variant: 'body2',
+                        variant: "body2",
                         color: prompt.enabled
-                          ? 'text.primary'
-                          : 'text.disabled',
+                          ? "text.primary"
+                          : "text.disabled",
                       }}
                     />
                     {isEditing && (
                       <Box
-                        sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
                       >
                         <Tooltip title="Edit Prompt">
                           <IconButton
@@ -858,9 +871,9 @@ function ReportAnalysisPrompts() {
                               handleEditPrompt(section.category, prompt)
                             }
                             sx={{
-                              color: 'primary.main',
-                              '&:hover': {
-                                bgcolor: 'primary.lighter',
+                              color: "primary.main",
+                              "&:hover": {
+                                bgcolor: "primary.lighter",
                               },
                             }}
                           >
@@ -881,9 +894,9 @@ function ReportAnalysisPrompts() {
                               handleDeletePrompt(categoryIndex, promptIndex)
                             }
                             sx={{
-                              color: 'error.main',
-                              '&:hover': {
-                                bgcolor: 'error.lighter',
+                              color: "error.main",
+                              "&:hover": {
+                                bgcolor: "error.lighter",
                               },
                             }}
                           >
@@ -917,28 +930,28 @@ function ReportAnalysisPrompts() {
         onClose={handleInfoDialogClose}
         PaperProps={{
           sx: {
-            width: '100%',
+            width: "100%",
             maxWidth: 600,
             borderRadius: 1,
-            '& .MuiDialogTitle-root': {
-              borderBottom: '1px solid',
-              borderColor: 'divider',
-              bgcolor: 'background.default',
+            "& .MuiDialogTitle-root": {
+              borderBottom: "1px solid",
+              borderColor: "divider",
+              bgcolor: "background.default",
             },
           },
         }}
       >
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <InfoIcon sx={{ color: 'warning.main' }} />
+        <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <InfoIcon sx={{ color: "warning.main" }} />
           Prompts
           <IconButton
             aria-label="close"
             onClick={handleInfoDialogClose}
             sx={{
-              position: 'absolute',
+              position: "absolute",
               right: 8,
               top: 8,
-              color: 'text.secondary',
+              color: "text.secondary",
             }}
           >
             <CloseIcon />
@@ -953,24 +966,24 @@ function ReportAnalysisPrompts() {
             <Typography
               variant="body1"
               component="div"
-              sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}
+              sx={{ mb: 2, display: "flex", alignItems: "center", gap: 1 }}
             >
-              <span style={{ fontSize: '1.5em' }}>•</span> When turned ON:
+              <span style={{ fontSize: "1.5em" }}>•</span> When turned ON:
               Enables all categories and their prompts
             </Typography>
             <Typography
               variant="body1"
               component="div"
-              sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}
+              sx={{ mb: 2, display: "flex", alignItems: "center", gap: 1 }}
             >
-              <span style={{ fontSize: '1.5em' }}>•</span> When turned OFF:
+              <span style={{ fontSize: "1.5em" }}>•</span> When turned OFF:
               Disabled in case all/any of categories and their prompts are
               disabled
             </Typography>
           </Box>
           <Typography
             variant="body1"
-            sx={{ mt: 2, color: 'text.secondary', fontStyle: 'italic' }}
+            sx={{ mt: 2, color: "text.secondary", fontStyle: "italic" }}
           >
             Note: You can still individually toggle categories and prompts after
             using this switch.
@@ -979,9 +992,9 @@ function ReportAnalysisPrompts() {
         <DialogActions
           sx={{
             p: 2,
-            borderTop: '1px solid',
-            borderColor: 'divider',
-            bgcolor: 'background.default',
+            borderTop: "1px solid",
+            borderColor: "divider",
+            bgcolor: "background.default",
           }}
         >
           <Button
@@ -999,11 +1012,11 @@ function ReportAnalysisPrompts() {
         open={openCategoryDialog}
         onClose={handleCategoryDialogClose}
         PaperProps={{
-          sx: { width: '100%', maxWidth: 500 },
+          sx: { width: "100%", maxWidth: 500 },
         }}
       >
         <DialogTitle>
-          {editingCategory ? 'Edit Category' : 'Add New Category'}
+          {editingCategory ? "Edit Category" : "Add New Category"}
         </DialogTitle>
         <DialogContent>
           <Box sx={{ mt: 2 }}>
@@ -1022,7 +1035,7 @@ function ReportAnalysisPrompts() {
               value={newCategoryOrder}
               onChange={(e) => {
                 const value = e.target.value;
-                if (value === '' || (parseInt(value) > 0 && !isNaN(value))) {
+                if (value === "" || (parseInt(value) > 0 && !isNaN(value))) {
                   setNewCategoryOrder(value);
                 }
               }}
@@ -1042,7 +1055,7 @@ function ReportAnalysisPrompts() {
             variant="contained"
             disabled={!newCategory.trim()}
           >
-            {editingCategory ? 'Save Changes' : 'Add'}
+            {editingCategory ? "Save Changes" : "Add"}
           </Button>
         </DialogActions>
       </Dialog>
@@ -1052,11 +1065,11 @@ function ReportAnalysisPrompts() {
         open={openPromptDialog}
         onClose={handlePromptDialogClose}
         PaperProps={{
-          sx: { width: '100%', maxWidth: 500 },
+          sx: { width: "100%", maxWidth: 500 },
         }}
       >
         <DialogTitle>
-          {editingPrompt ? 'Edit Prompt' : 'Add New Prompt'}
+          {editingPrompt ? "Edit Prompt" : "Add New Prompt"}
         </DialogTitle>
         <DialogContent>
           <Box sx={{ mt: 2 }}>
@@ -1077,7 +1090,7 @@ function ReportAnalysisPrompts() {
               value={newPromptOrder}
               onChange={(e) => {
                 const value = e.target.value;
-                if (value === '' || (parseInt(value) > 0 && !isNaN(value))) {
+                if (value === "" || (parseInt(value) > 0 && !isNaN(value))) {
                   setNewPromptOrder(value);
                 }
               }}
@@ -1102,7 +1115,7 @@ function ReportAnalysisPrompts() {
             variant="contained"
             disabled={!newPrompt.trim()}
           >
-            {editingPrompt ? 'Save Changes' : 'Add'}
+            {editingPrompt ? "Save Changes" : "Add"}
           </Button>
         </DialogActions>
       </Dialog>

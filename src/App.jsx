@@ -21,6 +21,9 @@ import { ColorModeContext } from "./contexts/ColorModeContext";
 import { useSecurity } from "./hooks/useSecurity";
 import SecurityStyles from "./components/SecurityStyles";
 import ReportAnalysisPage from "./pages/ReportAnalysisPage";
+import Analytics from "./pages/Analytics";
+import PropertyFiles from "./pages/PropertyFiles";
+import PropertySettings from "./pages/PropertySettings";
 
 function AppContent() {
   const [mode, setMode] = useState("light");
@@ -180,7 +183,15 @@ function AppContent() {
               }
             />
             <Route
-              path="/loss-report/:claimNo"
+              path="/property-files/loss-report/:claimNo"
+              element={
+                <AuthLayout>
+                  <LossReport />
+                </AuthLayout>
+              }
+            />
+            <Route
+              path="/flood-files/loss-report/:claimNo"
               element={
                 <AuthLayout>
                   <LossReport />
@@ -228,14 +239,32 @@ function AppContent() {
               }
             />
 
+            <Route
+              path="/analytics"
+              element={
+                <AuthLayout>
+                  <Analytics />
+                </AuthLayout>
+              }
+            />
+            <Route
+              path="/dashboard/property-files"
+              element={
+                <AuthLayout>
+                  <PropertyFiles />
+                </AuthLayout>
+              }
+            />
+            <Route
+              path="/admin-settings/property"
+              element={
+                <AuthLayout>
+                  <PropertySettings />
+                </AuthLayout>
+              }
+            />
+
             {/* Add other authenticated routes here */}
-            {/* Example:
-            <Route path="/reports" element={
-              <AuthLayout>
-                <Reports />
-              </AuthLayout>
-            } /> 
-            */}
           </Routes>
         </Router>
       </ThemeProvider>

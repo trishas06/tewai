@@ -49,16 +49,15 @@ import { useTheme } from "@mui/material/styles";
 
 // Table header cells
 const headCells = [
-  { id: "reportType", label: "Report Type" },
-  { id: "fileName", label: "Report Name" },
+  { id: "propertyType", label: "Property Type" },
+  { id: "reportName", label: "Report Name" }, // Changed from fileName to match mapping
   { id: "claimNo", label: "Claim No." },
   { id: "carrier", label: "Carrier" },
   { id: "policyNo", label: "Policy No." },
-  { id: "policyForm", label: "Policy Form" },
+  // { id: "policyForm", label: "Policy Form" },
   { id: "adjusterName", label: "Adjuster Name" },
   { id: "createdOn", label: "Created On" },
   { id: "status", label: "Status" },
-  // { id: "actions", label: "Action" },
 ];
 
 // Status chip colors - consistent solid backgrounds with white text for all modes
@@ -236,7 +235,7 @@ function MultiSelect({ label, options, value, onChange }) {
 }
 function StatusChip({ status, onClick, theme }) {
   const { color, bgcolor } = getStatusColor(status, theme);
-  const isClickable = status === "Generated";
+  const isGenerated = status === "Generated";
   const isMultiWord = status?.includes(" ");
 
   return (
@@ -244,32 +243,44 @@ function StatusChip({ status, onClick, theme }) {
       <Chip
         label={status}
         size="small"
-        onClick={isClickable ? onClick : undefined}
+        // Only trigger the click handler if status is Generated
+        onClick={isGenerated ? onClick : undefined}
         sx={{
           color,
           bgcolor,
-          fontWeight: 500,
+          fontWeight: 600,
           maxWidth: 110,
-          // Ellipse overflowing text
+          // Cursor logic
+          cursor: isGenerated ? "pointer" : "not-allowed",
+          ...(!isGenerated && {
+            opacity: 0.4, // Makes it look faded
+            filter: "grayscale(0.7)", // Pulls some color out
+            pointerEvents: "none", // Optional: strictly prevents clicks
+          }),
           "& .MuiChip-label": {
             display: "block",
             overflow: "hidden",
             textOverflow: "ellipsis",
             whiteSpace: "nowrap",
           },
-          // Only show pointer cursor for Generated
-          cursor: isClickable ? "pointer" : "default",
-          // Disable hover effect for non-clickable statuses
-          ...(!isClickable && {
-            "&:hover": { bgcolor },
-          }),
+          // Ensure hover effect only applies to clickable Generated chip
+          ...(isGenerated
+            ? {
+                "&:hover": {
+                  bgcolor: theme.palette.primary.dark,
+                  boxShadow: "0px 2px 4px rgba(0,0,0,0.2)",
+                },
+              }
+            : {
+                "&:hover": { bgcolor }, // Disable hover for others
+              }),
         }}
       />
     </Tooltip>
   );
 }
 
-function Dashboard() {
+function PropertyFiles() {
   const navigate = useNavigate();
   const { loading: userLoading, isAuthenticated } = useUser();
   const theme = useTheme();
@@ -296,7 +307,7 @@ function Dashboard() {
     policyForms: [],
     adjusters: [],
     statuses: [],
-    reportTypes: ["Prelim", "Final"],
+    reportTypes: [],
   });
   const [tempFilters, setTempFilters] = useState({ ...filters });
 
@@ -321,7 +332,7 @@ function Dashboard() {
     const fetchInitialData = async () => {
       try {
         // Fetch filter options
-        const options = await dashboardService.getFilterOptions();
+        const options = await dashboardService.getPropertyFilterOptions();
         setFilterOptions((prevOptions) => ({ ...prevOptions, ...options }));
         setLoading(false);
       } catch (error) {
@@ -342,10 +353,14 @@ function Dashboard() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const result = await dashboardService.getClaimsData(
+        const normalizedFilters = {
+          ...filters,
+          reportTypes: filters.reportTypes.map((t) => t.toUpperCase()),
+        };
+        const result = await dashboardService.getPropertyFilesData(
           page,
           rowsPerPage,
-          filters,
+          normalizedFilters,
           searchTerm,
         );
         setRows(result.data);
@@ -426,8 +441,8 @@ function Dashboard() {
 
   // Add handler for navigating to Loss Report Screen
   const handleNavigateToLossReport = (row) => {
-    navigate(`/flood-files/loss-report/${row.claimNo}`, {
-      state: row.originalData,
+    navigate(`/property-files/loss-report/${row.claimNo}`, {
+      state: { ...row.originalData, source: "propertyFiles" },
     });
   };
 
@@ -492,82 +507,85 @@ function Dashboard() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={9} align="center">
+                <TableCell colSpan={headCells.length} align="center">
                   <CircularProgress size={40} />
                 </TableCell>
               </TableRow>
             ) : rows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} align="center">
+                <TableCell colSpan={headCells.length} align="center">
                   No records found
                 </TableCell>
               </TableRow>
             ) : (
               rows.map((row) => (
-                <TableRow key={generateUniqueKey(row)} hover>
+                <TableRow key={row.id} hover>
+                  {/* 1. Property Type */}
                   <TableCell
                     sx={{
                       whiteSpace: "nowrap",
                       overflow: "hidden",
                       textOverflow: "ellipsis",
-                      width: 110,
+                      color: "#5B9B98", // Teal color matching your image
+                      fontWeight: 500,
                     }}
                   >
-                    {row.prelim_folder ? "Prelim" : "Final"} Report
+                    {row.propertyType}
                   </TableCell>
+
+                  {/* 2. Report Name */}
                   <TableCell>
-                    <Tooltip
-                      title={row.originalData.loss_report_name || ""}
-                      arrow
-                    >
+                    <Tooltip title={row.reportName} arrow>
                       <span
                         style={{
                           display: "inline-block",
-                          maxWidth: 250,
                           whiteSpace: "nowrap",
                           overflow: "hidden",
                           textOverflow: "ellipsis",
                           verticalAlign: "middle",
+                          textTransform: "uppercase", // Matching the uppercase style in image
+                          fontSize: "0.875rem",
                         }}
                       >
-                        {row.originalData.loss_report_name &&
-                        row.originalData.loss_report_name.length > 15
-                          ? row.originalData.loss_report_name.slice(0, 12) +
-                            "..."
-                          : row.originalData.loss_report_name || ""}
+                        {row.reportName}
                       </span>
                     </Tooltip>
                   </TableCell>
+
+                  {/* 3. Claim No. */}
                   <TableCell>{row.claimNo}</TableCell>
+
+                  {/* 4. Carrier */}
                   <TableCell>
-                    {(() => {
-                      const words = (row.carrier || "").split(" ");
-                      const truncated =
-                        words.length > 2
-                          ? words.slice(0, 2).join(" ") + "..."
-                          : row.carrier || "";
-                      return (
-                        <Tooltip
-                          title={words.length > 2 ? row.carrier : ""}
-                          arrow
-                        >
-                          <span>{truncated}</span>
-                        </Tooltip>
-                      );
-                    })()}
+                    <Tooltip
+                      title={
+                        row.carrier.split(" ").length > 2 ? row.carrier : ""
+                      }
+                      arrow
+                    >
+                      <span style={{ color: "#5B9B98" }}>
+                        {row.carrier.split(" ").length > 2
+                          ? row.carrier.split(" ").slice(0, 2).join(" ") + "..."
+                          : row.carrier}
+                      </span>
+                    </Tooltip>
                   </TableCell>
+
+                  {/* 5. Policy No. */}
                   <TableCell>{row.policyNo}</TableCell>
-                  <TableCell>{row.policyForm}</TableCell>
+
+                  {/* 6. Policy Form */}
+                  {/* <TableCell>{row.policyForm}</TableCell> */}
+
+                  {/* 7. Adjuster Name */}
                   <TableCell>{row.adjusterName}</TableCell>
-                  <TableCell
-                    sx={{
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                    }}
-                  >
+
+                  {/* 8. Created On */}
+                  <TableCell sx={{ whiteSpace: "nowrap" }}>
                     {row.createdOn}
                   </TableCell>
+
+                  {/* 9. Status */}
                   <TableCell>
                     <StatusChip
                       status={row.status}
@@ -575,18 +593,6 @@ function Dashboard() {
                       theme={theme}
                     />
                   </TableCell>
-                  {/* <TableCell align="center">
-                    {row.status !== "Failed" && (
-                      <IconButton
-                        size="small"
-                        title="View Loss Report"
-                        disabled={!ALLOWED_STATUSES.includes(row.status)}
-                        onClick={() => handleNavigateToLossReport(row)}
-                      >
-                        <DescriptionIcon sx={{ fontSize: 20 }} />
-                      </IconButton>
-                    )}
-                  </TableCell> */}
                 </TableRow>
               ))
             )}
@@ -614,7 +620,7 @@ function Dashboard() {
         <DialogTitle>Filter Claims</DialogTitle>
         <DialogContent>
           <MultiSelect
-            label="Report Type"
+            label="Property Type"
             options={filterOptions.reportTypes}
             value={tempFilters.reportTypes}
             onChange={handleMultiSelectChange("reportTypes")}
@@ -624,12 +630,6 @@ function Dashboard() {
             options={filterOptions.carriers}
             value={tempFilters.carriers}
             onChange={handleMultiSelectChange("carriers")}
-          />
-          <MultiSelect
-            label="Policy Form"
-            options={filterOptions.policyForms}
-            value={tempFilters.policyForms}
-            onChange={handleMultiSelectChange("policyForms")}
           />
           <MultiSelect
             label="Adjuster"
@@ -672,4 +672,4 @@ function Dashboard() {
   );
 }
 
-export default Dashboard;
+export default PropertyFiles;
