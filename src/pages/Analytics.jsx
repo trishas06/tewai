@@ -1112,14 +1112,14 @@ export default function Analytics() {
                 <TableRow sx={{ bgcolor: 'action.hover' }}>
                   <TableCell sx={{ fontWeight: 600 }}>Flagged Item (from guidance report)</TableCell>
                   <TableCell sx={{ fontWeight: 600 }} align="right">Amount (from estimate)</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>Flag Type</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Category</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {items.map((item, idx) => (
                   <TableRow key={idx}>
                     <TableCell>
-                      <Typography variant="body2" fontWeight={500}>{FLAG_LABELS[item.type] || item.type}</Typography>
+                      <Typography variant="body2" fontWeight={500}>{item.question || FLAG_LABELS[item.type] || item.type}</Typography>
                       {item.description && (
                         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.25 }}>
                           {item.description}
@@ -1135,7 +1135,7 @@ export default function Analytics() {
                     </TableCell>
                     <TableCell>
                       <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace', fontSize: 10 }}>
-                        {item.type}
+                        {item.headerKey || item.type}
                       </Typography>
                     </TableCell>
                   </TableRow>
