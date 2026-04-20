@@ -236,7 +236,7 @@ function MultiSelect({ label, options, value, onChange }) {
 }
 function StatusChip({ status, onClick, theme }) {
   const { color, bgcolor } = getStatusColor(status, theme);
-  const isClickable = status === "Generated";
+  const isClickable = status === "Generated" || status === "Validated";
   const isMultiWord = status?.includes(" ");
 
   return (
