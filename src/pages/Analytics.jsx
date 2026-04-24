@@ -444,7 +444,7 @@ export default function Analytics() {
 
   // ── Business Impact ────────────────────────────────────────────────────────
   const bizImpact = useMemo(() => {
-    const n = opStats?.claims_validated ?? displayAgg.total_claims_processed ?? 0;
+    const n = displayAgg.total_claims_processed ?? 0;
     // Use actual processing time if available, else default to 4 min (240 sec)
     const procSecs   = opStats?.avg_processing_time_seconds ?? 240;
     const saveMin    = 240 - procSecs / 60;          // manual 4hr = 240 min baseline
@@ -553,7 +553,7 @@ export default function Analytics() {
         value: hasData ? fmtTime(avg_processing_time_seconds) : '—',
         sub: hasData
           ? (avg_processing_time_seconds != null
-              ? `${processing_n} of ${claims_submitted} reports instrumented · model runtime only`
+              ? `${processing_n} of ${claims_validated} reports instrumented · model runtime only`
               : 'Timestamps added Apr 8 — not backfilled for this month')
           : 'Pending backend deployment',
         trend: null,
@@ -901,7 +901,7 @@ export default function Analytics() {
               },
               {
                 label: 'Claims Validated',
-                value: opStats?.claims_validated ?? displayAgg.total_claims_processed ?? 0,
+                value: displayAgg.total_claims_processed ?? 0,
                 sub: 'Reports where the AI completed all validation checks',
               },
             ].map((m, i, arr) => (
@@ -915,13 +915,13 @@ export default function Analytics() {
         {/* Business Impact Panel */}
         <HeaderPanel headerBg={teal}
           title={`Business Impact${filterMonth !== 'all' ? ` — ${fmtMonth(filterMonth)}` : ''}`}
-          note={`Based on ${opStats?.claims_validated ?? displayAgg.total_claims_processed ?? 0} claims processed · at $35/hr`}>
+          note={`Based on ${displayAgg.total_claims_processed ?? 0} claims processed · at $35/hr`}>
           <Box sx={{ display: 'flex' }}>
             {[
               {
                 label: filterMonth === 'all' ? 'Hours Saved (All Time)' : 'Hours Saved This Month',
                 value: bizImpact.hoursSaved.toLocaleString(),
-                sub: `${opStats?.claims_validated ?? displayAgg.total_claims_processed ?? 0} claims × ${bizImpact.saveMin} min saved per claim`,
+                sub: `${displayAgg.total_claims_processed ?? 0} claims × ${bizImpact.saveMin} min saved per claim`,
               },
               {
                 label: 'FTE Months Equivalent',
