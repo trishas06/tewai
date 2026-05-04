@@ -444,7 +444,11 @@ export default function Analytics() {
 
   // ── Business Impact ────────────────────────────────────────────────────────
   const bizImpact = useMemo(() => {
-    const n = displayAgg.total_claims_processed ?? 0;
+    // For a specific month, prefer the operational count (all validated claims) over the
+    // loss-reduction-only count (which only covers claims the LR pipeline has backfilled).
+    const n = (filterMonth !== 'all' && opStats?.claims_validated != null)
+      ? opStats.claims_validated
+      : displayAgg.total_claims_processed ?? 0;
     // Use actual processing time if available, else default to 4 min (240 sec)
     const procSecs   = opStats?.avg_processing_time_seconds ?? 240;
     const saveMin    = 240 - procSecs / 60;          // manual 4hr = 240 min baseline
@@ -456,7 +460,7 @@ export default function Analytics() {
     const annualProj = filterMonth === 'all'
       ? Math.round(costSaved / monthCount * 12)
       : costSaved * 12;
-    return { hoursSaved, fteMonths, costSaved, annualProj, saveMin: saveMin.toFixed(1), procSecs, monthCount };
+    return { n, hoursSaved, fteMonths, costSaved, annualProj, saveMin: saveMin.toFixed(1), procSecs, monthCount };
   }, [displayAgg, filterMonth, opStats, availableMonths]);
 
   // ── Period selector ────────────────────────────────────────────────────────
@@ -901,7 +905,9 @@ export default function Analytics() {
               },
               {
                 label: 'Claims Validated',
-                value: displayAgg.total_claims_processed ?? 0,
+                value: (filterMonth !== 'all' && opStats?.claims_validated != null)
+                  ? opStats.claims_validated
+                  : displayAgg.total_claims_processed ?? 0,
                 sub: 'Reports where the AI completed all validation checks',
               },
             ].map((m, i, arr) => (
@@ -915,13 +921,13 @@ export default function Analytics() {
         {/* Business Impact Panel */}
         <HeaderPanel headerBg={teal}
           title={`Business Impact${filterMonth !== 'all' ? ` — ${fmtMonth(filterMonth)}` : ''}`}
-          note={`Based on ${displayAgg.total_claims_processed ?? 0} claims processed · at $35/hr`}>
+          note={`Based on ${bizImpact.n} claims processed · at $35/hr`}>
           <Box sx={{ display: 'flex' }}>
             {[
               {
                 label: filterMonth === 'all' ? 'Hours Saved (All Time)' : 'Hours Saved This Month',
                 value: bizImpact.hoursSaved.toLocaleString(),
-                sub: `${displayAgg.total_claims_processed ?? 0} claims × ${bizImpact.saveMin} min saved per claim`,
+                sub: `${bizImpact.n} claims × ${bizImpact.saveMin} min saved per claim`,
               },
               {
                 label: 'FTE Months Equivalent',
