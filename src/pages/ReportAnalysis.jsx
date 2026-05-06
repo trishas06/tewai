@@ -26,6 +26,7 @@ import {
   Info as InfoIcon,
   Flag as FlagIcon,
   Warning as WarningIcon,
+  OpenInNew as OpenInNewIcon,
 } from '@mui/icons-material';
 import axiosInstance from '../utils/axiosInstance';
 import GenerateGuidanceReport from '../components/GenerateGuidanceReport';
@@ -71,6 +72,102 @@ const parsePageNumbers = (pageNumberStr) => {
     .map((p) => Number(p));
 };
 
+/**
+ * Allow only basenames for get_property_document_pdf (no path segments).
+ */
+const isSafeReportBasename = (name) => {
+  if (!name || typeof name !== 'string') return false;
+  const t = name.trim();
+  if (!t || t.length > 255) return false;
+  if (t.includes('..') || t.includes('/') || t.includes('\\')) return false;
+  return true;
+};
+
+const OPENING_STATEMENT_QUESTION_TYPE = 'opening_statement_match';
+/** Substring of default property prompt; older Q&A rows may lack ``type``. */
+const OPENING_STATEMENT_QUESTION_SUBSTR =
+  'opening statement from estimate for each carrier';
+
+function isOpeningStatementAnalysisRow(item) {
+  if (!item) return false;
+  if (item.type === OPENING_STATEMENT_QUESTION_TYPE) return true;
+  const q = String(item.question || '').toLowerCase();
+  return q.includes(OPENING_STATEMENT_QUESTION_SUBSTR);
+}
+
+/** True when the rule outcome is Match (case/spacing tolerant). */
+function isOpeningStatementMatchFlag(item) {
+  return String(item?.flag ?? '').trim().toLowerCase() === 'match';
+}
+
+/** True when the rule outcome is No match (case/spacing tolerant). */
+function isOpeningStatementNoMatchFlag(item) {
+  return String(item?.flag ?? '').trim().toLowerCase() === 'no match';
+}
+
+function fillOpeningStatementWindow(win, expectedText, carrierName) {
+  if (!win) {
+    return;
+  }
+  const titleSuffix = carrierName ? ` — ${carrierName}` : '';
+  win.document.open();
+  win.document.write(
+    '<!DOCTYPE html><html><head><meta charset="utf-8">' +
+      '<script>try{window.opener=null}catch(e){}<\/script></head><body></body></html>',
+  );
+  win.document.close();
+  win.document.title = `Expected opening statement${titleSuffix}`;
+  const pre = win.document.createElement('pre');
+  pre.style.whiteSpace = 'pre-wrap';
+  pre.style.fontFamily = 'system-ui, "Segoe UI", Roboto, sans-serif';
+  pre.style.padding = '1rem';
+  pre.style.maxWidth = '960px';
+  pre.textContent = expectedText;
+  win.document.body.appendChild(pre);
+}
+
+/**
+ * Open expected text in a new tab. Do not pass ``noopener`` on window.open:
+ * Chromium returns null for the Window handle when noopener is set, which
+ * breaks document.write and looks like a blocked popup.
+ */
+function openExpectedOpeningStatementInNewTab(expectedText, carrierName) {
+  const win = window.open('', '_blank');
+  if (!win) {
+    return false;
+  }
+  fillOpeningStatementWindow(win, expectedText, carrierName);
+  return true;
+}
+
+/** Read API detail from Flask/json bodies (``message`` or ``error``). */
+function openingStatementApiDetail(payload) {
+  if (!payload || typeof payload !== 'object') {
+    return '';
+  }
+  const m = payload.message ?? payload.error;
+  return typeof m === 'string' && m.trim() ? m.trim() : '';
+}
+
+function describeOpeningStatementNetworkFailure(err) {
+  const msg = (err?.message || '').toLowerCase();
+  const noResponse = !err?.response;
+  const looksNetwork =
+    noResponse &&
+    (err?.code === 'ERR_NETWORK' ||
+      msg.includes('network') ||
+      msg === 'failed to fetch');
+  if (!looksNetwork) {
+    return err?.message || '';
+  }
+  return (
+    'Could not reach the API (browser reports a network error). ' +
+    'Typical causes: wrong or empty VITE_API_BASE_URL, API not running, ' +
+    'HTTPS page calling HTTP API (blocked), or CORS. ' +
+    'Confirm other calls (e.g. analysis list) use the same host; check DevTools — Network for this request.'
+  );
+}
+
 function ReportAnalysis({ reportId, prelim_folder, pdfUrl }) {
   console.log('ReportAnalysis props:', { reportId, prelim_folder, pdfUrl });
   const [loading, setLoading] = useState(true);
@@ -81,15 +178,148 @@ function ReportAnalysis({ reportId, prelim_folder, pdfUrl }) {
   const [openDialog, setOpenDialog] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const [openingStatementLoading, setOpeningStatementLoading] = useState(false);
+  /** Last open-in-tab error, scoped to ``question`` so only that row shows it. */
+  const [openingStatementActionError, setOpeningStatementActionError] =
+    useState(null);
   const userRole = useContext(UserRoleContext);
   const theme = useTheme();
 
   // Treat the split-screen panel (~50vw) as narrow — md breakpoint catches it
   const isNarrow = useMediaQuery(theme.breakpoints.down('md'));
 
-  const handlePageClick = (page) => {
+  const handlePageClick = async (page, rowReportName) => {
+    const openBlobAtPage = (blobUrl) => {
+      window.open(`${blobUrl}#page=${page}`, '_blank', 'noopener,noreferrer');
+    };
+
+    if (
+      rowReportName &&
+      isSafeReportBasename(rowReportName) &&
+      reportId
+    ) {
+      try {
+        const body = {
+          report_id: reportId,
+          report_name: rowReportName.trim(),
+          ...(prelim_folder ? { prelim_folder } : {}),
+        };
+        const response = await axiosInstance.post(
+          '/get_property_document_pdf',
+          body,
+          {
+            responseType: 'blob',
+            headers: { Accept: 'application/pdf' },
+          },
+        );
+        if (response.status >= 200 && response.status < 300 && response.data) {
+          const blobUrl = URL.createObjectURL(response.data);
+          openBlobAtPage(blobUrl);
+          return;
+        }
+      } catch (err) {
+        console.error('Failed to open PDF for reportName:', rowReportName, err);
+      }
+    }
+
     if (!pdfUrl) return;
-    window.open(`${pdfUrl}#page=${page}`, '_blank', 'noopener,noreferrer');
+    openBlobAtPage(pdfUrl);
+  };
+
+  const handleOpenExpectedOpeningStatement = (row) => {
+    const questionKey = row?.question ?? '';
+    if (!reportId) {
+      setOpeningStatementActionError({
+        question: questionKey,
+        message: 'Report ID is missing.',
+      });
+      return;
+    }
+    setOpeningStatementActionError(null);
+    const inline =
+      row &&
+      typeof row.expected_text === 'string' &&
+      row.expected_text.trim().length > 0;
+    if (inline) {
+      const opened = openExpectedOpeningStatementInNewTab(
+        row.expected_text.trim(),
+        '',
+      );
+      if (!opened) {
+        setOpeningStatementActionError({
+          question: questionKey,
+          message:
+            'Popup blocked. Allow popups to view the expected text.',
+        });
+      }
+      return;
+    }
+    void (async () => {
+      setOpeningStatementLoading(true);
+      const newWin = window.open('about:blank', '_blank');
+      if (!newWin) {
+        setOpeningStatementActionError({
+          question: questionKey,
+          message:
+            'Popup blocked. Allow popups to view the expected text.',
+        });
+        setOpeningStatementLoading(false);
+        return;
+      }
+      try {
+        const res = await axiosInstance.get('/get_opening_statement_expected', {
+          params: { report_id: reportId },
+          validateStatus: () => true,
+        });
+        const data = res.data;
+        const detail = openingStatementApiDetail(data);
+        const ok =
+          res.status >= 200 &&
+          res.status < 300 &&
+          data?.status === 'success' &&
+          typeof data?.expected_text === 'string';
+        if (!ok) {
+          newWin.close();
+          setOpeningStatementActionError({
+            question: questionKey,
+            message:
+              detail ||
+              (typeof data === 'string' && data.trim().startsWith('<')
+                ? `Server returned HTTP ${res.status} (HTML). Deploy GET /get_opening_statement_expected on the API.`
+                : res.status
+                  ? `Request failed (HTTP ${res.status}).`
+                  : 'Could not load expected opening statement.'),
+          });
+          return;
+        }
+        fillOpeningStatementWindow(
+          newWin,
+          data.expected_text,
+          data.carrier_name || '',
+        );
+      } catch (err) {
+        console.error('get_opening_statement_expected failed:', err);
+        newWin.close();
+        if (import.meta.env.DEV) {
+          console.info(
+            'Opening statement API base:',
+            import.meta.env.VITE_API_BASE_URL || '(VITE_API_BASE_URL not set)',
+          );
+        }
+        const d = err.response?.data;
+        setOpeningStatementActionError({
+          question: questionKey,
+          message:
+            openingStatementApiDetail(
+              typeof d === 'object' && d !== null ? d : {},
+            ) ||
+            describeOpeningStatementNetworkFailure(err) ||
+            'Failed to load expected opening statement.',
+        });
+      } finally {
+        setOpeningStatementLoading(false);
+      }
+    })();
   };
 
   useEffect(() => {
@@ -111,6 +341,7 @@ function ReportAnalysis({ reportId, prelim_folder, pdfUrl }) {
           response.data.status === 'success' &&
           response.data.question_answer
         ) {
+          setOpeningStatementActionError(null);
           const groupedData = response.data.question_answer.reduce(
             (acc, item) => {
               const headerKey = item.headerKey || 'Other';
@@ -160,6 +391,9 @@ function ReportAnalysis({ reportId, prelim_folder, pdfUrl }) {
             descriptionKey: item.descriptionKey,
             question: item.question,
             ...(item?.flag ? { flag: item.flag } : {}),
+            ...(typeof item.expected_text === 'string' && item.expected_text.trim()
+              ? { expected_text: item.expected_text.trim() }
+              : {}),
             ...(item?.record_updated
               ? { record_updated: item.record_updated }
               : {}),
@@ -384,6 +618,12 @@ function ReportAnalysis({ reportId, prelim_folder, pdfUrl }) {
                 <AccordionDetails sx={{ px: { xs: 1, sm: 2 } }}>
                   {section.items.map((item, itemIndex) => {
                     const pages = parsePageNumbers(item.pageNumber);
+                    const rowReportName = item.reportName || item.report_name;
+                    const canOpenPage =
+                      !!pdfUrl ||
+                      (!!reportId &&
+                        !!rowReportName &&
+                        isSafeReportBasename(rowReportName));
 
                     return (
                       <Box
@@ -486,6 +726,76 @@ function ReportAnalysis({ reportId, prelim_folder, pdfUrl }) {
                               {item.descriptionKey}
                             </Typography>
 
+                            {isOpeningStatementAnalysisRow(item) &&
+                              !isOpeningStatementMatchFlag(item) &&
+                              !isOpeningStatementNoMatchFlag(item) &&
+                              typeof item.expected_text === 'string' &&
+                              item.expected_text.trim().length > 0 && (
+                                <Box
+                                  sx={{
+                                    mb: 1,
+                                    p: 1.5,
+                                    borderRadius: 1,
+                                    bgcolor: 'action.hover',
+                                  }}
+                                >
+                                  <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                    sx={{ display: 'block', mb: 0.5 }}
+                                  >
+                                    Expected opening statement
+                                  </Typography>
+                                  <Typography
+                                    component="pre"
+                                    variant="body2"
+                                    sx={{
+                                      whiteSpace: 'pre-wrap',
+                                      fontFamily: 'inherit',
+                                      m: 0,
+                                      fontSize: { xs: '0.75rem', sm: '0.8125rem' },
+                                    }}
+                                  >
+                                    {item.expected_text}
+                                  </Typography>
+                                </Box>
+                              )}
+
+                            {isOpeningStatementAnalysisRow(item) &&
+                              !isOpeningStatementMatchFlag(item) && (
+                              <Box sx={{ mb: pages.length ? 0.5 : 1 }}>
+                                <Button
+                                  type="button"
+                                  size="small"
+                                  variant="text"
+                                  startIcon={<OpenInNewIcon fontSize="small" />}
+                                  onClick={() =>
+                                    handleOpenExpectedOpeningStatement(item)
+                                  }
+                                  disabled={openingStatementLoading}
+                                >
+                                  {openingStatementLoading
+                                    ? 'Loading…'
+                                    : item.expected_text &&
+                                        String(item.expected_text).trim()
+                                      ? 'View expected text'
+                                      : 'View expected opening statement'}
+                                </Button>
+                                {openingStatementActionError &&
+                                  openingStatementActionError.question ===
+                                    item.question &&
+                                  openingStatementActionError.message && (
+                                  <Typography
+                                    variant="caption"
+                                    color="error"
+                                    sx={{ display: 'block', mt: 0.5 }}
+                                  >
+                                    {openingStatementActionError.message}
+                                  </Typography>
+                                )}
+                              </Box>
+                            )}
+
                             {pages.length > 0 && (
                               <Typography
                                 variant="caption"
@@ -499,15 +809,16 @@ function ReportAnalysis({ reportId, prelim_folder, pdfUrl }) {
                                       variant="caption"
                                       component="span"
                                       onClick={
-                                        pdfUrl
-                                          ? () => handlePageClick(page)
+                                        canOpenPage
+                                          ? () =>
+                                              handlePageClick(page, rowReportName)
                                           : undefined
                                       }
                                       sx={{
-                                        cursor: pdfUrl ? 'pointer' : 'default',
+                                        cursor: canOpenPage ? 'pointer' : 'default',
                                         color: 'primary.main',
                                         ml: idx > 0 ? 0.5 : 0,
-                                        '&:hover': pdfUrl
+                                        '&:hover': canOpenPage
                                           ? { textDecoration: 'underline' }
                                           : {},
                                       }}
