@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useContext } from 'react';
 import {
   Box, Typography, Paper, Button, Select, MenuItem, FormControl,
   InputLabel, Table, TableBody, TableCell, TableContainer, TableHead,
@@ -10,6 +10,8 @@ import {
   ArrowBack as ArrowBackIcon,
   Close as CloseIcon,
   PictureAsPdf as PdfIcon,
+  Edit as EditIcon,
+  Check as CheckIcon,
 } from '@mui/icons-material';
 import { useTheme } from '@mui/material/styles';
 import {
@@ -21,6 +23,7 @@ import {
   getLossReductionAggregate,
   getOperationalStats,
 } from '../services/analyticsService';
+import { UserRoleContext } from '../components/layout/AuthLayout';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const FLAG_LABELS = {
@@ -351,6 +354,8 @@ export default function Analytics() {
   const teal  = 'rgb(91,155,152)';
   const green = '#2e7d32';
 
+  const userRole = useContext(UserRoleContext);
+
   // ── State ──────────────────────────────────────────────────────────────────
   const [activeTab,     setActiveTab]     = useState(0);   // 0=Operational, 1=Executive
   const [view,          setView]          = useState('executive');
@@ -358,6 +363,11 @@ export default function Analytics() {
   const [selectedClaim, setSelectedClaim] = useState(null);
   const [infoOpen,      setInfoOpen]      = useState(false);
   const [catDrill,      setCatDrill]      = useState(null); // null | { category, sub_prompts }
+
+  // FTE hourly rate — Admin-configurable, persisted in localStorage
+  const [hourlyRate,  setHourlyRate]  = useState(() => Number(localStorage.getItem('fte_hourly_rate')) || 35);
+  const [editingRate, setEditingRate] = useState(false);
+  const [rateInput,   setRateInput]   = useState('');
 
   // Loss Reduction data
   const [claims,    setClaims]    = useState([]);
@@ -442,6 +452,16 @@ export default function Analytics() {
     };
   }, [filterMonth, filteredClaims, aggregate]);
 
+  // ── FTE rate handler ──────────────────────────────────────────────────────
+  const handleRateSave = () => {
+    const v = Number(rateInput);
+    if (!isNaN(v) && v > 0) {
+      setHourlyRate(v);
+      localStorage.setItem('fte_hourly_rate', String(v));
+    }
+    setEditingRate(false);
+  };
+
   // ── Business Impact ────────────────────────────────────────────────────────
   const bizImpact = useMemo(() => {
     // Prefer the operational count (all Generated/Validated reports) over the
@@ -454,14 +474,14 @@ export default function Analytics() {
     const saveMin    = 240 - procSecs / 60;          // manual 4hr = 240 min baseline
     const hoursSaved = Math.round(n * saveMin / 60);
     const fteMonths  = (hoursSaved / 160).toFixed(1);
-    const costSaved  = hoursSaved * 35;
+    const costSaved  = hoursSaved * hourlyRate;
     const monthCount = Math.max(1, availableMonths.length);
     // Projected Annual: for a specific month → that month × 12; for all-time → avg monthly × 12
     const annualProj = filterMonth === 'all'
       ? Math.round(costSaved / monthCount * 12)
       : costSaved * 12;
     return { n, hoursSaved, fteMonths, costSaved, annualProj, saveMin: saveMin.toFixed(1), procSecs, monthCount };
-  }, [displayAgg, filterMonth, opStats, availableMonths]);
+  }, [displayAgg, filterMonth, opStats, availableMonths, hourlyRate]);
 
   // ── Period selector ────────────────────────────────────────────────────────
   const periodSelector = (
@@ -919,7 +939,7 @@ export default function Analytics() {
         {/* Business Impact Panel */}
         <HeaderPanel headerBg={teal}
           title={`Business Impact${filterMonth !== 'all' ? ` — ${fmtMonth(filterMonth)}` : ''}`}
-          note={`Based on ${bizImpact.n} claims processed · at $35/hr`}>
+          note={`Based on ${bizImpact.n} claims processed · at $${hourlyRate}/hr`}>
           <Box sx={{ display: 'flex' }}>
             {[
               {
@@ -935,7 +955,7 @@ export default function Analytics() {
               {
                 label: filterMonth === 'all' ? 'Total Cost Saved' : 'Cost Saved This Month',
                 value: fmt$(bizImpact.costSaved),
-                sub: 'At $35/hr (Admin configurable)',
+                sub: `At $${hourlyRate}/hr FTE rate`,
               },
               {
                 label: 'Projected Annual Savings',
@@ -951,8 +971,49 @@ export default function Analytics() {
             ))}
           </Box>
           <Divider sx={{ mt: 1.5 }} />
-          <Typography sx={{ fontSize: 11, color: 'text.secondary', mt: 1, fontStyle: 'italic' }}>
-            Formula: (Manual baseline 4 hrs − Current {currentTime}) × Claims processed × $35/hr
+          {/* FTE rate editor — visible to Admin/Manager roles */}
+          {userRole && userRole !== 'Adjuster' && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1, mb: 0.5 }}>
+              <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>FTE Rate:</Typography>
+              {editingRate ? (
+                <>
+                  <Box
+                    component="input"
+                    type="number"
+                    min="1"
+                    value={rateInput}
+                    onChange={e => setRateInput(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') handleRateSave(); if (e.key === 'Escape') setEditingRate(false); }}
+                    autoFocus
+                    sx={{
+                      width: 72, fontSize: 13, px: 0.75, py: 0.25,
+                      border: '1px solid', borderColor: 'primary.main', borderRadius: 1,
+                      outline: 'none', fontFamily: 'inherit',
+                    }}
+                  />
+                  <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>/hr</Typography>
+                  <IconButton size="small" onClick={handleRateSave} sx={{ color: 'success.main' }}>
+                    <CheckIcon fontSize="inherit" />
+                  </IconButton>
+                </>
+              ) : (
+                <>
+                  <Typography sx={{ fontSize: 13, fontWeight: 600, color: 'text.primary' }}>
+                    ${hourlyRate}/hr
+                  </Typography>
+                  <IconButton
+                    size="small"
+                    onClick={() => { setRateInput(String(hourlyRate)); setEditingRate(true); }}
+                    sx={{ color: 'text.secondary', '&:hover': { color: 'primary.main' } }}
+                  >
+                    <EditIcon fontSize="inherit" />
+                  </IconButton>
+                </>
+              )}
+            </Box>
+          )}
+          <Typography sx={{ fontSize: 11, color: 'text.secondary', mt: 0.5, fontStyle: 'italic' }}>
+            Formula: (Manual baseline 4 hrs − Current {currentTime}) × Claims processed × ${hourlyRate}/hr
           </Typography>
         </HeaderPanel>
 
