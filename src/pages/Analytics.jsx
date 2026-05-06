@@ -1013,7 +1013,7 @@ export default function Analytics() {
             </Box>
           )}
           <Typography sx={{ fontSize: 11, color: 'text.secondary', mt: 0.5, fontStyle: 'italic' }}>
-            Formula: (Manual baseline 4 hrs − Current {currentTime}) × Claims processed × ${hourlyRate}/hr
+            {filterMonth === 'all' ? 'Total Cost Saved' : 'Cost Saved This Month'} formula: (Manual baseline 4 hrs − Current {currentTime}) × Claims processed × ${hourlyRate}/hr
           </Typography>
         </HeaderPanel>
 
