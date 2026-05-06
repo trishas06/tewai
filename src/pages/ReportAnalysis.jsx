@@ -193,11 +193,8 @@ function ReportAnalysis({ reportId, prelim_folder, pdfUrl }) {
       window.open(`${blobUrl}#page=${page}`, '_blank', 'noopener,noreferrer');
     };
 
-    if (
-      rowReportName &&
-      isSafeReportBasename(rowReportName) &&
-      reportId
-    ) {
+    // 1. Named document — try the specific report file first.
+    if (rowReportName && isSafeReportBasename(rowReportName) && reportId) {
       try {
         const body = {
           report_id: reportId,
@@ -207,14 +204,10 @@ function ReportAnalysis({ reportId, prelim_folder, pdfUrl }) {
         const response = await axiosInstance.post(
           '/get_property_document_pdf',
           body,
-          {
-            responseType: 'blob',
-            headers: { Accept: 'application/pdf' },
-          },
+          { responseType: 'blob', headers: { Accept: 'application/pdf' } },
         );
         if (response.status >= 200 && response.status < 300 && response.data) {
-          const blobUrl = URL.createObjectURL(response.data);
-          openBlobAtPage(blobUrl);
+          openBlobAtPage(URL.createObjectURL(response.data));
           return;
         }
       } catch (err) {
@@ -222,8 +215,33 @@ function ReportAnalysis({ reportId, prelim_folder, pdfUrl }) {
       }
     }
 
-    if (!pdfUrl) return;
-    openBlobAtPage(pdfUrl);
+    // 2. Already-loaded blob URL (flood claims or property combined PDF).
+    if (pdfUrl) {
+      openBlobAtPage(pdfUrl);
+      return;
+    }
+
+    // 3. No reportName and no pdfUrl — fetch the primary document for the claim.
+    //    Handles categories (e.g. Advanced Damage, Interior Damage) whose Q&A rows
+    //    don't carry a reportName but still have valid page references.
+    if (reportId) {
+      try {
+        const body = {
+          report_id: reportId,
+          ...(prelim_folder ? { prelim_folder } : {}),
+        };
+        const response = await axiosInstance.post(
+          '/get_property_document_pdf',
+          body,
+          { responseType: 'blob', headers: { Accept: 'application/pdf' } },
+        );
+        if (response.status >= 200 && response.status < 300 && response.data) {
+          openBlobAtPage(URL.createObjectURL(response.data));
+        }
+      } catch (err) {
+        console.error('Failed to open primary PDF for report:', reportId, err);
+      }
+    }
   };
 
   const handleOpenExpectedOpeningStatement = (row) => {
@@ -619,11 +637,7 @@ function ReportAnalysis({ reportId, prelim_folder, pdfUrl }) {
                   {section.items.map((item, itemIndex) => {
                     const pages = parsePageNumbers(item.pageNumber);
                     const rowReportName = item.reportName || item.report_name;
-                    const canOpenPage =
-                      !!pdfUrl ||
-                      (!!reportId &&
-                        !!rowReportName &&
-                        isSafeReportBasename(rowReportName));
+                    const canOpenPage = !!pdfUrl || !!reportId;
 
                     return (
                       <Box
