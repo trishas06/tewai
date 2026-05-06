@@ -417,7 +417,7 @@ export default function Analytics() {
     // Always show Jan 2026 → current month, so all months appear regardless of computed_at coverage.
     const now = new Date();
     const all = [];
-    let y = 2026, m = 1;
+    let y = 2026, m = 4;
     while (y < now.getFullYear() || (y === now.getFullYear() && m <= now.getMonth() + 1)) {
       all.push(`${y}-${String(m).padStart(2, '0')}`);
       m++;
