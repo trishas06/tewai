@@ -818,7 +818,7 @@ export default function Analytics() {
                       <TableCell align="right">{a.claims_count}</TableCell>
                       <TableCell align="right">
                         <Chip label={a.warnings_count} size="small"
-                          sx={{ bgcolor: 'primary.light', color: 'primary.dark', fontWeight: 600, fontSize: 12, height: 22, cursor: 'default' }} />
+                          sx={{ bgcolor: '#e0f2f1', color: '#00695c', fontWeight: 700, fontSize: 12, height: 22, cursor: 'default', border: '1px solid #80cbc4' }} />
                       </TableCell>
                       <TableCell align="right">
                         {a.trend === null || a.trend === undefined
