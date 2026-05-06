@@ -444,11 +444,11 @@ export default function Analytics() {
 
   // ── Business Impact ────────────────────────────────────────────────────────
   const bizImpact = useMemo(() => {
-    // For a specific month, prefer the operational count (all validated claims) over the
+    // Prefer the operational count (all Generated/Validated reports) over the
     // loss-reduction-only count (which only covers claims the LR pipeline has backfilled).
-    const n = (filterMonth !== 'all' && opStats?.claims_validated != null)
-      ? opStats.claims_validated
-      : displayAgg.total_claims_processed ?? 0;
+    // opStats is fetched for both specific months and all-time (month=null), so this
+    // works correctly in both cases.
+    const n = opStats?.claims_validated ?? displayAgg.total_claims_processed ?? 0;
     // Use actual processing time if available, else default to 4 min (240 sec)
     const procSecs   = opStats?.avg_processing_time_seconds ?? 240;
     const saveMin    = 240 - procSecs / 60;          // manual 4hr = 240 min baseline
@@ -905,9 +905,7 @@ export default function Analytics() {
               },
               {
                 label: 'Claims Validated',
-                value: (filterMonth !== 'all' && opStats?.claims_validated != null)
-                  ? opStats.claims_validated
-                  : displayAgg.total_claims_processed ?? 0,
+                value: opStats?.claims_validated ?? displayAgg.total_claims_processed ?? 0,
                 sub: 'Reports where the AI completed all validation checks',
               },
             ].map((m, i, arr) => (
