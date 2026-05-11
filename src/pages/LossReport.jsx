@@ -74,6 +74,7 @@ function LossReport() {
 
   const [pdfLoading, setPdfLoading] = useState(false);
   const [pdfKey, setPdfKey] = useState(0);
+  const [pdfLinkLoading, setPdfLinkLoading] = useState(false);
 
   useEffect(() => {
     const fetchReportData = async () => {
@@ -327,6 +328,7 @@ function LossReport() {
                 borderColor: "divider",
                 borderRadius: 1,
                 p: 1,
+                position: "relative",
               }}
             >
               {/* Panel header row */}
@@ -372,7 +374,7 @@ function LossReport() {
                     <span>
                       <IconButton
                         size="small"
-                        onClick={handleOpenPdfNewTab}                
+                        onClick={handleOpenPdfNewTab}
                         disabled={!data?.pdfUrl || loading || pdfLoading}
                         sx={{ color: "text.secondary" }}
                       >
@@ -397,6 +399,29 @@ function LossReport() {
                   renderPDFViewer()
                 )}
               </Box>
+
+              {/* Overlay shown while a page-number hyperlink is being fetched */}
+              {pdfLinkLoading && (
+                <Box
+                  sx={{
+                    position: "absolute",
+                    inset: 0,
+                    zIndex: 10,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 1.5,
+                    bgcolor: "rgba(0, 0, 0, 0.45)",
+                    borderRadius: 1,
+                  }}
+                >
+                  <CircularProgress size={52} sx={{ color: "#fff" }} />
+                  <Typography variant="body2" sx={{ color: "#fff", fontWeight: 500 }}>
+                    Loading PDF…
+                  </Typography>
+                </Box>
+              )}
             </Box>
 
             {/* Vertical divider */}
@@ -450,6 +475,8 @@ function LossReport() {
                   reportId={data?.report_id}
                   prelim_folder={data?.prelim_folder}
                   pdfUrl={data?.pdfUrl}
+                  onPageLinkLoadStart={() => setPdfLinkLoading(true)}
+                  onPageLinkLoadEnd={() => setPdfLinkLoading(false)}
                 />
               </Box>
             </Box>

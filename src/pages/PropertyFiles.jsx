@@ -526,8 +526,7 @@ function PropertyFiles() {
                       whiteSpace: "nowrap",
                       overflow: "hidden",
                       textOverflow: "ellipsis",
-                      color: "#5B9B98", // Teal color matching your image
-                      fontWeight: 500,
+                      width: 110,
                     }}
                   >
                     {row.propertyType}
@@ -535,19 +534,22 @@ function PropertyFiles() {
 
                   {/* 2. Report Name */}
                   <TableCell>
-                    <Tooltip title={row.reportName} arrow>
+                    <Tooltip title={row.reportName || ""} arrow>
                       <span
                         style={{
                           display: "inline-block",
+                          maxWidth: 250,
                           whiteSpace: "nowrap",
                           overflow: "hidden",
                           textOverflow: "ellipsis",
                           verticalAlign: "middle",
-                          textTransform: "uppercase", // Matching the uppercase style in image
+                          textTransform: "uppercase",
                           fontSize: "0.875rem",
                         }}
                       >
-                        {row.reportName}
+                        {row.reportName && row.reportName.length > 15
+                          ? row.reportName.slice(0, 12) + "..."
+                          : row.reportName || ""}
                       </span>
                     </Tooltip>
                   </TableCell>
@@ -557,18 +559,21 @@ function PropertyFiles() {
 
                   {/* 4. Carrier */}
                   <TableCell>
-                    <Tooltip
-                      title={
-                        row.carrier.split(" ").length > 2 ? row.carrier : ""
-                      }
-                      arrow
-                    >
-                      <span style={{ color: "#5B9B98" }}>
-                        {row.carrier.split(" ").length > 2
-                          ? row.carrier.split(" ").slice(0, 2).join(" ") + "..."
-                          : row.carrier}
-                      </span>
-                    </Tooltip>
+                    {(() => {
+                      const words = (row.carrier || "").split(" ");
+                      const truncated =
+                        words.length > 2
+                          ? words.slice(0, 2).join(" ") + "..."
+                          : row.carrier || "";
+                      return (
+                        <Tooltip
+                          title={words.length > 2 ? row.carrier : ""}
+                          arrow
+                        >
+                          <span>{truncated}</span>
+                        </Tooltip>
+                      );
+                    })()}
                   </TableCell>
 
                   {/* 5. Policy No. */}

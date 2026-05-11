@@ -168,7 +168,10 @@ function describeOpeningStatementNetworkFailure(err) {
   );
 }
 
-function ReportAnalysis({ reportId, prelim_folder, pdfUrl }) {
+/** Module-level cache: cacheKey → blob URL. Persists across re-renders. */
+const pdfPageCache = new Map();
+
+function ReportAnalysis({ reportId, prelim_folder, pdfUrl, onPageLinkLoadStart, onPageLinkLoadEnd }) {
   console.log('ReportAnalysis props:', { reportId, prelim_folder, pdfUrl });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -179,6 +182,8 @@ function ReportAnalysis({ reportId, prelim_folder, pdfUrl }) {
   const [hasChanges, setHasChanges] = useState(false);
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [openingStatementLoading, setOpeningStatementLoading] = useState(false);
+  /** { fileName, page } while a PDF fetch is in flight; null otherwise. */
+  const [loadingPageRef, setLoadingPageRef] = useState(null);
   /** Last open-in-tab error, scoped to ``question`` so only that row shows it. */
   const [openingStatementActionError, setOpeningStatementActionError] =
     useState(null);
@@ -189,58 +194,81 @@ function ReportAnalysis({ reportId, prelim_folder, pdfUrl }) {
   const isNarrow = useMediaQuery(theme.breakpoints.down('md'));
 
   const handlePageClick = async (page, rowReportName) => {
+    const cacheKey =
+      rowReportName && isSafeReportBasename(rowReportName)
+        ? `${reportId}_${rowReportName}`
+        : `${reportId}`;
+
     const openBlobAtPage = (blobUrl) => {
       window.open(`${blobUrl}#page=${page}`, '_blank', 'noopener,noreferrer');
     };
 
-    // 1. Named document — try the specific report file first.
-    if (rowReportName && isSafeReportBasename(rowReportName) && reportId) {
-      try {
-        const body = {
-          report_id: reportId,
-          report_name: rowReportName.trim(),
-          ...(prelim_folder ? { prelim_folder } : {}),
-        };
-        const response = await axiosInstance.post(
-          '/get_property_document_pdf',
-          body,
-          { responseType: 'blob', headers: { Accept: 'application/pdf' } },
-        );
-        if (response.status >= 200 && response.status < 300 && response.data) {
-          openBlobAtPage(URL.createObjectURL(response.data));
-          return;
-        }
-      } catch (err) {
-        console.error('Failed to open PDF for reportName:', rowReportName, err);
-      }
-    }
-
-    // 2. Already-loaded blob URL (flood claims or property combined PDF).
-    if (pdfUrl) {
-      openBlobAtPage(pdfUrl);
+    // Serve from cache instantly — no loading indicator needed.
+    if (pdfPageCache.has(cacheKey)) {
+      openBlobAtPage(pdfPageCache.get(cacheKey));
       return;
     }
 
-    // 3. No reportName and no pdfUrl — fetch the primary document for the claim.
-    //    Handles categories (e.g. Advanced Damage, Interior Damage) whose Q&A rows
-    //    don't carry a reportName but still have valid page references.
-    if (reportId) {
-      try {
-        const body = {
-          report_id: reportId,
-          ...(prelim_folder ? { prelim_folder } : {}),
-        };
-        const response = await axiosInstance.post(
-          '/get_property_document_pdf',
-          body,
-          { responseType: 'blob', headers: { Accept: 'application/pdf' } },
-        );
-        if (response.status >= 200 && response.status < 300 && response.data) {
-          openBlobAtPage(URL.createObjectURL(response.data));
+    setLoadingPageRef({ fileName: rowReportName || null, page });
+    onPageLinkLoadStart?.();
+
+    try {
+      // 1. Named document — try the specific report file first.
+      if (rowReportName && isSafeReportBasename(rowReportName) && reportId) {
+        try {
+          const body = {
+            report_id: reportId,
+            report_name: rowReportName.trim(),
+            ...(prelim_folder ? { prelim_folder } : {}),
+          };
+          const response = await axiosInstance.post(
+            '/get_property_document_pdf',
+            body,
+            { responseType: 'blob', headers: { Accept: 'application/pdf' } },
+          );
+          if (response.status >= 200 && response.status < 300 && response.data) {
+            const blobUrl = URL.createObjectURL(response.data);
+            pdfPageCache.set(cacheKey, blobUrl);
+            openBlobAtPage(blobUrl);
+            return;
+          }
+        } catch (err) {
+          console.error('Failed to open PDF for reportName:', rowReportName, err);
         }
-      } catch (err) {
-        console.error('Failed to open primary PDF for report:', reportId, err);
       }
+
+      // 2. Already-loaded blob URL (flood claims or property combined PDF).
+      if (pdfUrl) {
+        openBlobAtPage(pdfUrl);
+        return;
+      }
+
+      // 3. No reportName and no pdfUrl — fetch the primary document for the claim.
+      //    Handles categories (e.g. Advanced Damage, Interior Damage) whose Q&A rows
+      //    don't carry a reportName but still have valid page references.
+      if (reportId) {
+        try {
+          const body = {
+            report_id: reportId,
+            ...(prelim_folder ? { prelim_folder } : {}),
+          };
+          const response = await axiosInstance.post(
+            '/get_property_document_pdf',
+            body,
+            { responseType: 'blob', headers: { Accept: 'application/pdf' } },
+          );
+          if (response.status >= 200 && response.status < 300 && response.data) {
+            const blobUrl = URL.createObjectURL(response.data);
+            pdfPageCache.set(cacheKey, blobUrl);
+            openBlobAtPage(blobUrl);
+          }
+        } catch (err) {
+          console.error('Failed to open primary PDF for report:', reportId, err);
+        }
+      }
+    } finally {
+      setLoadingPageRef(null);
+      onPageLinkLoadEnd?.();
     }
   };
 
@@ -810,40 +838,91 @@ function ReportAnalysis({ reportId, prelim_folder, pdfUrl }) {
                               </Box>
                             )}
 
-                            {pages.length > 0 && (
+                            {item.pageReferences && item.pageReferences.length > 0 ? (
+                              <Box sx={{ mt: 1.25, mb: 1 }}>
+                                {item.pageReferences.map((ref) => {
+                                  const baseName = (ref.fileName || '').replace(/\.[^.]+$/, '');
+                                  return (
+                                    <Typography
+                                      key={ref.fileName}
+                                      variant="caption"
+                                      color="text.secondary"
+                                      sx={{ display: 'block' }}
+                                    >
+                                      {baseName} Page no.{' '}
+                                      {(ref.pages || []).map((page, idx) => {
+                                        const isThisLoading =
+                                          loadingPageRef?.fileName === ref.fileName &&
+                                          loadingPageRef?.page === page;
+                                        const clickable = canOpenPage && !loadingPageRef;
+                                        return (
+                                          <span key={page}>
+                                            <Typography
+                                              variant="caption"
+                                              component="span"
+                                              onClick={
+                                                clickable
+                                                  ? () => handlePageClick(page, ref.fileName)
+                                                  : undefined
+                                              }
+                                              sx={{
+                                                cursor: clickable ? 'pointer' : 'default',
+                                                color: 'primary.main',
+                                                ml: idx > 0 ? 0.5 : 0,
+                                                '&:hover': clickable
+                                                  ? { textDecoration: 'underline' }
+                                                  : {},
+                                              }}
+                                            >
+                                              {page}
+                                            </Typography>
+                                            {idx < ref.pages.length - 1 && ', '}
+                                          </span>
+                                        );
+                                      })}
+                                    </Typography>
+                                  );
+                                })}
+                              </Box>
+                            ) : pages.length > 0 ? (
                               <Typography
                                 variant="caption"
                                 color="text.secondary"
                                 sx={{ display: 'block', mt: 1.25, mb: 1 }}
                               >
                                 Page No:{' '}
-                                {pages.map((page, idx) => (
-                                  <span key={page}>
-                                    <Typography
-                                      variant="caption"
-                                      component="span"
-                                      onClick={
-                                        canOpenPage
-                                          ? () =>
-                                              handlePageClick(page, rowReportName)
-                                          : undefined
-                                      }
-                                      sx={{
-                                        cursor: canOpenPage ? 'pointer' : 'default',
-                                        color: 'primary.main',
-                                        ml: idx > 0 ? 0.5 : 0,
-                                        '&:hover': canOpenPage
-                                          ? { textDecoration: 'underline' }
-                                          : {},
-                                      }}
-                                    >
-                                      {page}
-                                    </Typography>
-                                    {idx < pages.length - 1 && ', '}
-                                  </span>
-                                ))}
+                                {pages.map((page, idx) => {
+                                  const isThisLoading =
+                                    loadingPageRef?.fileName === (rowReportName || null) &&
+                                    loadingPageRef?.page === page;
+                                  const clickable = canOpenPage && !loadingPageRef;
+                                  return (
+                                    <span key={page}>
+                                      <Typography
+                                        variant="caption"
+                                        component="span"
+                                        onClick={
+                                          clickable
+                                            ? () => handlePageClick(page, rowReportName)
+                                            : undefined
+                                        }
+                                        sx={{
+                                          cursor: clickable ? 'pointer' : 'default',
+                                          color: 'primary.main',
+                                          ml: idx > 0 ? 0.5 : 0,
+                                          '&:hover': clickable
+                                            ? { textDecoration: 'underline' }
+                                            : {},
+                                        }}
+                                      >
+                                        {page}
+                                      </Typography>
+                                      {idx < pages.length - 1 && ', '}
+                                    </span>
+                                  );
+                                })}
                               </Typography>
-                            )}
+                            ) : null}
                           </>
                         )}
                       </Box>
@@ -902,6 +981,7 @@ function ReportAnalysis({ reportId, prelim_folder, pdfUrl }) {
         open={showSuccessPopup}
         onClose={() => setShowSuccessPopup(false)}
       />
+
     </Box>
   );
 }
