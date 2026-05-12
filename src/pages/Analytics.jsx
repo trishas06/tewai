@@ -1,9 +1,10 @@
-import { useState, useEffect, useMemo, useContext } from 'react';
+import { useState, useEffect, useMemo, useContext, useCallback, memo } from 'react';
 import {
   Box, Typography, Paper, Button, Select, MenuItem, FormControl,
   InputLabel, Table, TableBody, TableCell, TableContainer, TableHead,
   TableRow, Dialog, DialogTitle, DialogContent, IconButton,
   CircularProgress, Alert, Tabs, Tab, Chip, Tooltip, Divider,
+  TextField, InputAdornment, TableSortLabel,
 } from '@mui/material';
 import {
   InfoOutlined as InfoIcon,
@@ -12,6 +13,7 @@ import {
   PictureAsPdf as PdfIcon,
   Edit as EditIcon,
   Check as CheckIcon,
+  Search as SearchIcon,
 } from '@mui/icons-material';
 import { useTheme } from '@mui/material/styles';
 import {
@@ -348,6 +350,146 @@ function LossReductionInfoModal({ open, onClose }) {
   );
 }
 
+// ── Adjuster Performance table — owns its own search/sort state so keystrokes
+//    don't re-render the parent page with all its charts
+const AdjusterPerformanceTable = memo(function AdjusterPerformanceTable({ adjusters, filterMonth }) {
+  const [search, setSearch] = useState('');
+  const [sort,   setSort]   = useState({ col: null, dir: 'asc' });
+
+  const handleSort = (col) => {
+    setSort(prev => ({ col, dir: prev.col === col && prev.dir === 'asc' ? 'desc' : 'asc' }));
+  };
+
+  const displayed = useMemo(() => {
+    let list = [...adjusters];
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      list = list.filter(a => a.adjuster_name?.toLowerCase().includes(q));
+    }
+    if (sort.col) {
+      list.sort((a, b) => {
+        const va = a[sort.col] ?? 0;
+        const vb = b[sort.col] ?? 0;
+        const cmp = typeof va === 'string' ? va.localeCompare(vb) : va - vb;
+        return sort.dir === 'asc' ? cmp : -cmp;
+      });
+    }
+    return list;
+  }, [adjusters, search, sort]);
+
+  // Reserve the full-list height so filtering rows never collapses the section
+  // and triggers a scrollbar change that causes the whole page to reflow.
+  const tableMinHeight = adjusters.length > 0 ? adjusters.length * 41 + 160 : 'auto';
+
+  return (
+    <Paper elevation={1} sx={{ p: 2, borderRadius: 1, minHeight: tableMinHeight }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5, flexWrap: 'wrap', gap: 1 }}>
+        <Typography sx={{ fontSize: 14, fontWeight: 600 }}>
+          Adjuster Performance
+          {filterMonth !== 'all' && (
+            <Typography component="span" sx={{ fontSize: 13, color: 'primary.main', fontWeight: 500, ml: 1 }}>
+              — {fmtMonth(filterMonth)}
+            </Typography>
+          )}
+        </Typography>
+        {adjusters.length > 0 && (
+          <TextField
+            size="small"
+            placeholder="Search adjuster…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            sx={{ width: 220 }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon fontSize="small" sx={{ color: 'text.secondary' }} />
+                </InputAdornment>
+              ),
+            }}
+          />
+        )}
+      </Box>
+      {adjusters.length === 0 ? (
+        <Typography variant="body2" color="text.secondary">
+          No adjuster data available. This requires adjuster names to be extracted from the loss reports.
+        </Typography>
+      ) : (
+        <TableContainer>
+          <Table size="small">
+            <TableHead>
+              <TableRow sx={{ bgcolor: 'action.hover' }}>
+                <TableCell sx={{ fontWeight: 600 }}>
+                  <TableSortLabel
+                    active={sort.col === 'adjuster_name'}
+                    direction={sort.col === 'adjuster_name' ? sort.dir : 'asc'}
+                    onClick={() => handleSort('adjuster_name')}
+                  >
+                    Adjuster Name
+                  </TableSortLabel>
+                </TableCell>
+                <TableCell sx={{ fontWeight: 600 }} align="right">
+                  <TableSortLabel
+                    active={sort.col === 'claims_count'}
+                    direction={sort.col === 'claims_count' ? sort.dir : 'asc'}
+                    onClick={() => handleSort('claims_count')}
+                    sx={{ flexDirection: 'row-reverse' }}
+                  >
+                    Claims Submitted
+                  </TableSortLabel>
+                </TableCell>
+                <TableCell sx={{ fontWeight: 600 }} align="right">
+                  <TableSortLabel
+                    active={sort.col === 'warnings_count'}
+                    direction={sort.col === 'warnings_count' ? sort.dir : 'asc'}
+                    onClick={() => handleSort('warnings_count')}
+                    sx={{ flexDirection: 'row-reverse' }}
+                  >
+                    Warnings
+                  </TableSortLabel>
+                </TableCell>
+                <TableCell sx={{ fontWeight: 600 }} align="right">Trend vs Last Month</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {displayed.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} align="center" sx={{ py: 2, color: 'text.secondary', fontSize: 13 }}>
+                    No adjusters match "{search}"
+                  </TableCell>
+                </TableRow>
+              ) : (
+                displayed.map((a, i) => (
+                  <TableRow key={i} hover>
+                    <TableCell sx={{ fontWeight: 500 }}>{a.adjuster_name}</TableCell>
+                    <TableCell align="right">{a.claims_count}</TableCell>
+                    <TableCell align="right">
+                      <Chip label={a.warnings_count} size="small"
+                        sx={{ bgcolor: '#e0f2f1', color: '#00695c', fontWeight: 700, fontSize: 12, height: 22, cursor: 'default', border: '1px solid #80cbc4' }} />
+                    </TableCell>
+                    <TableCell align="right">
+                      {a.trend === null || a.trend === undefined
+                        ? <Box component="span" sx={{ px: 1, py: 0.25, borderRadius: 10, bgcolor: 'action.hover', fontSize: 11, color: 'text.secondary' }}>N/A</Box>
+                        : a.trend > 0
+                          ? <Typography component="span" sx={{ fontSize: 12, fontWeight: 600, color: 'error.main' }}>↑ {a.trend}%</Typography>
+                          : a.trend < 0
+                            ? <Typography component="span" sx={{ fontSize: 12, fontWeight: 600, color: 'success.main' }}>↓ {Math.abs(a.trend)}%</Typography>
+                            : <Typography component="span" sx={{ fontSize: 12, color: 'text.secondary' }}>→ 0%</Typography>
+                      }
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
+      <Typography sx={{ fontSize: 11, color: 'text.secondary', mt: 1, fontStyle: 'italic' }}>
+        Warnings = reports with ≥1 "No match" or "Raise" flag · Trend = % change in warnings vs previous month · N/A = first month in system for this adjuster
+      </Typography>
+    </Paper>
+  );
+});
+
 // ── Main Analytics page ───────────────────────────────────────────────────────
 export default function Analytics() {
   const theme = useTheme();
@@ -451,6 +593,25 @@ export default function Analytics() {
       total_match_flags:          filteredClaims.reduce((s, c) => s + c.match, 0),
     };
   }, [filterMonth, filteredClaims, aggregate]);
+
+  // ── Drill-down Y-axis custom tick — full question shown on hover ──────────
+  const DrillYAxisTick = useCallback(({ x, y, payload }) => {
+    const question = payload?.value ?? '';
+    const label = question.length > 48 ? question.slice(0, 48) + '…' : question;
+    return (
+      <g transform={`translate(${x},${y})`}>
+        <foreignObject x={-255} y={-9} width={252} height={20} style={{ overflow: 'visible' }}>
+          <div xmlns="http://www.w3.org/1999/xhtml" style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+            <Tooltip title={question} placement="right" arrow>
+              <span style={{ fontSize: 11, color: theme.palette.text.primary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 252, display: 'block', textAlign: 'right', cursor: 'default' }}>
+                {label}
+              </span>
+            </Tooltip>
+          </div>
+        </foreignObject>
+      </g>
+    );
+  }, [theme]);
 
   // ── FTE rate handler ──────────────────────────────────────────────────────
   const handleRateSave = () => {
@@ -627,9 +788,8 @@ export default function Analytics() {
                 <BarChart data={drillData} layout="vertical" margin={{ top: 0, right: 24, left: 260, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} horizontal={false} />
                   <XAxis type="number" tick={{ fontSize: 11 }} />
-                  <YAxis type="category" dataKey="question" tick={{ fontSize: 11 }} width={255}
-                    tickFormatter={v => v?.length > 48 ? v.slice(0, 48) + '…' : v} />
-                  <ReTooltip formatter={(v, n, p) => [v, p.payload.question]} />
+                  <YAxis type="category" dataKey="question" tick={DrillYAxisTick} width={255} />
+                  <ReTooltip formatter={(v) => [v, 'No Match']} />
                   <Bar dataKey="no_match_count" fill={teal} radius={[0, 3, 3, 0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -787,59 +947,7 @@ export default function Analytics() {
         </Paper>
 
         {/* Adjuster Performance */}
-        <Paper elevation={1} sx={{ p: 2, borderRadius: 1 }}>
-          <Typography sx={{ fontSize: 14, fontWeight: 600, mb: 1.5 }}>
-            Adjuster Performance
-            {filterMonth !== 'all' && (
-              <Typography component="span" sx={{ fontSize: 13, color: 'primary.main', fontWeight: 500, ml: 1 }}>
-                — {fmtMonth(filterMonth)}
-              </Typography>
-            )}
-          </Typography>
-          {adjuster_performance.length === 0 ? (
-            <Typography variant="body2" color="text.secondary">
-              No adjuster data available. This requires adjuster names to be extracted from the loss reports.
-            </Typography>
-          ) : (
-            <TableContainer>
-              <Table size="small">
-                <TableHead>
-                  <TableRow sx={{ bgcolor: 'action.hover' }}>
-                    <TableCell sx={{ fontWeight: 600 }}>Adjuster Name</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }} align="right">Claims Submitted</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }} align="right">Warnings</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }} align="right">Trend vs Last Month</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {adjuster_performance.map((a, i) => (
-                    <TableRow key={i} hover>
-                      <TableCell sx={{ fontWeight: 500 }}>{a.adjuster_name}</TableCell>
-                      <TableCell align="right">{a.claims_count}</TableCell>
-                      <TableCell align="right">
-                        <Chip label={a.warnings_count} size="small"
-                          sx={{ bgcolor: '#e0f2f1', color: '#00695c', fontWeight: 700, fontSize: 12, height: 22, cursor: 'default', border: '1px solid #80cbc4' }} />
-                      </TableCell>
-                      <TableCell align="right">
-                        {a.trend === null || a.trend === undefined
-                          ? <Box component="span" sx={{ px: 1, py: 0.25, borderRadius: 10, bgcolor: 'action.hover', fontSize: 11, color: 'text.secondary' }}>N/A</Box>
-                          : a.trend > 0
-                            ? <Typography component="span" sx={{ fontSize: 12, fontWeight: 600, color: 'error.main' }}>↑ {a.trend}%</Typography>
-                            : a.trend < 0
-                              ? <Typography component="span" sx={{ fontSize: 12, fontWeight: 600, color: 'success.main' }}>↓ {Math.abs(a.trend)}%</Typography>
-                              : <Typography component="span" sx={{ fontSize: 12, color: 'text.secondary' }}>→ 0%</Typography>
-                        }
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          )}
-          <Typography sx={{ fontSize: 11, color: 'text.secondary', mt: 1, fontStyle: 'italic' }}>
-            Warnings = reports with ≥1 "No match" or "Raise" flag · Trend = % change in warnings vs previous month · N/A = first month in system for this adjuster
-          </Typography>
-        </Paper>
+        <AdjusterPerformanceTable adjusters={adjuster_performance} filterMonth={filterMonth} />
       </Box>
     );
   };
