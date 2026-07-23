@@ -791,7 +791,7 @@ export default function Analytics() {
         <Box>
           <Paper elevation={1} sx={{ p: 2, borderRadius: 1 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
-              <Button startIcon={<ArrowBackIcon />} onClick={() => setCatDrill(null)} size="small" variant="outlined">
+              <Button className="no-print" startIcon={<ArrowBackIcon />} onClick={() => setCatDrill(null)} size="small" variant="outlined">
                 Back to Categories
               </Button>
               <Box>
@@ -803,15 +803,20 @@ export default function Analytics() {
               </Box>
             </Box>
             {drillData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={Math.max(160, drillData.length * 44)}>
-                <BarChart data={drillData} layout="vertical" margin={{ top: 0, right: 24, left: 260, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} horizontal={false} />
-                  <XAxis type="number" tick={{ fontSize: 11 }} />
-                  <YAxis type="category" dataKey="question" tick={DrillYAxisTick} width={255} />
-                  <ReTooltip formatter={(v) => [v, 'No Match']} />
-                  <Bar dataKey="no_match_count" fill={teal} radius={[0, 3, 3, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              // Excluded from print: at 44px/row this chart routinely exceeds one printable
+              // page and gets pushed whole onto the next page, leaving the first page blank.
+              // The table below has the same data in full, so print output stays lossless.
+              <Box className="no-print">
+                <ResponsiveContainer width="100%" height={Math.max(160, drillData.length * 44)}>
+                  <BarChart data={drillData} layout="vertical" margin={{ top: 0, right: 24, left: 260, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} horizontal={false} />
+                    <XAxis type="number" tick={{ fontSize: 11 }} />
+                    <YAxis type="category" dataKey="question" tick={DrillYAxisTick} width={255} />
+                    <ReTooltip formatter={(v) => [v, 'No Match']} />
+                    <Bar dataKey="no_match_count" fill={teal} radius={[0, 3, 3, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </Box>
             ) : (
               <Typography variant="body2" color="text.secondary">No sub-prompt breakdown available.</Typography>
             )}
@@ -1420,6 +1425,24 @@ export default function Analytics() {
         ...(opStats?.top_failed_categories ?? []).map(c => [c.category, c.no_match_count]),
       ];
       XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(catRows), 'Failed Validation Categories');
+
+      // Sub-prompt breakdown — same data shown in the on-screen category drill-down.
+      const breakdownRows = [['Category', '#', 'Prompt / Validation Check', 'No Match Flags', '% of Category']];
+      (opStats?.top_failed_categories ?? []).forEach(c => {
+        const subPrompts = c.sub_prompts ?? [];
+        const totalCat = subPrompts.reduce((s, p) => s + p.no_match_count, 0) || c.no_match_count;
+        const sorted = [...subPrompts].sort((a, b) => b.no_match_count - a.no_match_count);
+        sorted.forEach((p, i) => {
+          breakdownRows.push([
+            c.category,
+            i + 1,
+            p.question || '—',
+            p.no_match_count,
+            totalCat > 0 ? `${(p.no_match_count / totalCat * 100).toFixed(1)}%` : '—',
+          ]);
+        });
+      });
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(breakdownRows), 'Category Breakdown');
     }
 
     const filenamePeriod = filterMonth === 'all' ? 'AllTime' : filterMonth;
