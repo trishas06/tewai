@@ -4,13 +4,16 @@ import {
   InputLabel, Table, TableBody, TableCell, TableContainer, TableHead,
   TableRow, Dialog, DialogTitle, DialogContent, IconButton,
   CircularProgress, Alert, Tabs, Tab, Chip, Tooltip, Divider,
-  TextField, InputAdornment, TableSortLabel,
+  TextField, InputAdornment, TableSortLabel, ToggleButton, ToggleButtonGroup,
+  Menu,
 } from '@mui/material';
 import {
   InfoOutlined as InfoIcon,
   ArrowBack as ArrowBackIcon,
   Close as CloseIcon,
   PictureAsPdf as PdfIcon,
+  TableChart as ExcelIcon,
+  ArrowDropDown as ArrowDropDownIcon,
   Edit as EditIcon,
   Check as CheckIcon,
   Search as SearchIcon,
@@ -20,6 +23,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as ReTooltip,
   ResponsiveContainer, PieChart, Pie, Cell, Legend,
 } from 'recharts';
+import * as XLSX from 'xlsx';
 import {
   getLossReductionData,
   getLossReductionAggregate,
@@ -505,6 +509,7 @@ export default function Analytics() {
   const [selectedClaim, setSelectedClaim] = useState(null);
   const [infoOpen,      setInfoOpen]      = useState(false);
   const [catDrill,      setCatDrill]      = useState(null); // null | { category, sub_prompts }
+  const [catViewAll,    setCatViewAll]    = useState(false); // false=Top 10, true=All
 
   // FTE hourly rate — Admin-configurable, persisted in localStorage
   const [hourlyRate,  setHourlyRate]  = useState(() => Number(localStorage.getItem('fte_hourly_rate')) || 35);
@@ -648,6 +653,16 @@ export default function Analytics() {
     return { available: true, n, hoursSaved, fteMonths, costSaved, annualProj, saveMin: saveMin.toFixed(1), procSecs, monthCount };
   }, [displayAgg, filterMonth, opStats, availableMonths, hourlyRate]);
 
+  // ── Efficiency journey (Executive tab "Today" bubble — always the all-time average) ──
+  const journey = useMemo(() => {
+    const journeyProcSecs = globalProcSecs ?? opStats?.avg_processing_time_seconds ?? null;
+    const reductionPct = journeyProcSecs != null
+      ? ((240 * 60 - journeyProcSecs) / (240 * 60) * 100).toFixed(1)
+      : '98.3';
+    const currentTime = journeyProcSecs != null ? fmtTime(journeyProcSecs) : '~4 min';
+    return { journeyProcSecs, reductionPct, currentTime };
+  }, [globalProcSecs, opStats]);
+
   // ── Period selector ────────────────────────────────────────────────────────
   const periodSelector = (
     <FormControl size="small" sx={{ minWidth: 180 }}>
@@ -776,7 +791,7 @@ export default function Analytics() {
         <Box>
           <Paper elevation={1} sx={{ p: 2, borderRadius: 1 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
-              <Button startIcon={<ArrowBackIcon />} onClick={() => setCatDrill(null)} size="small" variant="outlined">
+              <Button className="no-print" startIcon={<ArrowBackIcon />} onClick={() => setCatDrill(null)} size="small" variant="outlined">
                 Back to Categories
               </Button>
               <Box>
@@ -788,15 +803,20 @@ export default function Analytics() {
               </Box>
             </Box>
             {drillData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={Math.max(160, drillData.length * 44)}>
-                <BarChart data={drillData} layout="vertical" margin={{ top: 0, right: 24, left: 260, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} horizontal={false} />
-                  <XAxis type="number" tick={{ fontSize: 11 }} />
-                  <YAxis type="category" dataKey="question" tick={DrillYAxisTick} width={255} />
-                  <ReTooltip formatter={(v) => [v, 'No Match']} />
-                  <Bar dataKey="no_match_count" fill={teal} radius={[0, 3, 3, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              // Excluded from print: at 44px/row this chart routinely exceeds one printable
+              // page and gets pushed whole onto the next page, leaving the first page blank.
+              // The table below has the same data in full, so print output stays lossless.
+              <Box className="no-print">
+                <ResponsiveContainer width="100%" height={Math.max(160, drillData.length * 44)}>
+                  <BarChart data={drillData} layout="vertical" margin={{ top: 0, right: 24, left: 260, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} horizontal={false} />
+                    <XAxis type="number" tick={{ fontSize: 11 }} />
+                    <YAxis type="category" dataKey="question" tick={DrillYAxisTick} width={255} />
+                    <ReTooltip formatter={(v) => [v, 'No Match']} />
+                    <Bar dataKey="no_match_count" fill={teal} radius={[0, 3, 3, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </Box>
             ) : (
               <Typography variant="body2" color="text.secondary">No sub-prompt breakdown available.</Typography>
             )}
@@ -918,12 +938,24 @@ export default function Analytics() {
 
         {/* Top Failed Categories */}
         <Paper elevation={1} sx={{ p: 2, mb: 1.5, borderRadius: 1 }}>
-          <Typography sx={{ fontSize: 14, fontWeight: 600, mb: 1.5 }}>
-            Top 10 Failed Validation Categories
-            <Typography component="span" sx={{ fontSize: 12, color: 'text.secondary', fontWeight: 400, ml: 1 }}>
-              by "No match" count{filterMonth !== 'all' ? ` · ${fmtMonth(filterMonth)} · ${claims_validated} generated reports` : ''}
+          <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 1.5, gap: 1.5 }}>
+            <Typography sx={{ fontSize: 14, fontWeight: 600 }}>
+              {catViewAll ? 'Failed Validation Categories' : 'Top 10 Failed Validation Categories'}
+              <Typography component="span" sx={{ fontSize: 12, color: 'text.secondary', fontWeight: 400, ml: 1 }}>
+                by "No match" count{filterMonth !== 'all' ? ` · ${fmtMonth(filterMonth)} · ${claims_validated} generated reports` : ''}
+              </Typography>
             </Typography>
-          </Typography>
+            <ToggleButtonGroup value={catViewAll ? 'all' : 'top10'} exclusive size="small"
+              onChange={(_, v) => { if (v !== null) setCatViewAll(v === 'all'); }}>
+              <ToggleButton value="top10" sx={{ fontSize: 11, py: 0.25, px: 1.25 }}>Top 10</ToggleButton>
+              <ToggleButton value="all" sx={{ fontSize: 11, py: 0.25, px: 1.25 }}>All</ToggleButton>
+            </ToggleButtonGroup>
+          </Box>
+          {catViewAll && (
+            <Typography sx={{ fontSize: 11, color: 'text.secondary', mt: -1, mb: 1.5, fontStyle: 'italic' }}>
+              The backend currently only returns the top 10 categories — full list pending a backend update.
+            </Typography>
+          )}
           {catData.length === 0 ? (
             <Typography variant="body2" color="text.secondary">No data</Typography>
           ) : (
@@ -960,11 +992,7 @@ export default function Analytics() {
   const renderExecutive = () => {
     const prev = opStats?.prev_month ?? null;
     // Efficiency journey always uses the global all-time processing time (same regardless of month filter)
-    const journeyProcSecs = globalProcSecs ?? opStats?.avg_processing_time_seconds ?? null;
-    const reductionPct = journeyProcSecs != null
-      ? ((240 * 60 - journeyProcSecs) / (240 * 60) * 100).toFixed(1)
-      : '98.3';
-    const currentTime = journeyProcSecs != null ? fmtTime(journeyProcSecs) : '~4 min';
+    const { reductionPct, currentTime } = journey;
 
     return (
       <Box>
@@ -1332,6 +1360,101 @@ export default function Analytics() {
     );
   };
 
+  // ── Export ──────────────────────────────────────────────────────────────────
+  const [exportMenuAnchor, setExportMenuAnchor] = useState(null);
+
+  const handleExportExcel = () => {
+    const periodLabel = filterMonth === 'all' ? 'All Time' : fmtMonth(filterMonth);
+    const wb = XLSX.utils.book_new();
+    const tabLabel = activeTab === 1 ? 'Executive' : 'Operational';
+
+    if (activeTab === 1) {
+      // ── Executive tab ───────────────────────────────────────────────────
+      const execRows = [
+        ['Metric', 'Value'],
+        ['Period', periodLabel],
+        ['Efficiency Journey — Baseline (Manual QA)', '4 hrs'],
+        ['Efficiency Journey — Early Adoption (Phase 1)', '40 min'],
+        ['Efficiency Journey — Today (All-Time Average)', journey.currentTime],
+        ['Total Estimate Value Reviewed', fmt$(displayAgg.total_estimate_value)],
+        ['Total Loss Reduction', fmt$(displayAgg.total_loss_reduction_value)],
+        ['Total "No Match" Flags', (displayAgg.total_no_match_flags ?? 0).toLocaleString()],
+        ['Claims Validated', opStats?.claims_validated ?? displayAgg.total_claims_processed ?? '—'],
+        ['Claim Quality Score', opStats?.quality_score != null ? `${opStats.quality_score}%` : '—'],
+        ['Unprocessable Rate', opStats?.unprocessable_rate != null ? `${opStats.unprocessable_rate}%` : '—'],
+        ['Active Adjusters', opStats?.active_adjusters ?? '—'],
+        ['Hours Saved', bizImpact.available ? bizImpact.hoursSaved : 'Backfill pending'],
+        ['FTE Months Equivalent', bizImpact.available ? bizImpact.fteMonths : 'Backfill pending'],
+        ['Cost Saved', bizImpact.available ? fmt$(bizImpact.costSaved) : 'Backfill pending'],
+        ['Projected Annual Savings', bizImpact.available ? fmt$(bizImpact.annualProj) : 'Backfill pending'],
+        ['FTE Hourly Rate', `$${hourlyRate}/hr`],
+      ];
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(execRows), 'Executive Summary');
+    } else {
+      // ── Operational tab ─────────────────────────────────────────────────
+      const kpiRows = [
+        ['Metric', 'Value'],
+        ['Period', periodLabel],
+        ['Claims Submitted', opStats?.claims_submitted ?? '—'],
+        ['Claims Validated', opStats?.claims_validated ?? '—'],
+        ['Unprocessable Rate', opStats?.unprocessable_rate != null ? `${opStats.unprocessable_rate}%` : '—'],
+        ['Avg Warnings / Report', opStats?.avg_warnings != null ? opStats.avg_warnings.toFixed(1) : '—'],
+        ['Active Adjusters', opStats?.active_adjusters ?? '—'],
+        ['Claim Quality Score', opStats?.quality_score != null ? `${opStats.quality_score}%` : '—'],
+        ['Carrier Coverage', opStats?.carrier_coverage ?? '—'],
+        ['Avg AI Processing Time', opStats?.avg_processing_time_seconds != null ? fmtTime(opStats.avg_processing_time_seconds) : 'Backfill pending'],
+        ['Total Estimate Value Reviewed', fmt$(displayAgg.total_estimate_value)],
+        ['Total Loss Reduction', fmt$(displayAgg.total_loss_reduction_value)],
+        ['Total "No Match" Flags', (displayAgg.total_no_match_flags ?? 0).toLocaleString()],
+      ];
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(kpiRows), 'KPIs');
+
+      const adjRows = [
+        ['Adjuster Name', 'Claims Submitted', 'Warnings', 'Trend vs Last Month'],
+        ...(opStats?.adjuster_performance ?? []).map(a => [
+          a.adjuster_name,
+          a.claims_count,
+          a.warnings_count,
+          a.trend == null ? 'N/A' : `${a.trend > 0 ? '+' : ''}${a.trend}%`,
+        ]),
+      ];
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(adjRows), 'Adjuster Performance');
+
+      const catRows = [
+        ['Category', 'No Match Count'],
+        ...(opStats?.top_failed_categories ?? []).map(c => [c.category, c.no_match_count]),
+      ];
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(catRows), 'Failed Validation Categories');
+
+      // Sub-prompt breakdown — same data shown in the on-screen category drill-down.
+      const breakdownRows = [['Category', '#', 'Prompt / Validation Check', 'No Match Flags', '% of Category']];
+      (opStats?.top_failed_categories ?? []).forEach(c => {
+        const subPrompts = c.sub_prompts ?? [];
+        const totalCat = subPrompts.reduce((s, p) => s + p.no_match_count, 0) || c.no_match_count;
+        const sorted = [...subPrompts].sort((a, b) => b.no_match_count - a.no_match_count);
+        sorted.forEach((p, i) => {
+          breakdownRows.push([
+            c.category,
+            i + 1,
+            p.question || '—',
+            p.no_match_count,
+            totalCat > 0 ? `${(p.no_match_count / totalCat * 100).toFixed(1)}%` : '—',
+          ]);
+        });
+      });
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(breakdownRows), 'Category Breakdown');
+    }
+
+    const filenamePeriod = filterMonth === 'all' ? 'AllTime' : filterMonth;
+    XLSX.writeFile(wb, `Analytics_${tabLabel}_${filenamePeriod}.xlsx`);
+    setExportMenuAnchor(null);
+  };
+
+  const handleExportPDF = () => {
+    setExportMenuAnchor(null);
+    window.print();
+  };
+
   // ── Loading / error (Loss Reduction) ──────────────────────────────────────
   if (lrLoading) return (
     <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
@@ -1346,10 +1469,19 @@ export default function Analytics() {
       {/* Page header */}
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
         <Typography variant="h5" fontWeight={600}>Analytics Dashboard</Typography>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <Button variant="outlined" size="small" startIcon={<PdfIcon />} onClick={() => window.print()}>
-            Export as PDF
+        <Box className="no-print" sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Button variant="outlined" size="small" startIcon={<PdfIcon />} endIcon={<ArrowDropDownIcon />}
+            onClick={e => setExportMenuAnchor(e.currentTarget)}>
+            Export Report
           </Button>
+          <Menu anchorEl={exportMenuAnchor} open={Boolean(exportMenuAnchor)} onClose={() => setExportMenuAnchor(null)}>
+            <MenuItem onClick={handleExportPDF}>
+              <PdfIcon fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} /> as PDF
+            </MenuItem>
+            <MenuItem onClick={handleExportExcel}>
+              <ExcelIcon fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} /> as Excel
+            </MenuItem>
+          </Menu>
           {periodSelector}
         </Box>
       </Box>

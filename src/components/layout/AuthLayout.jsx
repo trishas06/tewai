@@ -139,7 +139,9 @@ function AuthLayout({ children }) {
           color: 'text.primary',
         }}
       >
-        <Sidebar isExpanded={isExpanded} onToggle={handleSidebarToggle} />
+        <Box className="no-print">
+          <Sidebar isExpanded={isExpanded} onToggle={handleSidebarToggle} />
+        </Box>
         <Box
           component="main"
           sx={{
@@ -158,13 +160,17 @@ function AuthLayout({ children }) {
             color: 'text.primary',
           }}
         >
-          <Header
-            isExpanded={isExpanded}
-            notifications={notifications}
-            loading={notificationsLoading}
-          />
+          <Box className="no-print">
+            <Header
+              isExpanded={isExpanded}
+              notifications={notifications}
+              loading={notificationsLoading}
+            />
+          </Box>
           {children}
-          <Footer isExpanded={isExpanded} />
+          <Box className="no-print">
+            <Footer isExpanded={isExpanded} />
+          </Box>
         </Box>
 
         <SessionTimeoutDialog
