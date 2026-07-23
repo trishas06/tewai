@@ -653,6 +653,16 @@ export default function Analytics() {
     return { available: true, n, hoursSaved, fteMonths, costSaved, annualProj, saveMin: saveMin.toFixed(1), procSecs, monthCount };
   }, [displayAgg, filterMonth, opStats, availableMonths, hourlyRate]);
 
+  // ── Efficiency journey (Executive tab "Today" bubble — always the all-time average) ──
+  const journey = useMemo(() => {
+    const journeyProcSecs = globalProcSecs ?? opStats?.avg_processing_time_seconds ?? null;
+    const reductionPct = journeyProcSecs != null
+      ? ((240 * 60 - journeyProcSecs) / (240 * 60) * 100).toFixed(1)
+      : '98.3';
+    const currentTime = journeyProcSecs != null ? fmtTime(journeyProcSecs) : '~4 min';
+    return { journeyProcSecs, reductionPct, currentTime };
+  }, [globalProcSecs, opStats]);
+
   // ── Period selector ────────────────────────────────────────────────────────
   const periodSelector = (
     <FormControl size="small" sx={{ minWidth: 180 }}>
@@ -977,11 +987,7 @@ export default function Analytics() {
   const renderExecutive = () => {
     const prev = opStats?.prev_month ?? null;
     // Efficiency journey always uses the global all-time processing time (same regardless of month filter)
-    const journeyProcSecs = globalProcSecs ?? opStats?.avg_processing_time_seconds ?? null;
-    const reductionPct = journeyProcSecs != null
-      ? ((240 * 60 - journeyProcSecs) / (240 * 60) * 100).toFixed(1)
-      : '98.3';
-    const currentTime = journeyProcSecs != null ? fmtTime(journeyProcSecs) : '~4 min';
+    const { reductionPct, currentTime } = journey;
 
     return (
       <Box>
@@ -1355,43 +1361,69 @@ export default function Analytics() {
   const handleExportExcel = () => {
     const periodLabel = filterMonth === 'all' ? 'All Time' : fmtMonth(filterMonth);
     const wb = XLSX.utils.book_new();
+    const tabLabel = activeTab === 1 ? 'Executive' : 'Operational';
 
-    const kpiRows = [
-      ['Metric', 'Value'],
-      ['Period', periodLabel],
-      ['Claims Submitted', opStats?.claims_submitted ?? '—'],
-      ['Claims Validated', opStats?.claims_validated ?? '—'],
-      ['Unprocessable Rate', opStats?.unprocessable_rate != null ? `${opStats.unprocessable_rate}%` : '—'],
-      ['Avg Warnings / Report', opStats?.avg_warnings != null ? opStats.avg_warnings.toFixed(1) : '—'],
-      ['Active Adjusters', opStats?.active_adjusters ?? '—'],
-      ['Claim Quality Score', opStats?.quality_score != null ? `${opStats.quality_score}%` : '—'],
-      ['Carrier Coverage', opStats?.carrier_coverage ?? '—'],
-      ['Avg AI Processing Time', opStats?.avg_processing_time_seconds != null ? fmtTime(opStats.avg_processing_time_seconds) : 'Backfill pending'],
-      ['Total Estimate Value Reviewed', fmt$(displayAgg.total_estimate_value)],
-      ['Total Loss Reduction', fmt$(displayAgg.total_loss_reduction_value)],
-      ['Total "No Match" Flags', (displayAgg.total_no_match_flags ?? 0).toLocaleString()],
-    ];
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(kpiRows), 'KPIs');
+    if (activeTab === 1) {
+      // ── Executive tab ───────────────────────────────────────────────────
+      const execRows = [
+        ['Metric', 'Value'],
+        ['Period', periodLabel],
+        ['Efficiency Journey — Baseline (Manual QA)', '4 hrs'],
+        ['Efficiency Journey — Early Adoption (Phase 1)', '40 min'],
+        ['Efficiency Journey — Today (All-Time Average)', journey.currentTime],
+        ['Total Estimate Value Reviewed', fmt$(displayAgg.total_estimate_value)],
+        ['Total Loss Reduction', fmt$(displayAgg.total_loss_reduction_value)],
+        ['Total "No Match" Flags', (displayAgg.total_no_match_flags ?? 0).toLocaleString()],
+        ['Claims Validated', opStats?.claims_validated ?? displayAgg.total_claims_processed ?? '—'],
+        ['Claim Quality Score', opStats?.quality_score != null ? `${opStats.quality_score}%` : '—'],
+        ['Unprocessable Rate', opStats?.unprocessable_rate != null ? `${opStats.unprocessable_rate}%` : '—'],
+        ['Active Adjusters', opStats?.active_adjusters ?? '—'],
+        ['Hours Saved', bizImpact.available ? bizImpact.hoursSaved : 'Backfill pending'],
+        ['FTE Months Equivalent', bizImpact.available ? bizImpact.fteMonths : 'Backfill pending'],
+        ['Cost Saved', bizImpact.available ? fmt$(bizImpact.costSaved) : 'Backfill pending'],
+        ['Projected Annual Savings', bizImpact.available ? fmt$(bizImpact.annualProj) : 'Backfill pending'],
+        ['FTE Hourly Rate', `$${hourlyRate}/hr`],
+      ];
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(execRows), 'Executive Summary');
+    } else {
+      // ── Operational tab ─────────────────────────────────────────────────
+      const kpiRows = [
+        ['Metric', 'Value'],
+        ['Period', periodLabel],
+        ['Claims Submitted', opStats?.claims_submitted ?? '—'],
+        ['Claims Validated', opStats?.claims_validated ?? '—'],
+        ['Unprocessable Rate', opStats?.unprocessable_rate != null ? `${opStats.unprocessable_rate}%` : '—'],
+        ['Avg Warnings / Report', opStats?.avg_warnings != null ? opStats.avg_warnings.toFixed(1) : '—'],
+        ['Active Adjusters', opStats?.active_adjusters ?? '—'],
+        ['Claim Quality Score', opStats?.quality_score != null ? `${opStats.quality_score}%` : '—'],
+        ['Carrier Coverage', opStats?.carrier_coverage ?? '—'],
+        ['Avg AI Processing Time', opStats?.avg_processing_time_seconds != null ? fmtTime(opStats.avg_processing_time_seconds) : 'Backfill pending'],
+        ['Total Estimate Value Reviewed', fmt$(displayAgg.total_estimate_value)],
+        ['Total Loss Reduction', fmt$(displayAgg.total_loss_reduction_value)],
+        ['Total "No Match" Flags', (displayAgg.total_no_match_flags ?? 0).toLocaleString()],
+      ];
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(kpiRows), 'KPIs');
 
-    const adjRows = [
-      ['Adjuster Name', 'Claims Submitted', 'Warnings', 'Trend vs Last Month'],
-      ...(opStats?.adjuster_performance ?? []).map(a => [
-        a.adjuster_name,
-        a.claims_count,
-        a.warnings_count,
-        a.trend == null ? 'N/A' : `${a.trend > 0 ? '+' : ''}${a.trend}%`,
-      ]),
-    ];
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(adjRows), 'Adjuster Performance');
+      const adjRows = [
+        ['Adjuster Name', 'Claims Submitted', 'Warnings', 'Trend vs Last Month'],
+        ...(opStats?.adjuster_performance ?? []).map(a => [
+          a.adjuster_name,
+          a.claims_count,
+          a.warnings_count,
+          a.trend == null ? 'N/A' : `${a.trend > 0 ? '+' : ''}${a.trend}%`,
+        ]),
+      ];
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(adjRows), 'Adjuster Performance');
 
-    const catRows = [
-      ['Category', 'No Match Count'],
-      ...(opStats?.top_failed_categories ?? []).map(c => [c.category, c.no_match_count]),
-    ];
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(catRows), 'Failed Validation Categories');
+      const catRows = [
+        ['Category', 'No Match Count'],
+        ...(opStats?.top_failed_categories ?? []).map(c => [c.category, c.no_match_count]),
+      ];
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(catRows), 'Failed Validation Categories');
+    }
 
     const filenamePeriod = filterMonth === 'all' ? 'AllTime' : filterMonth;
-    XLSX.writeFile(wb, `Analytics_${filenamePeriod}.xlsx`);
+    XLSX.writeFile(wb, `Analytics_${tabLabel}_${filenamePeriod}.xlsx`);
     setExportMenuAnchor(null);
   };
 
@@ -1414,7 +1446,7 @@ export default function Analytics() {
       {/* Page header */}
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
         <Typography variant="h5" fontWeight={600}>Analytics Dashboard</Typography>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+        <Box className="no-print" sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
           <Button variant="outlined" size="small" startIcon={<PdfIcon />} endIcon={<ArrowDropDownIcon />}
             onClick={e => setExportMenuAnchor(e.currentTarget)}>
             Export Report
