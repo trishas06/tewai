@@ -980,7 +980,7 @@ export default function Analytics() {
             {[
               { n: '1', time: '4 hrs',     label: 'Before tool\nManual QA — baseline',  badge: 'Baseline',                        badgeSx: { bgcolor: 'rgba(0,0,0,0.06)', color: 'text.secondary' }, dotSx: { bgcolor: 'background.default', border: '2px solid', borderColor: 'divider', color: 'text.secondary' } },
               { n: '2', time: '40 min',    label: 'Early adoption\nPhase 1 deployment', badge: '−83% from baseline',               badgeSx: { bgcolor: 'success.light', color: 'success.dark' },       dotSx: { bgcolor: 'background.default', border: '2px solid', borderColor: 'divider', color: 'text.secondary' } },
-              { n: '3', time: currentTime, label: 'Today (all-time average)\nCurrent production', badge: `−${reductionPct}% from baseline`,  badgeSx: { bgcolor: 'success.light', color: 'success.dark' },       dotSx: { bgcolor: 'primary.main', color: '#fff', boxShadow: '0 0 0 4px rgba(91,155,152,0.15)' } },
+              { n: '3', time: currentTime, label: 'Today\nAll-time average',           badge: `−${reductionPct}% from baseline`,  badgeSx: { bgcolor: 'success.light', color: 'success.dark' },       dotSx: { bgcolor: 'primary.main', color: '#fff', boxShadow: '0 0 0 4px rgba(91,155,152,0.15)' } },
             ].map((s, i) => (
               <Box key={i} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.75, position: 'relative', zIndex: 1, flex: 1 }}>
                 <Box sx={{ width: 56, height: 56, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 700, ...s.dotSx }}>
