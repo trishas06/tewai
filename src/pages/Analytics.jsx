@@ -630,8 +630,12 @@ export default function Analytics() {
     // opStats is fetched for both specific months and all-time (month=null), so this
     // works correctly in both cases.
     const n = opStats?.claims_validated ?? displayAgg.total_claims_processed ?? 0;
-    // Use actual processing time if available, else default to 4 min (240 sec)
-    const procSecs   = opStats?.avg_processing_time_seconds ?? 240;
+    // Only compute savings when this period has a real measured processing time —
+    // never fall back to a made-up default, or the $ figures shown would be fiction.
+    const procSecs = opStats?.avg_processing_time_seconds;
+    if (procSecs == null) {
+      return { available: false, n };
+    }
     const saveMin    = 240 - procSecs / 60;          // manual 4hr = 240 min baseline
     const hoursSaved = Math.round(n * saveMin / 60);
     const fteMonths  = (hoursSaved / 160).toFixed(1);
@@ -641,7 +645,7 @@ export default function Analytics() {
     const annualProj = filterMonth === 'all'
       ? Math.round(costSaved / monthCount * 12)
       : costSaved * 12;
-    return { n, hoursSaved, fteMonths, costSaved, annualProj, saveMin: saveMin.toFixed(1), procSecs, monthCount };
+    return { available: true, n, hoursSaved, fteMonths, costSaved, annualProj, saveMin: saveMin.toFixed(1), procSecs, monthCount };
   }, [displayAgg, filterMonth, opStats, availableMonths, hourlyRate]);
 
   // ── Period selector ────────────────────────────────────────────────────────
@@ -961,8 +965,6 @@ export default function Analytics() {
       ? ((240 * 60 - journeyProcSecs) / (240 * 60) * 100).toFixed(1)
       : '98.3';
     const currentTime = journeyProcSecs != null ? fmtTime(journeyProcSecs) : '~4 min';
-    // Monthly processing time (for business impact formula note)
-    const procSecs = opStats?.avg_processing_time_seconds ?? journeyProcSecs;
 
     return (
       <Box>
@@ -978,7 +980,7 @@ export default function Analytics() {
             {[
               { n: '1', time: '4 hrs',     label: 'Before tool\nManual QA — baseline',  badge: 'Baseline',                        badgeSx: { bgcolor: 'rgba(0,0,0,0.06)', color: 'text.secondary' }, dotSx: { bgcolor: 'background.default', border: '2px solid', borderColor: 'divider', color: 'text.secondary' } },
               { n: '2', time: '40 min',    label: 'Early adoption\nPhase 1 deployment', badge: '−83% from baseline',               badgeSx: { bgcolor: 'success.light', color: 'success.dark' },       dotSx: { bgcolor: 'background.default', border: '2px solid', borderColor: 'divider', color: 'text.secondary' } },
-              { n: '3', time: currentTime, label: 'Today\nCurrent production',          badge: `−${reductionPct}% from baseline`,  badgeSx: { bgcolor: 'success.light', color: 'success.dark' },       dotSx: { bgcolor: 'primary.main', color: '#fff', boxShadow: '0 0 0 4px rgba(91,155,152,0.15)' } },
+              { n: '3', time: currentTime, label: 'Today (all-time average)\nCurrent production', badge: `−${reductionPct}% from baseline`,  badgeSx: { bgcolor: 'success.light', color: 'success.dark' },       dotSx: { bgcolor: 'primary.main', color: '#fff', boxShadow: '0 0 0 4px rgba(91,155,152,0.15)' } },
             ].map((s, i) => (
               <Box key={i} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.75, position: 'relative', zIndex: 1, flex: 1 }}>
                 <Box sx={{ width: 56, height: 56, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 700, ...s.dotSx }}>
@@ -1047,9 +1049,11 @@ export default function Analytics() {
         {/* Business Impact Panel */}
         <HeaderPanel headerBg={teal}
           title={`Business Impact${filterMonth !== 'all' ? ` — ${fmtMonth(filterMonth)}` : ''}`}
-          note={`Based on ${bizImpact.n} claims processed · at $${hourlyRate}/hr`}>
+          note={bizImpact.available
+            ? `Based on ${bizImpact.n} claims processed · at $${hourlyRate}/hr`
+            : `AI processing time not yet backfilled for ${filterMonth === 'all' ? 'this period' : fmtMonth(filterMonth)}`}>
           <Box sx={{ display: 'flex' }}>
-            {[
+            {(bizImpact.available ? [
               {
                 label: filterMonth === 'all' ? 'Hours Saved (All Time)' : 'Hours Saved This Month',
                 value: bizImpact.hoursSaved.toLocaleString(),
@@ -1072,7 +1076,12 @@ export default function Analytics() {
                   ? `Based on ${bizImpact.monthCount}-month avg run rate × 12`
                   : 'Based on current month run rate × 12',
               },
-            ].map((m, i, arr) => (
+            ] : [
+              { label: filterMonth === 'all' ? 'Hours Saved (All Time)' : 'Hours Saved This Month', value: '—', sub: 'Backfill pending' },
+              { label: 'FTE Months Equivalent', value: '—', sub: 'Backfill pending' },
+              { label: filterMonth === 'all' ? 'Total Cost Saved' : 'Cost Saved This Month', value: '—', sub: 'Backfill pending' },
+              { label: 'Projected Annual Savings', value: '—', sub: 'Backfill pending' },
+            ]).map((m, i, arr) => (
               <Box key={i} sx={{ flex: 1, borderRight: i < arr.length - 1 ? 1 : 0, borderColor: 'divider' }}>
                 <PanelMetric {...m} />
               </Box>
@@ -1121,7 +1130,9 @@ export default function Analytics() {
             </Box>
           )}
           <Typography sx={{ fontSize: 11, color: 'text.secondary', mt: 0.5, fontStyle: 'italic' }}>
-            {filterMonth === 'all' ? 'Total Cost Saved' : 'Cost Saved This Month'} formula: (Manual baseline 4 hrs − Current {currentTime}) × Claims processed × ${hourlyRate}/hr
+            {bizImpact.available
+              ? `${filterMonth === 'all' ? 'Total Cost Saved' : 'Cost Saved This Month'} formula: (Manual baseline 4 hrs − Current ${fmtTime(bizImpact.procSecs)}) × Claims processed × $${hourlyRate}/hr`
+              : `Cost savings will display once AI processing time is backfilled for ${filterMonth === 'all' ? 'this period' : fmtMonth(filterMonth)}.`}
           </Typography>
         </HeaderPanel>
 
