@@ -4,13 +4,16 @@ import {
   InputLabel, Table, TableBody, TableCell, TableContainer, TableHead,
   TableRow, Dialog, DialogTitle, DialogContent, IconButton,
   CircularProgress, Alert, Tabs, Tab, Chip, Tooltip, Divider,
-  TextField, InputAdornment, TableSortLabel,
+  TextField, InputAdornment, TableSortLabel, ToggleButton, ToggleButtonGroup,
+  Menu,
 } from '@mui/material';
 import {
   InfoOutlined as InfoIcon,
   ArrowBack as ArrowBackIcon,
   Close as CloseIcon,
   PictureAsPdf as PdfIcon,
+  TableChart as ExcelIcon,
+  ArrowDropDown as ArrowDropDownIcon,
   Edit as EditIcon,
   Check as CheckIcon,
   Search as SearchIcon,
@@ -20,6 +23,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as ReTooltip,
   ResponsiveContainer, PieChart, Pie, Cell, Legend,
 } from 'recharts';
+import * as XLSX from 'xlsx';
 import {
   getLossReductionData,
   getLossReductionAggregate,
@@ -505,6 +509,7 @@ export default function Analytics() {
   const [selectedClaim, setSelectedClaim] = useState(null);
   const [infoOpen,      setInfoOpen]      = useState(false);
   const [catDrill,      setCatDrill]      = useState(null); // null | { category, sub_prompts }
+  const [catViewAll,    setCatViewAll]    = useState(false); // false=Top 10, true=All
 
   // FTE hourly rate — Admin-configurable, persisted in localStorage
   const [hourlyRate,  setHourlyRate]  = useState(() => Number(localStorage.getItem('fte_hourly_rate')) || 35);
@@ -918,12 +923,24 @@ export default function Analytics() {
 
         {/* Top Failed Categories */}
         <Paper elevation={1} sx={{ p: 2, mb: 1.5, borderRadius: 1 }}>
-          <Typography sx={{ fontSize: 14, fontWeight: 600, mb: 1.5 }}>
-            Top 10 Failed Validation Categories
-            <Typography component="span" sx={{ fontSize: 12, color: 'text.secondary', fontWeight: 400, ml: 1 }}>
-              by "No match" count{filterMonth !== 'all' ? ` · ${fmtMonth(filterMonth)} · ${claims_validated} generated reports` : ''}
+          <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 1.5, gap: 1.5 }}>
+            <Typography sx={{ fontSize: 14, fontWeight: 600 }}>
+              {catViewAll ? 'Failed Validation Categories' : 'Top 10 Failed Validation Categories'}
+              <Typography component="span" sx={{ fontSize: 12, color: 'text.secondary', fontWeight: 400, ml: 1 }}>
+                by "No match" count{filterMonth !== 'all' ? ` · ${fmtMonth(filterMonth)} · ${claims_validated} generated reports` : ''}
+              </Typography>
             </Typography>
-          </Typography>
+            <ToggleButtonGroup value={catViewAll ? 'all' : 'top10'} exclusive size="small"
+              onChange={(_, v) => { if (v !== null) setCatViewAll(v === 'all'); }}>
+              <ToggleButton value="top10" sx={{ fontSize: 11, py: 0.25, px: 1.25 }}>Top 10</ToggleButton>
+              <ToggleButton value="all" sx={{ fontSize: 11, py: 0.25, px: 1.25 }}>All</ToggleButton>
+            </ToggleButtonGroup>
+          </Box>
+          {catViewAll && (
+            <Typography sx={{ fontSize: 11, color: 'text.secondary', mt: -1, mb: 1.5, fontStyle: 'italic' }}>
+              The backend currently only returns the top 10 categories — full list pending a backend update.
+            </Typography>
+          )}
           {catData.length === 0 ? (
             <Typography variant="body2" color="text.secondary">No data</Typography>
           ) : (
@@ -1332,6 +1349,57 @@ export default function Analytics() {
     );
   };
 
+  // ── Export ──────────────────────────────────────────────────────────────────
+  const [exportMenuAnchor, setExportMenuAnchor] = useState(null);
+
+  const handleExportExcel = () => {
+    const periodLabel = filterMonth === 'all' ? 'All Time' : fmtMonth(filterMonth);
+    const wb = XLSX.utils.book_new();
+
+    const kpiRows = [
+      ['Metric', 'Value'],
+      ['Period', periodLabel],
+      ['Claims Submitted', opStats?.claims_submitted ?? '—'],
+      ['Claims Validated', opStats?.claims_validated ?? '—'],
+      ['Unprocessable Rate', opStats?.unprocessable_rate != null ? `${opStats.unprocessable_rate}%` : '—'],
+      ['Avg Warnings / Report', opStats?.avg_warnings != null ? opStats.avg_warnings.toFixed(1) : '—'],
+      ['Active Adjusters', opStats?.active_adjusters ?? '—'],
+      ['Claim Quality Score', opStats?.quality_score != null ? `${opStats.quality_score}%` : '—'],
+      ['Carrier Coverage', opStats?.carrier_coverage ?? '—'],
+      ['Avg AI Processing Time', opStats?.avg_processing_time_seconds != null ? fmtTime(opStats.avg_processing_time_seconds) : 'Backfill pending'],
+      ['Total Estimate Value Reviewed', fmt$(displayAgg.total_estimate_value)],
+      ['Total Loss Reduction', fmt$(displayAgg.total_loss_reduction_value)],
+      ['Total "No Match" Flags', (displayAgg.total_no_match_flags ?? 0).toLocaleString()],
+    ];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(kpiRows), 'KPIs');
+
+    const adjRows = [
+      ['Adjuster Name', 'Claims Submitted', 'Warnings', 'Trend vs Last Month'],
+      ...(opStats?.adjuster_performance ?? []).map(a => [
+        a.adjuster_name,
+        a.claims_count,
+        a.warnings_count,
+        a.trend == null ? 'N/A' : `${a.trend > 0 ? '+' : ''}${a.trend}%`,
+      ]),
+    ];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(adjRows), 'Adjuster Performance');
+
+    const catRows = [
+      ['Category', 'No Match Count'],
+      ...(opStats?.top_failed_categories ?? []).map(c => [c.category, c.no_match_count]),
+    ];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(catRows), 'Failed Validation Categories');
+
+    const filenamePeriod = filterMonth === 'all' ? 'AllTime' : filterMonth;
+    XLSX.writeFile(wb, `Analytics_${filenamePeriod}.xlsx`);
+    setExportMenuAnchor(null);
+  };
+
+  const handleExportPDF = () => {
+    setExportMenuAnchor(null);
+    window.print();
+  };
+
   // ── Loading / error (Loss Reduction) ──────────────────────────────────────
   if (lrLoading) return (
     <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
@@ -1347,9 +1415,18 @@ export default function Analytics() {
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
         <Typography variant="h5" fontWeight={600}>Analytics Dashboard</Typography>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <Button variant="outlined" size="small" startIcon={<PdfIcon />} onClick={() => window.print()}>
-            Export as PDF
+          <Button variant="outlined" size="small" startIcon={<PdfIcon />} endIcon={<ArrowDropDownIcon />}
+            onClick={e => setExportMenuAnchor(e.currentTarget)}>
+            Export Report
           </Button>
+          <Menu anchorEl={exportMenuAnchor} open={Boolean(exportMenuAnchor)} onClose={() => setExportMenuAnchor(null)}>
+            <MenuItem onClick={handleExportPDF}>
+              <PdfIcon fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} /> as PDF
+            </MenuItem>
+            <MenuItem onClick={handleExportExcel}>
+              <ExcelIcon fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} /> as Excel
+            </MenuItem>
+          </Menu>
           {periodSelector}
         </Box>
       </Box>
