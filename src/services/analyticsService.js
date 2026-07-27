@@ -10,3 +10,8 @@ export const getOperationalStats = (month = null) => {
   const params = month ? { month } : {};
   return axiosInstance.get('/get_operational_stats', { params }).then(r => r.data.data || {});
 };
+
+export const getAdjusterCategoryBreakdown = (adjusterName, month = null) => {
+  const params = { adjuster_name: adjusterName, ...(month ? { month } : {}) };
+  return axiosInstance.get('/get_adjuster_category_breakdown', { params }).then(r => r.data.data || []);
+};
