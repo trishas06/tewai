@@ -779,8 +779,16 @@ export default function Analytics() {
       unprocessed: (w.total ?? w.count ?? 0) - (w.gen ?? 0),
     }));
 
-    // Category chart: sort ascending (largest at top after recharts renders)
-    const catData = [...top_failed_categories].reverse();
+    // Category chart: sort ascending (largest at top after recharts renders).
+    // Slice to top 10 client-side when the toggle is off — the backend may
+    // eventually stop capping at 10 itself, so this keeps "Top 10" correct
+    // regardless of how many categories the API actually returns.
+    const catSource = catViewAll ? top_failed_categories : top_failed_categories.slice(0, 10);
+    const catData = [...catSource].reverse();
+    // Beyond this many rows the chart routinely exceeds one printable page and
+    // gets pushed whole onto the next page (same failure mode fixed for the
+    // category drill-down chart) — exclude it from print past that point.
+    const catChartTooTallForPrint = catData.length > 15;
 
     // Category drill-down view
     if (catDrill) {
@@ -959,23 +967,31 @@ export default function Analytics() {
           {catData.length === 0 ? (
             <Typography variant="body2" color="text.secondary">No data</Typography>
           ) : (
-            <ResponsiveContainer width="100%" height={catData.length * 32 + 20}>
-              <BarChart data={catData} layout="vertical" margin={{ top: 0, right: 24, left: 180, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} horizontal={false} />
-                <XAxis type="number" tick={{ fontSize: 11 }} />
-                <YAxis type="category" dataKey="category" tick={{ fontSize: 11 }} width={175} />
-                <ReTooltip formatter={(v) => [`${v} "No match" flags — click to drill down`]} />
-                <Bar dataKey="no_match_count" cursor="pointer"
-                  onClick={(data) => setCatDrill(data)}
-                  radius={[0, 3, 3, 0]}>
-                  {catData.map((entry, i) => (
-                    <Cell key={i}
-                      fill={i >= catData.length - 2 ? theme.palette.error.main : teal}
-                    />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+            <Box className={catChartTooTallForPrint ? 'no-print' : undefined}>
+              <ResponsiveContainer width="100%" height={catData.length * 32 + 20}>
+                <BarChart data={catData} layout="vertical" margin={{ top: 0, right: 24, left: 180, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} horizontal={false} />
+                  <XAxis type="number" tick={{ fontSize: 11 }} />
+                  <YAxis type="category" dataKey="category" tick={{ fontSize: 11 }} width={175} />
+                  <ReTooltip formatter={(v) => [`${v} "No match" flags — click to drill down`]} />
+                  <Bar dataKey="no_match_count" cursor="pointer"
+                    onClick={(data) => setCatDrill(data)}
+                    radius={[0, 3, 3, 0]}>
+                    {catData.map((entry, i) => (
+                      <Cell key={i}
+                        fill={i >= catData.length - 2 ? theme.palette.error.main : teal}
+                      />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </Box>
+          )}
+          {catChartTooTallForPrint && (
+            <Typography className="print-only" sx={{ fontSize: 12, color: 'text.secondary', fontStyle: 'italic', py: 2 }}>
+              Chart omitted from this PDF — {catData.length} categories is too tall to print on one page.
+              Use Export Report → as Excel for the full "Failed Validation Categories" breakdown.
+            </Typography>
           )}
           <Typography sx={{ fontSize: 11, color: 'text.secondary', mt: 1, fontStyle: 'italic' }}>
             Click any bar to see the prompt-level flag breakdown for that category.
