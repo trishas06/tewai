@@ -959,11 +959,6 @@ export default function Analytics() {
               <ToggleButton value="all" sx={{ fontSize: 11, py: 0.25, px: 1.25 }}>All</ToggleButton>
             </ToggleButtonGroup>
           </Box>
-          {catViewAll && (
-            <Typography sx={{ fontSize: 11, color: 'text.secondary', mt: -1, mb: 1.5, fontStyle: 'italic' }}>
-              The backend currently only returns the top 10 categories — full list pending a backend update.
-            </Typography>
-          )}
           {catData.length === 0 ? (
             <Typography variant="body2" color="text.secondary">No data</Typography>
           ) : (
