@@ -28,6 +28,7 @@ import {
   getLossReductionData,
   getLossReductionAggregate,
   getOperationalStats,
+  getAdjusterCategoryBreakdown,
 } from '../services/analyticsService';
 import { UserRoleContext } from '../components/layout/AuthLayout';
 
@@ -356,7 +357,7 @@ function LossReductionInfoModal({ open, onClose }) {
 
 // ── Adjuster Performance table — owns its own search/sort state so keystrokes
 //    don't re-render the parent page with all its charts
-const AdjusterPerformanceTable = memo(function AdjusterPerformanceTable({ adjusters, filterMonth }) {
+const AdjusterPerformanceTable = memo(function AdjusterPerformanceTable({ adjusters, filterMonth, onWarningsClick }) {
   const [search, setSearch] = useState('');
   const [sort,   setSort]   = useState({ col: null, dir: 'asc' });
 
@@ -468,7 +469,8 @@ const AdjusterPerformanceTable = memo(function AdjusterPerformanceTable({ adjust
                     <TableCell align="right">{a.claims_count}</TableCell>
                     <TableCell align="right">
                       <Chip label={a.warnings_count} size="small"
-                        sx={{ bgcolor: '#e0f2f1', color: '#00695c', fontWeight: 700, fontSize: 12, height: 22, cursor: 'default', border: '1px solid #80cbc4' }} />
+                        onClick={() => onWarningsClick(a.adjuster_name)}
+                        sx={{ bgcolor: '#e0f2f1', color: '#00695c', fontWeight: 700, fontSize: 12, height: 22, cursor: 'pointer', border: '1px solid #80cbc4', '&:hover': { bgcolor: '#b2dfdb' } }} />
                     </TableCell>
                     <TableCell align="right">
                       {a.trend === null || a.trend === undefined
@@ -510,6 +512,7 @@ export default function Analytics() {
   const [infoOpen,      setInfoOpen]      = useState(false);
   const [catDrill,      setCatDrill]      = useState(null); // null | { category, sub_prompts }
   const [catViewAll,    setCatViewAll]    = useState(false); // false=Top 10, true=All
+  const [adjusterCatView, setAdjusterCatView] = useState(null); // null | { adjusterName, loading, error, categories }
 
   // FTE hourly rate — Admin-configurable, persisted in localStorage
   const [hourlyRate,  setHourlyRate]  = useState(() => Number(localStorage.getItem('fte_hourly_rate')) || 35);
@@ -668,12 +671,24 @@ export default function Analytics() {
     <FormControl size="small" sx={{ minWidth: 180 }}>
       <InputLabel>Period</InputLabel>
       <Select value={filterMonth} label="Period"
-        onChange={e => { setFilterMonth(e.target.value); setView('executive'); setCatDrill(null); }}>
+        onChange={e => { setFilterMonth(e.target.value); setView('executive'); setCatDrill(null); setAdjusterCatView(null); }}>
         <MenuItem value="all">All Time</MenuItem>
         {availableMonths.map(m => <MenuItem key={m} value={m}>{fmtMonth(m)}</MenuItem>)}
       </Select>
     </FormControl>
   );
+
+  // ── Adjuster-scoped category breakdown (Warnings click) ────────────────────
+  const handleWarningsClick = async (adjusterName) => {
+    setCatDrill(null);
+    setAdjusterCatView({ adjusterName, loading: true, error: null, categories: [] });
+    try {
+      const categories = await getAdjusterCategoryBreakdown(adjusterName, filterMonth === 'all' ? null : filterMonth);
+      setAdjusterCatView({ adjusterName, loading: false, error: null, categories });
+    } catch (err) {
+      setAdjusterCatView({ adjusterName, loading: false, error: err.message || 'Failed to load category breakdown', categories: [] });
+    }
+  };
 
   // ── OPERATIONAL TAB ────────────────────────────────────────────────────────
   const renderOperational = () => {
@@ -779,8 +794,16 @@ export default function Analytics() {
       unprocessed: (w.total ?? w.count ?? 0) - (w.gen ?? 0),
     }));
 
-    // Category chart: sort ascending (largest at top after recharts renders)
-    const catData = [...top_failed_categories].reverse();
+    // Category chart: sort ascending (largest at top after recharts renders).
+    // Slice to top 10 client-side when the toggle is off — the backend may
+    // eventually stop capping at 10 itself, so this keeps "Top 10" correct
+    // regardless of how many categories the API actually returns.
+    const catSource = catViewAll ? top_failed_categories : top_failed_categories.slice(0, 10);
+    const catData = [...catSource].reverse();
+    // Beyond this many rows the chart routinely exceeds one printable page and
+    // gets pushed whole onto the next page (same failure mode fixed for the
+    // category drill-down chart) — exclude it from print past that point.
+    const catChartTooTallForPrint = catData.length > 15;
 
     // Category drill-down view
     if (catDrill) {
@@ -792,7 +815,7 @@ export default function Analytics() {
           <Paper elevation={1} sx={{ p: 2, borderRadius: 1 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
               <Button className="no-print" startIcon={<ArrowBackIcon />} onClick={() => setCatDrill(null)} size="small" variant="outlined">
-                Back to Categories
+                {adjusterCatView ? `Back to ${adjusterCatView.adjusterName}'s Categories` : 'Back to Categories'}
               </Button>
               <Box>
                 <Typography sx={{ fontSize: 18, fontWeight: 600 }}>{catDrill.category}</Typography>
@@ -847,6 +870,69 @@ export default function Analytics() {
                 </TableBody>
               </Table>
             </TableContainer>
+          </Paper>
+        </Box>
+      );
+    }
+
+    // Adjuster-scoped category breakdown (from clicking a Warnings count)
+    if (adjusterCatView) {
+      const { adjusterName, loading, error, categories } = adjusterCatView;
+      const adjCatData = [...categories].reverse();
+      const adjChartTooTallForPrint = adjCatData.length > 15;
+      return (
+        <Box>
+          <Paper elevation={1} sx={{ p: 2, borderRadius: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+              <Button className="no-print" startIcon={<ArrowBackIcon />} onClick={() => setAdjusterCatView(null)} size="small" variant="outlined">
+                Back to Adjuster Performance
+              </Button>
+              <Typography sx={{ fontSize: 18, fontWeight: 600 }}>
+                Failed Validation Categories — {adjusterName}
+                <Typography component="span" sx={{ fontSize: 12, color: 'text.secondary', fontWeight: 400, ml: 1 }}>
+                  by "No match" count{filterMonth !== 'all' ? ` · ${fmtMonth(filterMonth)}` : ''}
+                </Typography>
+              </Typography>
+            </Box>
+            {loading ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}><CircularProgress size={28} /></Box>
+            ) : error ? (
+              <Alert severity="error">{error}</Alert>
+            ) : adjCatData.length === 0 ? (
+              <Typography variant="body2" color="text.secondary">
+                No failed validation categories for {adjusterName}{filterMonth !== 'all' ? ` in ${fmtMonth(filterMonth)}` : ''}.
+              </Typography>
+            ) : (
+              <>
+                <Box className={adjChartTooTallForPrint ? 'no-print' : undefined}>
+                  <ResponsiveContainer width="100%" height={adjCatData.length * 32 + 20}>
+                    <BarChart data={adjCatData} layout="vertical" margin={{ top: 0, right: 24, left: 180, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} horizontal={false} />
+                      <XAxis type="number" tick={{ fontSize: 11 }} />
+                      <YAxis type="category" dataKey="category" tick={{ fontSize: 11 }} width={175} />
+                      <ReTooltip formatter={(v) => [`${v} "No match" flags — click to drill down`]} />
+                      <Bar dataKey="no_match_count" cursor="pointer"
+                        onClick={(data) => setCatDrill(data)}
+                        radius={[0, 3, 3, 0]}>
+                        {adjCatData.map((entry, i) => (
+                          <Cell key={i}
+                            fill={i >= adjCatData.length - 2 ? theme.palette.error.main : teal}
+                          />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </Box>
+                {adjChartTooTallForPrint && (
+                  <Typography className="print-only" sx={{ fontSize: 12, color: 'text.secondary', fontStyle: 'italic', py: 2 }}>
+                    Chart omitted from this PDF — {adjCatData.length} categories is too tall to print on one page.
+                  </Typography>
+                )}
+                <Typography sx={{ fontSize: 11, color: 'text.secondary', mt: 1, fontStyle: 'italic' }}>
+                  Click any bar to see the prompt-level flag breakdown for that category.
+                </Typography>
+              </>
+            )}
           </Paper>
         </Box>
       );
@@ -959,23 +1045,31 @@ export default function Analytics() {
           {catData.length === 0 ? (
             <Typography variant="body2" color="text.secondary">No data</Typography>
           ) : (
-            <ResponsiveContainer width="100%" height={catData.length * 32 + 20}>
-              <BarChart data={catData} layout="vertical" margin={{ top: 0, right: 24, left: 180, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} horizontal={false} />
-                <XAxis type="number" tick={{ fontSize: 11 }} />
-                <YAxis type="category" dataKey="category" tick={{ fontSize: 11 }} width={175} />
-                <ReTooltip formatter={(v) => [`${v} "No match" flags — click to drill down`]} />
-                <Bar dataKey="no_match_count" cursor="pointer"
-                  onClick={(data) => setCatDrill(data)}
-                  radius={[0, 3, 3, 0]}>
-                  {catData.map((entry, i) => (
-                    <Cell key={i}
-                      fill={i >= catData.length - 2 ? theme.palette.error.main : teal}
-                    />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+            <Box className={catChartTooTallForPrint ? 'no-print' : undefined}>
+              <ResponsiveContainer width="100%" height={catData.length * 32 + 20}>
+                <BarChart data={catData} layout="vertical" margin={{ top: 0, right: 24, left: 180, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} horizontal={false} />
+                  <XAxis type="number" tick={{ fontSize: 11 }} />
+                  <YAxis type="category" dataKey="category" tick={{ fontSize: 11 }} width={175} />
+                  <ReTooltip formatter={(v) => [`${v} "No match" flags — click to drill down`]} />
+                  <Bar dataKey="no_match_count" cursor="pointer"
+                    onClick={(data) => setCatDrill(data)}
+                    radius={[0, 3, 3, 0]}>
+                    {catData.map((entry, i) => (
+                      <Cell key={i}
+                        fill={i >= catData.length - 2 ? theme.palette.error.main : teal}
+                      />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </Box>
+          )}
+          {catChartTooTallForPrint && (
+            <Typography className="print-only" sx={{ fontSize: 12, color: 'text.secondary', fontStyle: 'italic', py: 2 }}>
+              Chart omitted from this PDF — {catData.length} categories is too tall to print on one page.
+              Use Export Report → as Excel for the full "Failed Validation Categories" breakdown.
+            </Typography>
           )}
           <Typography sx={{ fontSize: 11, color: 'text.secondary', mt: 1, fontStyle: 'italic' }}>
             Click any bar to see the prompt-level flag breakdown for that category.
@@ -983,7 +1077,7 @@ export default function Analytics() {
         </Paper>
 
         {/* Adjuster Performance */}
-        <AdjusterPerformanceTable adjusters={adjuster_performance} filterMonth={filterMonth} />
+        <AdjusterPerformanceTable adjusters={adjuster_performance} filterMonth={filterMonth} onWarningsClick={handleWarningsClick} />
       </Box>
     );
   };
@@ -1488,7 +1582,7 @@ export default function Analytics() {
 
       {/* Tabs — Operational first, Executive second (matches mockup) */}
       <Tabs value={activeTab}
-        onChange={(_, v) => { setActiveTab(v); setView('executive'); setCatDrill(null); }}
+        onChange={(_, v) => { setActiveTab(v); setView('executive'); setCatDrill(null); setAdjusterCatView(null); }}
         sx={{ mb: 2, borderBottom: 1, borderColor: 'divider' }}>
         <Tab label="Operational" />
         <Tab label="Executive" />
