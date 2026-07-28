@@ -24,6 +24,7 @@ import ReportAnalysisPage from "./pages/ReportAnalysisPage";
 import Analytics from "./pages/Analytics";
 import PropertyFiles from "./pages/PropertyFiles";
 import PropertySettings from "./pages/PropertySettings";
+import RuleBook from "./pages/RuleBook";
 
 function AppContent() {
   const [mode, setMode] = useState("light");
@@ -260,6 +261,14 @@ function AppContent() {
               element={
                 <AuthLayout>
                   <PropertySettings />
+                </AuthLayout>
+              }
+            />
+            <Route
+              path="/rulebook"
+              element={
+                <AuthLayout>
+                  <RuleBook />
                 </AuthLayout>
               }
             />

@@ -21,6 +21,7 @@ import {
   Flood as FloodIcon,
   Home as HomeIcon,
   Assessment as AssessmentIcon,
+  MenuBook as MenuBookIcon,
 } from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useContext, useState, useCallback } from "react";
@@ -69,6 +70,11 @@ const menuItems = [
     icon: <AssessmentIcon />,
     path: "/analytics",
     roles: ["Admin", "Developer"],
+  },
+  {
+    text: "Rule Book",
+    icon: <MenuBookIcon />,
+    path: "/rulebook",
   },
   {
     text: "User Management",

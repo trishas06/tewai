@@ -29,6 +29,7 @@ import {
   OpenInNew as OpenInNewIcon,
 } from '@mui/icons-material';
 import axiosInstance from '../utils/axiosInstance';
+import ruleBookService from '../services/ruleBookService';
 import GenerateGuidanceReport from '../components/GenerateGuidanceReport';
 import SuccessPopup from '../components/SuccessPopup';
 import { UserRoleContext } from '../components/layout/AuthLayout';
@@ -59,6 +60,14 @@ const getFlagColor = (flag, theme) => {
             : theme.palette.grey[100],
       };
   }
+};
+
+/** Short hover preview: the "What this rule checks" section of a rule book entry's body. */
+const extractRulePreview = (body) => {
+  if (!body) return '';
+  const match = body.match(/##\s*What this rule checks\s*\n+([\s\S]*?)(\n##|$)/i);
+  const text = match ? match[1] : body;
+  return text.trim().slice(0, 280);
 };
 
 const parsePageNumbers = (pageNumberStr) => {
@@ -187,8 +196,24 @@ function ReportAnalysis({ reportId, prelim_folder, pdfUrl, onPageLinkLoadStart, 
   /** Last open-in-tab error, scoped to ``question`` so only that row shows it. */
   const [openingStatementActionError, setOpeningStatementActionError] =
     useState(null);
+  /** { [type]: entry } for whichever rules have a published rule book entry. */
+  const [ruleBookMap, setRuleBookMap] = useState({});
   const userRole = useContext(UserRoleContext);
   const theme = useTheme();
+
+  // Fetch the rule book once (cached in ruleBookService) as a type -> entry
+  // lookup, so the per-question info icon needs no extra network call.
+  // Rules with no published entry simply show no icon.
+  useEffect(() => {
+    ruleBookService
+      .getFlatRulebook()
+      .then(setRuleBookMap)
+      .catch((err) => console.error('Error fetching rule book:', err));
+  }, []);
+
+  const openRuleBookEntry = (type) => {
+    window.open(`/rulebook?type=${encodeURIComponent(type)}`, '_blank', 'noopener,noreferrer');
+  };
 
   // Treat the split-screen panel (~50vw) as narrow — md breakpoint catches it
   const isNarrow = useMediaQuery(theme.breakpoints.down('md'));
@@ -699,6 +724,23 @@ function ReportAnalysis({ reportId, prelim_folder, pdfUrl, onPageLinkLoadStart, 
                           >
                             {item.question}
                           </Typography>
+
+                          {ruleBookMap[item.type] && (
+                            <Tooltip
+                              title={extractRulePreview(ruleBookMap[item.type].body)}
+                              placement="top"
+                              arrow
+                            >
+                              <IconButton
+                                size="small"
+                                onClick={() => openRuleBookEntry(item.type)}
+                                sx={{ p: 0.25, flexShrink: 0 }}
+                                aria-label="View rule book entry"
+                              >
+                                <InfoIcon fontSize="small" color="action" />
+                              </IconButton>
+                            </Tooltip>
+                          )}
 
                           <Box
                             sx={{
