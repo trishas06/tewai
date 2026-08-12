@@ -52,11 +52,6 @@ function RuleEntry({ entry, defaultExpanded }) {
         <Box sx={{ "& p": { mt: 0 } }}>
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{entry.body}</ReactMarkdown>
         </Box>
-        {entry.source && (
-          <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1 }}>
-            Source: {entry.source}
-          </Typography>
-        )}
       </AccordionDetails>
     </Accordion>
   );
