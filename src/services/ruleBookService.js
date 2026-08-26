@@ -29,15 +29,18 @@ export const ruleBookService = {
   },
 
   // { [type]: entry } — flattened for O(1) lookup by a question's `type`,
-  // e.g. the Report Analysis screen's per-question info icon.
-  getFlatRulebook: async (opts) => {
+  // scoped to a single model (flood/prelim/property). `type` is NOT unique
+  // across models (e.g. "address" and "narrative_completion" each exist in
+  // more than one model), so flattening across all models would let one
+  // model's entry silently shadow another's — callers must pass the model
+  // they're actually rendering (e.g. the Report Analysis screen's per-claim
+  // info icon).
+  getFlatRulebook: async (model, opts) => {
     const grouped = await ruleBookService.getRulebook(opts);
     const flat = {};
-    Object.values(grouped).forEach((categories) => {
-      Object.values(categories).forEach((entries) => {
-        entries.forEach((entry) => {
-          flat[entry.type] = entry;
-        });
+    Object.values(grouped[model] || {}).forEach((entries) => {
+      entries.forEach((entry) => {
+        flat[entry.type] = entry;
       });
     });
     return flat;

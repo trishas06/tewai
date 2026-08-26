@@ -180,8 +180,8 @@ function describeOpeningStatementNetworkFailure(err) {
 /** Module-level cache: cacheKey → blob URL. Persists across re-renders. */
 const pdfPageCache = new Map();
 
-function ReportAnalysis({ reportId, prelim_folder, pdfUrl, onPageLinkLoadStart, onPageLinkLoadEnd }) {
-  console.log('ReportAnalysis props:', { reportId, prelim_folder, pdfUrl });
+function ReportAnalysis({ reportId, prelim_folder, pdfUrl, ruleBookModel, onPageLinkLoadStart, onPageLinkLoadEnd }) {
+  console.log('ReportAnalysis props:', { reportId, prelim_folder, pdfUrl, ruleBookModel });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
@@ -202,17 +202,25 @@ function ReportAnalysis({ reportId, prelim_folder, pdfUrl, onPageLinkLoadStart, 
   const theme = useTheme();
 
   // Fetch the rule book once (cached in ruleBookService) as a type -> entry
-  // lookup, so the per-question info icon needs no extra network call.
-  // Rules with no published entry simply show no icon.
+  // lookup scoped to this claim's model, so the per-question info icon needs
+  // no extra network call. Rules with no published entry simply show no icon.
+  // Scoping by model matters because `type` is reused across models (e.g.
+  // "address" exists in both flood and prelim) — an unscoped flat map could
+  // show a different model's rule text on the icon.
   useEffect(() => {
+    if (!ruleBookModel) return;
     ruleBookService
-      .getFlatRulebook()
+      .getFlatRulebook(ruleBookModel)
       .then(setRuleBookMap)
       .catch((err) => console.error('Error fetching rule book:', err));
-  }, []);
+  }, [ruleBookModel]);
 
   const openRuleBookEntry = (type) => {
-    window.open(`/rulebook?type=${encodeURIComponent(type)}`, '_blank', 'noopener,noreferrer');
+    window.open(
+      `/rulebook?type=${encodeURIComponent(type)}&model=${encodeURIComponent(ruleBookModel)}`,
+      '_blank',
+      'noopener,noreferrer',
+    );
   };
 
   // Treat the split-screen panel (~50vw) as narrow — md breakpoint catches it
