@@ -166,6 +166,9 @@ function LossReport() {
     if (data?.prelim_folder) {
       params.set("prelim_folder", data.prelim_folder);
     }
+    if (isPropertyFiles) {
+      params.set("source", "propertyFiles");
+    }
     window.open(
       `/report-analysis?${params.toString()}`,
       "_blank",
@@ -475,6 +478,7 @@ function LossReport() {
                   reportId={data?.report_id}
                   prelim_folder={data?.prelim_folder}
                   pdfUrl={data?.pdfUrl}
+                  ruleBookModel={isPropertyFiles ? "property" : data?.prelim_folder ? "prelim" : "flood"}
                   onPageLinkLoadStart={() => setPdfLinkLoading(true)}
                   onPageLinkLoadEnd={() => setPdfLinkLoading(false)}
                 />

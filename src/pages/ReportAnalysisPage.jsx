@@ -2,14 +2,15 @@
  * ReportAnalysisPage.jsx
  *
  * Standalone page rendered when "Open in new tab" is clicked on the
- * Report Analysis panel. Reads report_id and prelim_folder directly
- * from URL query parameters and passes them to ReportAnalysis.
+ * Report Analysis panel. Reads report_id, prelim_folder, and source
+ * directly from URL query parameters and passes them to ReportAnalysis.
  *
  * Route (add to your router):
  *   <Route path="/report-analysis" element={<ReportAnalysisPage />} />
  *
  * Example URL opened:
  *   /report-analysis?report_id=123&prelim_folder=abc
+ *   /report-analysis?report_id=123&source=propertyFiles
  */
 import { useSearchParams } from 'react-router-dom';
 import { Box, Typography, Paper } from '@mui/material';
@@ -20,6 +21,8 @@ function ReportAnalysisPage() {
 
   const reportId = searchParams.get('report_id');
   const prelimFolder = searchParams.get('prelim_folder') || undefined;
+  const isPropertyFiles = searchParams.get('source') === 'propertyFiles';
+  const ruleBookModel = isPropertyFiles ? 'property' : prelimFolder ? 'prelim' : 'flood';
 
   if (!reportId) {
     return (
@@ -48,6 +51,7 @@ function ReportAnalysisPage() {
         reportId={reportId}
         prelim_folder={prelimFolder}
         pdfUrl={null}
+        ruleBookModel={ruleBookModel}
       />
     </Box>
   );

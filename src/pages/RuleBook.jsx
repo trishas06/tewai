@@ -71,6 +71,7 @@ function RuleBook() {
   const [search, setSearch] = useState("");
   const [searchParams] = useSearchParams();
   const deepLinkType = searchParams.get("type");
+  const deepLinkModel = searchParams.get("model");
 
   const loadRulebook = (forceRefresh = false) => {
     (forceRefresh ? setRefreshing : setLoading)(true);
@@ -79,8 +80,15 @@ function RuleBook() {
       .then((data) => {
         setRulebook(data);
         setError(null);
-        // Jump to whichever model tab actually contains the deep-linked rule.
-        if (deepLinkType) {
+        // Jump to the deep-linked rule's model tab. `type` is reused across
+        // models (e.g. "address" exists in both flood and prelim), so a
+        // `model` param — set whenever the link came from a specific claim's
+        // Report Analysis screen — takes priority; only fall back to
+        // searching every tab for a matching type when it's absent (e.g. a
+        // link shared without model context).
+        if (deepLinkModel && data[deepLinkModel]) {
+          setTab(deepLinkModel);
+        } else if (deepLinkType) {
           const model = Object.keys(data).find((m) =>
             Object.values(data[m]).some((entries) =>
               entries.some((e) => e.type === deepLinkType),
@@ -98,9 +106,9 @@ function RuleBook() {
 
   useEffect(() => {
     loadRulebook();
-    // Only re-run if the deep-linked type changes; loadRulebook is stable enough for this effect's purpose.
+    // Only re-run if the deep-linked type/model changes; loadRulebook is stable enough for this effect's purpose.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [deepLinkType]);
+  }, [deepLinkType, deepLinkModel]);
 
   const filteredCategories = useMemo(() => {
     const categoriesForTab = rulebook?.[tab] || {};
